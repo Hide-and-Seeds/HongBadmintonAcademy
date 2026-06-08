@@ -7,6 +7,8 @@ export interface CheckoutInput {
   currency: string; // e.g. "MYR"
   description: string;
   customerEmail?: string | null;
+  /** Existing provider customer id to attach the payment to (optional). */
+  customerId?: string | null;
   successUrl: string;
   cancelUrl: string;
 }

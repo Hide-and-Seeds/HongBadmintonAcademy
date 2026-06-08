@@ -21,6 +21,7 @@ export interface Profile {
   phone: string | null;
   avatar_url: string | null;
   is_active: boolean;
+  stripe_customer_id: string | null;
   created_at: string;
 }
 
@@ -106,6 +107,8 @@ export interface FeePlan {
   currency: string;
   interval: FeeInterval;
   is_active: boolean;
+  stripe_product_id: string | null;
+  stripe_price_id: string | null;
 }
 
 export interface Invoice {
