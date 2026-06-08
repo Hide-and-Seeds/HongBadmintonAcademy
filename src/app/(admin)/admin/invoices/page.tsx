@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, LinkButton, Table, Th, Td, Badge, EmptyState, Button } from "@/components/ui";
+import { PageHeader, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import type { InvoiceStatus } from "@/lib/types";
@@ -58,12 +59,12 @@ export default async function InvoicesPage() {
                       {i.status !== "paid" && (
                         <form action={markPaid}>
                           <input type="hidden" name="id" value={i.id} />
-                          <Button type="submit" variant="secondary">Mark paid</Button>
+                          <SubmitButton variant="secondary" pendingText="Saving…">Mark paid</SubmitButton>
                         </form>
                       )}
                       <form action={sendReminder}>
                         <input type="hidden" name="id" value={i.id} />
-                        <Button type="submit" variant="secondary">Remind</Button>
+                        <SubmitButton variant="secondary" pendingText="Sending…">Remind</SubmitButton>
                       </form>
                       <form action={deleteInvoice}>
                         <input type="hidden" name="id" value={i.id} />

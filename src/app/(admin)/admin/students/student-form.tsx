@@ -1,4 +1,5 @@
-import { Card, Field, Input, Select, Textarea, Button, LinkButton } from "@/components/ui";
+import { Card, Field, Input, Select, Textarea, LinkButton } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import type { Student } from "@/lib/types";
 
 export function StudentForm({
@@ -61,7 +62,7 @@ export function StudentForm({
         </Field>
 
         <div className="flex gap-2 pt-2">
-          <Button type="submit">{student ? "Save changes" : "Create student"}</Button>
+          <SubmitButton pendingText="Saving…">{student ? "Save changes" : "Create student"}</SubmitButton>
           <LinkButton href="/admin/students" variant="secondary">
             Cancel
           </LinkButton>

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getWhatsappProvider } from "@/lib/whatsapp";
-import { env } from "@/lib/env";
+import { getBaseUrl } from "@/lib/url";
 import { monthLabel, formatDateTime } from "@/lib/format";
 import { APP_NAME } from "@/lib/constants";
 import { renderScorecardPdf } from "@/lib/scorecard-pdf";
@@ -144,7 +144,8 @@ export async function sendScorecard(formData: FormData) {
   if (!parent?.phone) return;
 
   // Signed link (7 days) so the parent can open the PDF without logging in.
-  let pdfLink = `${env.appUrl}/parent/scorecards`;
+  const baseUrl = await getBaseUrl();
+  let pdfLink = `${baseUrl}/parent/scorecards`;
   if (sc.pdf_url) {
     const { data: signed } = await admin.storage
       .from(BUCKET)

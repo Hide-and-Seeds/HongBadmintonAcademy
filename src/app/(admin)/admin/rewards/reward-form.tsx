@@ -1,4 +1,5 @@
-import { Card, Field, Input, Textarea, Button, LinkButton } from "@/components/ui";
+import { Card, Field, Input, Textarea, LinkButton } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import type { RewardRule } from "@/lib/types";
 
 export function RewardForm({
@@ -40,7 +41,7 @@ export function RewardForm({
         </Field>
 
         <div className="flex gap-2 pt-2">
-          <Button type="submit">{rule ? "Save changes" : "Create rule"}</Button>
+          <SubmitButton pendingText="Saving…">{rule ? "Save changes" : "Create rule"}</SubmitButton>
           <LinkButton href="/admin/rewards" variant="secondary">
             Cancel
           </LinkButton>

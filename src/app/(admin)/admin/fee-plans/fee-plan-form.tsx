@@ -1,4 +1,5 @@
-import { Card, Field, Input, Select, Textarea, Button, LinkButton } from "@/components/ui";
+import { Card, Field, Input, Select, Textarea, LinkButton } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import type { FeePlan } from "@/lib/types";
 
 export function FeePlanForm({
@@ -48,7 +49,7 @@ export function FeePlanForm({
         </Field>
 
         <div className="flex gap-2 pt-2">
-          <Button type="submit">{plan ? "Save changes" : "Create plan"}</Button>
+          <SubmitButton pendingText="Saving…">{plan ? "Save changes" : "Create plan"}</SubmitButton>
           <LinkButton href="/admin/fee-plans" variant="secondary">
             Cancel
           </LinkButton>

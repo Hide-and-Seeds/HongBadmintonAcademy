@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Table, Th, Td, Badge, EmptyState, Button } from "@/components/ui";
+import { PageHeader, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { InvoiceStatus } from "@/lib/types";
 import { payInvoice } from "./actions";
@@ -54,7 +55,7 @@ export default async function ParentInvoicesPage({
                   {i.status !== "paid" ? (
                     <form action={payInvoice}>
                       <input type="hidden" name="id" value={i.id} />
-                      <Button type="submit">Pay now</Button>
+                      <SubmitButton pendingText="Redirecting…">Pay now</SubmitButton>
                     </form>
                   ) : (
                     <span className="text-xs text-green-600">Paid</span>

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Table, Th, Td, Badge, EmptyState, Button, LinkButton } from "@/components/ui";
+import { PageHeader, Card, Table, Th, Td, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { monthLabel, formatDateTime } from "@/lib/format";
 import { generateScorecards, sendScorecard } from "./actions";
 
@@ -26,7 +27,7 @@ export default async function ScorecardsPage() {
           month&apos;s marks, attendance and rewards.
         </div>
         <form action={generateScorecards}>
-          <Button type="submit">Generate this month</Button>
+          <SubmitButton pendingText="Generating…">Generate this month</SubmitButton>
         </form>
       </Card>
 
@@ -70,7 +71,7 @@ export default async function ScorecardsPage() {
                       )}
                       <form action={sendScorecard}>
                         <input type="hidden" name="id" value={c.id} />
-                        <Button type="submit" variant="secondary">Send WhatsApp</Button>
+                        <SubmitButton variant="secondary" pendingText="Sending…">Send WhatsApp</SubmitButton>
                       </form>
                     </div>
                   </Td>

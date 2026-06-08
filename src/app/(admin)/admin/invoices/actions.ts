@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { invoiceSchema } from "@/lib/validation";
 import { getPaymentProvider } from "@/lib/payments";
 import { getWhatsappProvider } from "@/lib/whatsapp";
-import { env, isStripeConfigured } from "@/lib/env";
+import { isStripeConfigured } from "@/lib/env";
+import { getBaseUrl } from "@/lib/url";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 function err(path: string, message: string): never {
@@ -93,7 +94,8 @@ export async function sendReminder(formData: FormData) {
   if (!parent?.phone) err("/admin/invoices", "Parent has no phone number on file");
 
   // Build a payment link (Stripe Checkout when configured).
-  let link = `${env.appUrl}/parent/invoices`;
+  const baseUrl = await getBaseUrl();
+  let link = `${baseUrl}/parent/invoices`;
   if (isStripeConfigured()) {
     try {
       const checkout = await getPaymentProvider().createCheckoutSession({
@@ -102,8 +104,8 @@ export async function sendReminder(formData: FormData) {
         currency: inv.currency,
         description: `Academy fee — ${studentName}`,
         customerEmail: parent.email,
-        successUrl: `${env.appUrl}/parent/invoices?paid=1`,
-        cancelUrl: `${env.appUrl}/parent/invoices`,
+        successUrl: `${baseUrl}/parent/invoices?paid=1`,
+        cancelUrl: `${baseUrl}/parent/invoices`,
       });
       link = checkout.url;
       await supabase

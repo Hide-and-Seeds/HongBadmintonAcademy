@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   PageHeader, Card, StatCard, Table, Th, Td, Badge, EmptyState,
-  LinkButton, Field, Input, Select, Button,
+  LinkButton, Field, Input, Select,
 } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/format";
 import type { AttendanceStatus, InvoiceStatus } from "@/lib/types";
 import { awardReward } from "../actions";
@@ -187,7 +188,7 @@ export default async function StudentProfilePage({
               <Field label="Reason">
                 <Input name="reason" placeholder="e.g. Perfect attendance" />
               </Field>
-              <Button type="submit" className="w-full">Award</Button>
+              <SubmitButton className="w-full" pendingText="Awarding…">Award</SubmitButton>
             </form>
           </Card>
         </div>

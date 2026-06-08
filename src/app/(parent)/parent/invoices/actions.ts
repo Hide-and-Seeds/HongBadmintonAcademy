@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPaymentProvider } from "@/lib/payments";
-import { env, isStripeConfigured } from "@/lib/env";
+import { isStripeConfigured } from "@/lib/env";
+import { getBaseUrl } from "@/lib/url";
 
 // Parent pays an invoice → create a Stripe Checkout session and redirect to it.
 export async function payInvoice(formData: FormData) {
@@ -29,14 +30,15 @@ export async function payInvoice(formData: FormData) {
 
   const studentName = (inv as any).students?.full_name ?? "your child";
 
+  const baseUrl = await getBaseUrl();
   const checkout = await getPaymentProvider().createCheckoutSession({
     invoiceId: inv.id,
     amount: Number(inv.amount),
     currency: inv.currency,
     description: inv.description || `Academy fee — ${studentName}`,
     customerEmail: user?.email ?? null,
-    successUrl: `${env.appUrl}/parent/invoices?paid=1`,
-    cancelUrl: `${env.appUrl}/parent/invoices`,
+    successUrl: `${baseUrl}/parent/invoices?paid=1`,
+    cancelUrl: `${baseUrl}/parent/invoices`,
   });
 
   await supabase

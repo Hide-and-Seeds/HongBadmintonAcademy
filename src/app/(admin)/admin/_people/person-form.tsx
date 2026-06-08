@@ -1,4 +1,5 @@
-import { Card, Field, Input, Button, LinkButton } from "@/components/ui";
+import { Card, Field, Input, LinkButton } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import type { Profile, Role } from "@/lib/types";
 
 export function PersonForm({
@@ -53,7 +54,7 @@ export function PersonForm({
         </Field>
 
         <div className="flex gap-2 pt-2">
-          <Button type="submit">{person ? "Save changes" : `Create ${label}`}</Button>
+          <SubmitButton pendingText="Saving…">{person ? "Save changes" : `Create ${label}`}</SubmitButton>
           <LinkButton href={base} variant="secondary">
             Cancel
           </LinkButton>

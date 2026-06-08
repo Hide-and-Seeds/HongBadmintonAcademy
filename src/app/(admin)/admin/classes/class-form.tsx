@@ -1,4 +1,5 @@
-import { Card, Field, Input, Select, Textarea, Button, LinkButton } from "@/components/ui";
+import { Card, Field, Input, Select, Textarea, LinkButton } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import type { ClassRow } from "@/lib/types";
 
 export function ClassForm({
@@ -51,7 +52,7 @@ export function ClassForm({
         </Field>
 
         <div className="flex gap-2 pt-2">
-          <Button type="submit">{submitLabel ?? (classRow ? "Save changes" : "Create class")}</Button>
+          <SubmitButton pendingText="Saving…">{submitLabel ?? (classRow ? "Save changes" : "Create class")}</SubmitButton>
           <LinkButton href="/admin/classes" variant="secondary">
             Cancel
           </LinkButton>
