@@ -46,7 +46,10 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
   },
   {
     group: "Reports",
-    items: [{ href: "/admin/reports", label: "Reports & Export" }],
+    items: [
+      { href: "/admin/analytics", label: "Analytics" },
+      { href: "/admin/reports", label: "Reports & Export" },
+    ],
   },
 ];
 

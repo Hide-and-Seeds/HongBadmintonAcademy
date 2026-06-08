@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Card, EmptyState, LinkButton, Badge } from "@/components/ui";
@@ -39,10 +40,17 @@ export default async function ParentDashboard() {
         {children && children.length > 0 ? (
           <Card className="divide-y divide-slate-100">
             {children.map((c) => (
-              <div key={c.id} className="flex items-center justify-between px-5 py-3">
-                <span className="font-medium text-slate-800">{c.full_name}</span>
-                <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
-              </div>
+              <Link
+                key={c.id}
+                href={`/parent/children/${c.id}`}
+                className="flex items-center justify-between px-5 py-3 hover:bg-slate-50"
+              >
+                <span className="font-medium text-green-700">{c.full_name}</span>
+                <span className="flex items-center gap-2">
+                  <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
+                  <span className="text-slate-400">→</span>
+                </span>
+              </Link>
             ))}
           </Card>
         ) : (

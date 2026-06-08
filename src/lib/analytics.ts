@@ -1,0 +1,104 @@
+import { env } from "@/lib/env";
+import { monthLabel } from "@/lib/format";
+
+export interface Analytics {
+  monthLabel: string;
+  currency: string;
+  counts: { students: number; coaches: number; parents: number; classes: number };
+  revenueThisMonth: number;
+  outstanding: number;
+  attendanceRate: number | null;
+  attendanceBreakdown: { present: number; late: number; absent: number; excused: number };
+  avgScore: number | null;
+  assessmentCount: number;
+  invoiceStatus: Record<string, number>;
+  messageStatus: Record<string, number>;
+  topStudents: { name: string; points: number }[];
+}
+
+// Computes the academy analytics. Pass an authed Supabase client (admin RLS
+// gives full reads). Shared by the analytics page and the PDF export.
+export async function computeAnalytics(supabase: any): Promise<Analytics> {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const head = (table: string, filter?: (q: any) => any) => {
+    let q = supabase.from(table).select("*", { count: "exact", head: true });
+    if (filter) q = filter(q);
+    return q;
+  };
+
+  const [
+    students, coaches, parents, classes,
+    { data: payments },
+    { data: invoices },
+    { data: attendance },
+    { data: assessments },
+    { data: ledger },
+    { data: messages },
+  ] = await Promise.all([
+    head("students", (q: any) => q.eq("status", "active")),
+    head("profiles", (q: any) => q.eq("role", "coach")),
+    head("profiles", (q: any) => q.eq("role", "parent")),
+    head("classes", (q: any) => q.eq("is_active", true)),
+    supabase.from("payments").select("amount, status, created_at").gte("created_at", monthStart).eq("status", "succeeded"),
+    supabase.from("invoices").select("amount, status"),
+    supabase.from("attendance").select("status").limit(10000),
+    supabase.from("assessments").select("overall_score").limit(10000),
+    supabase.from("reward_ledger").select("points, students(full_name)").limit(10000),
+    supabase.from("messages").select("status").limit(10000),
+  ]);
+
+  const revenueThisMonth = (payments ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0);
+
+  const invoiceStatus: Record<string, number> = {};
+  let outstanding = 0;
+  for (const i of invoices ?? []) {
+    invoiceStatus[i.status] = (invoiceStatus[i.status] ?? 0) + 1;
+    if (i.status === "unpaid" || i.status === "overdue") outstanding += Number(i.amount);
+  }
+
+  const attendanceBreakdown = { present: 0, late: 0, absent: 0, excused: 0 };
+  for (const a of attendance ?? []) {
+    if (a.status in attendanceBreakdown) (attendanceBreakdown as any)[a.status]++;
+  }
+  const attTotal = (attendance ?? []).length;
+  const attended = attendanceBreakdown.present + attendanceBreakdown.late;
+  const attendanceRate = attTotal ? Math.round((attended / attTotal) * 100) : null;
+
+  const scores = (assessments ?? []).map((a: any) => Number(a.overall_score)).filter((n: number) => !Number.isNaN(n));
+  const avgScore = scores.length ? Math.round((scores.reduce((x: number, y: number) => x + y, 0) / scores.length) * 10) / 10 : null;
+
+  const pointsByStudent = new Map<string, number>();
+  for (const r of ledger ?? []) {
+    const name = r.students?.full_name ?? "—";
+    pointsByStudent.set(name, (pointsByStudent.get(name) ?? 0) + Number(r.points));
+  }
+  const topStudents = [...pointsByStudent.entries()]
+    .map(([name, points]) => ({ name, points }))
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 5);
+
+  const messageStatus: Record<string, number> = {};
+  for (const m of messages ?? []) messageStatus[m.status] = (messageStatus[m.status] ?? 0) + 1;
+
+  return {
+    monthLabel: monthLabel(monthStart),
+    currency: env.paymentCurrency,
+    counts: {
+      students: students.count ?? 0,
+      coaches: coaches.count ?? 0,
+      parents: parents.count ?? 0,
+      classes: classes.count ?? 0,
+    },
+    revenueThisMonth,
+    outstanding,
+    attendanceRate,
+    attendanceBreakdown,
+    avgScore,
+    assessmentCount: scores.length,
+    invoiceStatus,
+    messageStatus,
+    topStudents,
+  };
+}
