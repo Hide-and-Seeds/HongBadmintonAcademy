@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -36,7 +37,11 @@ export default async function StudentsPage() {
           <tbody>
             {students.map((s: any) => (
               <tr key={s.id}>
-                <Td className="font-medium text-slate-900">{s.full_name}</Td>
+                <Td className="font-medium">
+                  <Link href={`/admin/students/${s.id}`} className="text-green-700 hover:underline">
+                    {s.full_name}
+                  </Link>
+                </Td>
                 <Td>{s.parent?.full_name ?? "—"}</Td>
                 <Td>{s.nfc_tag_uid ? <code className="text-xs">{s.nfc_tag_uid}</code> : "—"}</Td>
                 <Td>{formatDate(s.dob)}</Td>
@@ -45,7 +50,7 @@ export default async function StudentsPage() {
                 </Td>
                 <Td className="text-right">
                   <div className="flex justify-end gap-2">
-                    <LinkButton href={`/admin/students/${s.id}`} variant="secondary">
+                    <LinkButton href={`/admin/students/${s.id}/edit`} variant="secondary">
                       Edit
                     </LinkButton>
                     <form action={deleteStudent}>

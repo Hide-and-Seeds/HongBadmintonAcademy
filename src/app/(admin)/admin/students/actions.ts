@@ -42,3 +42,30 @@ export async function deleteStudent(formData: FormData) {
   await supabase.from("students").delete().eq("id", id);
   revalidatePath("/admin/students");
 }
+
+// Reward system: award points to a student (optionally tied to a rule).
+export async function awardReward(formData: FormData) {
+  const student_id = String(formData.get("student_id"));
+  const points = Number(formData.get("points"));
+  const rule_id = (formData.get("rule_id") as string) || null;
+  const reason = (formData.get("reason") as string)?.trim() || null;
+  if (!points || Number.isNaN(points)) {
+    err(`/admin/students/${student_id}`, "Enter a non-zero points value");
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase.from("reward_ledger").insert({
+    student_id,
+    rule_id,
+    points,
+    reason,
+    awarded_by: user?.id ?? null,
+  });
+  if (error) err(`/admin/students/${student_id}`, error.message);
+
+  revalidatePath(`/admin/students/${student_id}`);
+}
