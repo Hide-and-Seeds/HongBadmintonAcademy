@@ -1,0 +1,15 @@
+{
+  "name": "hba-wa-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Always-on WhatsApp bot worker for HBA (whatsapp-web.js). Runs OUTSIDE Vercel on a 24/7 host; the Next.js app calls it over HTTP.",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.23.0"
+  }
+}

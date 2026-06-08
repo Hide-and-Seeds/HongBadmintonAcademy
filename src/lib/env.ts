@@ -17,6 +17,11 @@ export const env = {
   whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN ?? "",
   whatsappApiVersion: process.env.WHATSAPP_API_VERSION ?? "v21.0",
 
+  // whatsapp-web.js worker (see /wa-worker). When both are set, sends route to
+  // the worker instead of the Meta Cloud API.
+  waWorkerUrl: process.env.WA_WORKER_URL ?? "",
+  waWorkerSecret: process.env.WA_WORKER_SECRET ?? "",
+
   nfcApiKey: process.env.NFC_API_KEY ?? "",
   cronSecret: process.env.CRON_SECRET ?? "",
 };
@@ -41,4 +46,8 @@ export function isStripeConfigured(): boolean {
 
 export function isWhatsappConfigured(): boolean {
   return !!env.whatsappToken && !!env.whatsappPhoneId;
+}
+
+export function isWaWorkerConfigured(): boolean {
+  return !!env.waWorkerUrl && !!env.waWorkerSecret;
 }

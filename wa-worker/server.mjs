@@ -1,0 +1,112 @@
+// HBA WhatsApp bot worker (whatsapp-web.js).
+//
+// Runs as a long-lived process on a 24/7 host (NOT Vercel — serverless can't
+// keep a browser/socket alive). Drives a real WhatsApp account through
+// WhatsApp Web and exposes a tiny authenticated HTTP API that the Next.js app
+// calls from sendScorecard()/sendReminder().
+//
+// WARNING: whatsapp-web.js is UNOFFICIAL. Connecting a number automates it in
+// violation of WhatsApp's ToS; Meta can ban that number permanently. Connect a
+// DEDICATED prepaid SIM, never the academy's main number.
+
+import express from "express";
+import qrcode from "qrcode-terminal";
+import pkg from "whatsapp-web.js";
+
+const { Client, LocalAuth } = pkg;
+
+const PORT = process.env.PORT || 8787;
+const SECRET = process.env.WA_WORKER_SECRET || "";
+
+if (!SECRET) {
+  console.error(
+    "FATAL: WA_WORKER_SECRET is not set. This shared secret authenticates the " +
+      "website to this worker — set it (and the same value in the Next.js app).",
+  );
+  process.exit(1);
+}
+
+let ready = false;
+
+const client = new Client({
+  authStrategy: new LocalAuth({ dataPath: "./.wwebjs_auth" }),
+  puppeteer: {
+    headless: true,
+    // --no-sandbox is required when running as root / inside most Linux hosts.
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    // On ARM/Raspberry Pi the bundled Chromium won't run — point at system
+    // chromium via CHROME_PATH (see .env.example).
+    ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
+  },
+});
+
+client.on("qr", (qr) => {
+  ready = false;
+  console.log(
+    "\n=== Scan this QR with the DEDICATED WhatsApp number ===\n" +
+      "(WhatsApp → Settings → Linked Devices → Link a device)\n",
+  );
+  qrcode.generate(qr, { small: true });
+});
+client.on("authenticated", () =>
+  console.log("Authenticated — session persisted in ./.wwebjs_auth (keep this folder private)."),
+);
+client.on("auth_failure", (m) => console.error("Auth failure:", m));
+client.on("ready", () => {
+  ready = true;
+  console.log("WhatsApp client READY. Worker can send messages.");
+});
+client.on("disconnected", (reason) => {
+  ready = false;
+  console.log("Disconnected:", reason, "— will try to re-init.");
+  client.initialize().catch((e) => console.error("Re-init failed:", e));
+});
+
+client.initialize();
+
+const app = express();
+app.use(express.json({ limit: "1mb" }));
+
+// Bearer-secret auth on everything except the health probe.
+app.use((req, res, next) => {
+  if (req.path === "/health") return next();
+  if (req.get("authorization") !== `Bearer ${SECRET}`) {
+    return res.status(401).json({ status: "failed", error: "unauthorized" });
+  }
+  next();
+});
+
+// Liveness + readiness. Returns { ready: true } only after the QR is scanned
+// and the session is live.
+app.get("/health", (_req, res) => res.json({ ready }));
+
+// Send a free-form text message. Body: { to: "+60123456789", text: "hi" }.
+app.post("/send", async (req, res) => {
+  if (!ready) {
+    return res
+      .status(503)
+      .json({ status: "failed", error: "client not ready (scan QR / still booting)" });
+  }
+  const { to, text } = req.body || {};
+  if (!to || !text) {
+    return res.status(400).json({ status: "failed", error: "missing 'to' or 'text'" });
+  }
+  try {
+    const digits = String(to).replace(/[^\d]/g, "");
+    if (!digits) return res.status(400).json({ status: "failed", error: "invalid number" });
+
+    // Resolve to a real WhatsApp chat id — also tells us if the number isn't on
+    // WhatsApp instead of silently dropping the message.
+    const numberId = await client.getNumberId(digits);
+    if (!numberId) {
+      return res.status(422).json({ status: "failed", error: "number not on WhatsApp" });
+    }
+
+    const msg = await client.sendMessage(numberId._serialized, String(text));
+    res.json({ status: "sent", providerMessageId: msg?.id?._serialized });
+  } catch (e) {
+    res.status(500).json({ status: "failed", error: String(e?.message || e) });
+  }
+});
+
+app.listen(PORT, () => console.log(`WA worker listening on :${PORT}`));

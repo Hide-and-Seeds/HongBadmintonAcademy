@@ -13,6 +13,6 @@ export interface SendResult {
 }
 
 export interface WhatsappProvider {
-  readonly id: "meta_cloud" | "twilio";
+  readonly id: "meta_cloud" | "twilio" | "wwebjs";
   send(input: SendInput): Promise<SendResult>;
 }
