@@ -16,7 +16,10 @@ export interface NavItem {
 export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Overview",
-    items: [{ href: "/admin", label: "Dashboard" }],
+    items: [
+      { href: "/admin", label: "Dashboard" },
+      { href: "/admin/settings", label: "Settings" },
+    ],
   },
   {
     group: "People",
