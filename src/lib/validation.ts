@@ -2,11 +2,17 @@ import { z } from "zod";
 
 const optionalStr = z.string().trim().optional().transform((v) => (v ? v : null));
 
+// IDs come from our own <select>/hidden fields and land in Postgres `uuid`
+// columns (which validate format themselves). We avoid z.uuid() because its
+// strict RFC-4122 check rejects placeholder/seed UUIDs like 0000…0011.
+const optionalId = z.string().trim().optional().nullable().transform((v) => (v ? v : null));
+const requiredId = z.string().trim().min(1, "Required");
+
 export const studentSchema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
   dob: optionalStr,
   gender: optionalStr,
-  parent_id: z.string().uuid().optional().nullable().or(z.literal("")).transform((v) => (v ? v : null)),
+  parent_id: optionalId,
   nfc_tag_uid: optionalStr,
   status: z.enum(["active", "inactive"]).default("active"),
   notes: optionalStr,
@@ -23,13 +29,13 @@ export const classSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   level: optionalStr,
   description: optionalStr,
-  coach_id: z.string().uuid().optional().nullable().or(z.literal("")).transform((v) => (v ? v : null)),
+  coach_id: optionalId,
   default_location: optionalStr,
   capacity: z.coerce.number().int().positive().optional().nullable().or(z.literal("")).transform((v) => (v === "" ? null : v)),
 });
 
 export const scheduleSchema = z.object({
-  class_id: z.string().uuid(),
+  class_id: requiredId,
   day_of_week: z.coerce.number().int().min(0).max(6),
   start_time: z.string().min(1),
   end_time: z.string().min(1),
@@ -51,7 +57,7 @@ export const schemeSchema = z.object({
 });
 
 export const criterionSchema = z.object({
-  scheme_id: z.string().uuid(),
+  scheme_id: requiredId,
   name: z.string().trim().min(1, "Name is required"),
   weight: z.coerce.number().positive().default(1),
   max_score: z.coerce.number().positive().default(10),
@@ -73,9 +79,9 @@ export const rewardRuleSchema = z.object({
 });
 
 export const invoiceSchema = z.object({
-  student_id: z.string().uuid(),
-  parent_id: z.string().uuid().optional().nullable().or(z.literal("")).transform((v) => (v ? v : null)),
-  fee_plan_id: z.string().uuid().optional().nullable().or(z.literal("")).transform((v) => (v ? v : null)),
+  student_id: requiredId,
+  parent_id: optionalId,
+  fee_plan_id: optionalId,
   description: optionalStr,
   amount: z.coerce.number().positive(),
   currency: z.string().default("MYR"),
