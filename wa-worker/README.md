@@ -31,9 +31,9 @@ option is a cloud VM:
 **Ampere A1 (ARM)** instance with ~1–2 OCPU / 6 GB RAM (well inside the free
 quota and enough for Chromium — the 1 GB AMD micro will OOM). Use an Ubuntu
 image, SSH in, then run the steps below. The QR prints as ASCII **in your SSH
-terminal** — scan it with the phone. ARM can't run the bundled Chromium, so
-install system chromium and set `CHROME_PATH` (see the ARM section). Don't open
-port 8787 to the world — reach it via the tunnel below.
+terminal** — scan it with the phone. On ARM you must use system chromium via
+`CHROME_PATH` (see "Chrome / Chromium binary" below). Don't open port 8787 to the
+world — reach it via the tunnel below.
 
 Alternatives: an **on-site PC / Raspberry Pi** (free if it already runs 24/7), or
 any small VPS. **Avoid** free tiers that sleep (Render free, Railway trial) — they
@@ -42,7 +42,8 @@ drop the WhatsApp session.
 ```bash
 cd wa-worker
 cp .env.example .env          # then edit WA_WORKER_SECRET
-npm install                   # downloads Chromium (a few hundred MB)
+npm install                   # installs deps — does NOT bundle a browser
+# provide Chrome/Chromium first — see "Chrome / Chromium binary" below
 npm start
 ```
 
@@ -54,14 +55,23 @@ re-scan on restart.
 Keep it running: `pm2 start server.mjs --name hba-wa` (install pm2 globally), or
 a systemd unit / Windows Task Scheduler "at startup".
 
-### Raspberry Pi / ARM
+### Chrome / Chromium binary
 
-Bundled Chromium won't run on ARM. Install system chromium and set `CHROME_PATH`:
+whatsapp-web.js bundles `puppeteer-core`, which does **not** download a browser on
+`npm install`. Provide one:
 
 ```bash
-sudo apt install -y chromium-browser
-echo 'CHROME_PATH=/usr/bin/chromium-browser' >> .env
+# A) System chromium + CHROME_PATH — works on x64 AND ARM (use this on Oracle ARM):
+sudo apt install -y chromium-browser                   # or: sudo snap install chromium
+echo 'CHROME_PATH=/usr/bin/chromium-browser' >> .env   # snap path: /snap/bin/chromium
+
+# B) Or let puppeteer fetch its own build (x64 / mac only — NOT ARM):
+npx puppeteer browsers install chrome
 ```
+
+If startup logs `Could not find Chrome (ver. …)`, the browser step was skipped or
+`CHROME_PATH` points at the wrong place. (Verified locally on Windows x64 via
+option B — server, bearer auth, and QR all came up clean.)
 
 ## Make it reachable from Vercel
 

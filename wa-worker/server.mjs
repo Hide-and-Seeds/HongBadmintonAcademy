@@ -62,7 +62,9 @@ client.on("disconnected", (reason) => {
   client.initialize().catch((e) => console.error("Re-init failed:", e));
 });
 
-client.initialize();
+// A launch/auth failure here must not kill the process — log it and keep the
+// HTTP server up so /health stays reachable and reports not-ready.
+client.initialize().catch((e) => console.error("Initialization failed:", e?.message || e));
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
