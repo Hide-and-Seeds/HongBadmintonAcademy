@@ -40,8 +40,18 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", invoiceId);
 
-      await db.from("payments").upsert(
-        {
+      // Idempotent insert: skip if we've already recorded this event.
+      // (Avoids ON CONFLICT against the partial unique index, which Postgres
+      // can't infer from column names alone.)
+      const { data: alreadyRecorded } = await db
+        .from("payments")
+        .select("id")
+        .eq("provider", "stripe")
+        .eq("provider_event_id", event.id)
+        .maybeSingle();
+
+      if (!alreadyRecorded) {
+        await db.from("payments").insert({
           invoice_id: invoiceId,
           amount,
           currency: (session.currency ?? env.paymentCurrency).toUpperCase(),
@@ -52,9 +62,8 @@ export async function POST(req: NextRequest) {
           status: "succeeded",
           method: "card",
           raw: session as unknown as Record<string, unknown>,
-        },
-        { onConflict: "provider,provider_event_id" },
-      );
+        });
+      }
     }
   }
 
