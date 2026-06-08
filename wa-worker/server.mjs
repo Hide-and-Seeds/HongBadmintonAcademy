@@ -47,6 +47,10 @@ let ready = false;
 
 const client = new Client({
   authStrategy: new LocalAuth({ dataPath: "./.wwebjs_auth" }),
+  // Slow shared-CPU VMs (e2-micro) load WhatsApp Web too slowly for the default
+  // auth timeout, which fires before 'ready' (logs show "auth timeout").
+  // 0 = wait as long as the load needs.
+  authTimeoutMs: 0,
   puppeteer: {
     headless: true,
     // --no-sandbox: needed when running as root / on most Linux hosts.
