@@ -16,6 +16,15 @@ import pkg from "whatsapp-web.js";
 
 const { Client, LocalAuth } = pkg;
 
+// Load .env from the worker directory (Node >=20.12) so config is picked up
+// under pm2 / systemd, where the interactive shell's exported vars are NOT
+// inherited. Harmless if there's no .env file (real env vars still win).
+try {
+  process.loadEnvFile();
+} catch {
+  /* no .env file present — fall back to the real environment */
+}
+
 const PORT = process.env.PORT || 8787;
 const SECRET = process.env.WA_WORKER_SECRET || "";
 
