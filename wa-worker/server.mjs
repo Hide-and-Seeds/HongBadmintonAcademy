@@ -34,6 +34,7 @@ process.on("uncaughtException", (e) => console.error("uncaughtException:", e?.me
 
 const PORT = process.env.PORT || 8787;
 const SECRET = process.env.WA_WORKER_SECRET || "";
+const APP_URL = (process.env.APP_URL || "").replace(/\/$/, "");
 
 if (!SECRET) {
   console.error(
@@ -119,6 +120,32 @@ app.use((req, res, next) => {
 // and the session is live.
 app.get("/health", (_req, res) => res.json({ ready }));
 
+// Resolve a number + send, retrying transient Puppeteer errors (the WhatsApp
+// Web page can reload mid-call on low-RAM hosts -> "Execution context was
+// destroyed"). Shared by the /send route and the drip sender.
+async function sendWithRetry(to, text) {
+  const digits = String(to).replace(/[^\d]/g, "");
+  if (!digits) return { error: "invalid number" };
+  const transient = /Execution context was destroyed|Protocol error|Target closed|Session closed/i;
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const numberId = await client.getNumberId(digits);
+      if (!numberId) return { notOnWhatsapp: true };
+      const msg = await client.sendMessage(numberId._serialized, String(text));
+      return { providerMessageId: msg?.id?._serialized };
+    } catch (e) {
+      lastErr = e;
+      if (transient.test(String(e?.message || e)) && attempt < 3) {
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+
 // Send a free-form text message. Body: { to: "+60123456789", text: "hi" }.
 app.post("/send", async (req, res) => {
   if (!ready) {
@@ -130,32 +157,69 @@ app.post("/send", async (req, res) => {
   if (!to || !text) {
     return res.status(400).json({ status: "failed", error: "missing 'to' or 'text'" });
   }
-  const digits = String(to).replace(/[^\d]/g, "");
-  if (!digits) return res.status(400).json({ status: "failed", error: "invalid number" });
-
-  // On low-RAM hosts the WhatsApp Web page occasionally reloads mid-call,
-  // throwing "Execution context was destroyed". Retry such transient errors a
-  // few times before giving up.
-  const transient = /Execution context was destroyed|Protocol error|Target closed|Session closed/i;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      // Resolve to a real WhatsApp chat id — also tells us if the number isn't
-      // on WhatsApp instead of silently dropping the message.
-      const numberId = await client.getNumberId(digits);
-      if (!numberId) {
-        return res.status(422).json({ status: "failed", error: "number not on WhatsApp" });
-      }
-      const msg = await client.sendMessage(numberId._serialized, String(text));
-      return res.json({ status: "sent", providerMessageId: msg?.id?._serialized });
-    } catch (e) {
-      const m = String(e?.message || e);
-      if (transient.test(m) && attempt < 3) {
-        await new Promise((r) => setTimeout(r, 2000));
-        continue;
-      }
-      return res.status(500).json({ status: "failed", error: m });
-    }
+  try {
+    const r = await sendWithRetry(to, text);
+    if (r.error) return res.status(400).json({ status: "failed", error: r.error });
+    if (r.notOnWhatsapp) return res.status(422).json({ status: "failed", error: "number not on WhatsApp" });
+    return res.json({ status: "sent", providerMessageId: r.providerMessageId });
+  } catch (e) {
+    return res.status(500).json({ status: "failed", error: String(e?.message || e) });
   }
 });
 
 app.listen(PORT, () => console.log(`WA worker listening on :${PORT}`));
+
+// --- Throttled drip sender (very cautious) -----------------------------------
+// Polls the app for the next queued reminder on a long, jittered interval. The
+// APP enforces the real policy (daytime window, daily cap, min-gap, random
+// skips) — this loop just asks and obeys. Enabled only when APP_URL is set.
+async function reportResult(id, status, providerMessageId, error) {
+  try {
+    await fetch(`${APP_URL}/api/worker/result`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SECRET}` },
+      body: JSON.stringify({ id, status, providerMessageId, error }),
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (e) {
+    console.error("drip: report failed:", e?.message || e);
+  }
+}
+
+async function dripTick() {
+  try {
+    if (ready && APP_URL) {
+      const res = await fetch(`${APP_URL}/api/worker/next`, {
+        headers: { Authorization: `Bearer ${SECRET}` },
+        signal: AbortSignal.timeout(15000),
+      });
+      const j = await res.json().catch(() => ({}));
+      const m = j && j.message;
+      if (m && m.id) {
+        try {
+          const r = await sendWithRetry(m.to, m.text);
+          if (r.notOnWhatsapp) await reportResult(m.id, "failed", undefined, "number not on WhatsApp");
+          else if (r.error) await reportResult(m.id, "failed", undefined, r.error);
+          else {
+            await reportResult(m.id, "sent", r.providerMessageId);
+            console.log("drip: sent reminder", m.id);
+          }
+        } catch (e) {
+          await reportResult(m.id, "failed", undefined, String(e?.message || e));
+        }
+      }
+    }
+  } catch (e) {
+    console.error("drip: tick error:", e?.message || e);
+  } finally {
+    // Long, irregular gap (8-15 min) between polls; the app gates the rest.
+    setTimeout(dripTick, (8 + Math.random() * 7) * 60 * 1000);
+  }
+}
+
+if (APP_URL) {
+  console.log("Drip sender ON — polling", APP_URL);
+  setTimeout(dripTick, 60 * 1000); // first poll a minute after boot
+} else {
+  console.log("Drip sender OFF (set APP_URL in .env to enable auto-reminders).");
+}
