@@ -5,7 +5,7 @@ import { WhatsAppButton } from "@/components/whatsapp-button";
 import { monthLabel, formatDateTime } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
-import { generateScorecards, logScorecardSend } from "./actions";
+import { generateScorecards, logScorecardSend, sendScorecard } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +86,12 @@ export default async function ScorecardsPage() {
                           body: text,
                         }}
                       />
+                      {parent?.phone && (
+                        <form action={sendScorecard}>
+                          <input type="hidden" name="id" value={c.id} />
+                          <SubmitButton pendingText="Sending…">Send via bot</SubmitButton>
+                        </form>
+                      )}
                     </div>
                   </Td>
                 </tr>
