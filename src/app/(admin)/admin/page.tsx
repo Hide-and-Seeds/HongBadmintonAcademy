@@ -10,6 +10,7 @@ const QUICK_ACTIONS = [
   { href: "/admin/scorecards", icon: "📊", title: "Score cards", sub: "Generate & send" },
   { href: "/admin/invoices", icon: "💳", title: "Fees & invoices", sub: "Bill & track" },
   { href: "/admin/students", icon: "👥", title: "Students", sub: "Add & manage" },
+  { href: "/admin/coaches", icon: "🧑‍🏫", title: "Coaches", sub: "Manage & payroll" },
 ];
 
 async function count(table: string, filter?: (q: any) => any) {
@@ -43,7 +44,7 @@ export default async function AdminDashboard() {
     <div>
       <PageHeader title="Dashboard" description="What would you like to do?" />
 
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.href}

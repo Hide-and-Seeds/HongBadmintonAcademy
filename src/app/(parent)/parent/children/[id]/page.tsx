@@ -194,24 +194,47 @@ export default async function ChildDetailPage({
         )}
       </Section>
 
-      {/* ─── Attendance ─────────────────────────────────────────────────── */}
+      {/* ─── Attendance (recent first; older collapsed) ──────────────────── */}
       <Section title="Attendance history" flush>
         {att.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr><Th>Date</Th><Th>Class</Th><Th>Status</Th><Th>Tap in</Th></tr></thead>
-              <tbody>
-                {att.map((a: any, i) => (
-                  <tr key={i}>
-                    <Td>{formatDate(a.sessions?.session_date)}</Td>
-                    <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
-                    <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
-                    <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr><Th>Date</Th><Th>Class</Th><Th>Status</Th><Th>Tap in</Th></tr></thead>
+                <tbody>
+                  {att.slice(0, 6).map((a: any, i) => (
+                    <tr key={i}>
+                      <Td>{formatDate(a.sessions?.session_date)}</Td>
+                      <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
+                      <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
+                      <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {att.length > 6 && (
+              <details className="border-t border-slate-100">
+                <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-green-700 hover:bg-slate-50">
+                  Show {att.length - 6} earlier sessions
+                </summary>
+                <div className="overflow-x-auto border-t border-slate-100">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {att.slice(6).map((a: any, i) => (
+                        <tr key={i}>
+                          <Td>{formatDate(a.sessions?.session_date)}</Td>
+                          <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
+                          <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
+                          <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+          </>
         ) : (
           <div className="p-5"><EmptyState message="No attendance records yet." /></div>
         )}

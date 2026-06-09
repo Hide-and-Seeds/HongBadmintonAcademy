@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
-  PageHeader, StatCard, Card, EmptyState, LinkButton, Badge,
+  PageHeader, StatCard, Card, EmptyState, Badge,
 } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
 import type { FeeInterval } from "@/lib/types";
@@ -10,6 +10,11 @@ import type { FeeInterval } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 const INTERVAL_SUFFIX: Record<FeeInterval, string> = { monthly: "/mo", one_time: "" };
+
+const PARENT_ACTIONS = [
+  { href: "/parent/scorecards", icon: "📊", title: "Score cards", sub: "Monthly reports" },
+  { href: "/parent/invoices", icon: "💳", title: "Fees & payments", sub: "Pay & history" },
+];
 
 export default async function ParentDashboard() {
   const me = await requireRole("parent");
@@ -75,12 +80,25 @@ export default async function ParentDashboard() {
       <PageHeader
         title={`Hello, ${me.full_name ?? "Parent"}`}
         description="Your children's level, progress and package fees at a glance."
-        action={
-          <LinkButton href="/parent/invoices" variant="secondary">
-            Fees &amp; payments
-          </LinkButton>
-        }
       />
+
+      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {PARENT_ACTIONS.map((q) => (
+          <Link
+            key={q.href}
+            href={q.href}
+            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-green-300 hover:shadow-sm"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-50 text-2xl">
+              {q.icon}
+            </span>
+            <div className="min-w-0">
+              <div className="font-semibold leading-tight text-slate-900">{q.title}</div>
+              <div className="truncate text-xs text-slate-500">{q.sub}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Children" value={children?.length ?? 0} />
