@@ -5,10 +5,17 @@ import {
   PageHeader, Section, Field, Input, Textarea, Button, LinkButton,
   Table, Th, Td, EmptyState, Badge,
 } from "@/components/ui";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, monthLabel } from "@/lib/format";
 import { createAssessment, addNote } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+function monthBounds() {
+  const now = new Date(Date.now() + 8 * 3600 * 1000); // MYT
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+  return { start: `${y}-${String(m + 1).padStart(2, "0")}-01`, end: new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10) };
+}
 
 export default async function MarkStudentPage({
   params,
@@ -28,6 +35,16 @@ export default async function MarkStudentPage({
     .eq("id", studentId)
     .maybeSingle();
   if (!student) notFound();
+
+  const { start: mStart, end: mEnd } = monthBounds();
+  const [{ data: enrClass }, { data: monthAtt }, { data: existingAssess }] = await Promise.all([
+    supabase.from("enrollments").select("classes(name)").eq("student_id", studentId).eq("active", true).limit(1).maybeSingle(),
+    supabase.from("attendance").select("status, sessions!inner(session_date)").eq("student_id", studentId).gte("sessions.session_date", mStart).lte("sessions.session_date", mEnd),
+    supabase.from("assessments").select("assessed_on").eq("student_id", studentId).gte("assessed_on", mStart).lte("assessed_on", mEnd).order("assessed_on", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const className = (enrClass as any)?.classes?.name ?? null;
+  const attTotal = (monthAtt ?? []).length;
+  const attHere = (monthAtt ?? []).filter((a: any) => a.status === "present" || a.status === "late").length;
 
   const { data: scheme } = await supabase
     .from("marking_schemes")
@@ -60,7 +77,17 @@ export default async function MarkStudentPage({
     <div className="space-y-6">
       <LinkButton href="/coach/marking" variant="ghost" className="!px-0">← Back to students</LinkButton>
 
-      <PageHeader title={student.full_name} description="Record a skills assessment and session notes." />
+      <PageHeader title={student.full_name} description={`Skills assessment · ${className ?? "—"} · ${monthLabel(mStart)}`} />
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm">
+        <span className="font-medium text-slate-800">{monthLabel(mStart)} assessment</span>
+        <span className="text-slate-500">Attendance this month: {attTotal ? `${attHere}/${attTotal}` : "no sessions yet"}</span>
+        {existingAssess ? (
+          <span className="text-amber-600">⚠ already assessed {formatDate(existingAssess.assessed_on)} — saving adds another</span>
+        ) : (
+          <span className="text-slate-400">not yet assessed this month</span>
+        )}
+      </div>
 
       {saved && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">Assessment saved.</p>}
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
