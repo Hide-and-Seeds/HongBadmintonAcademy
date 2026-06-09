@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/components/ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { APP_SHORT, ROLE_LABEL, type NavItem } from "@/lib/constants";
@@ -39,41 +39,80 @@ export function AppShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  // Admin has many groups → collapse to an accordion (only the active section
+  // open) so the rail isn't 16 links at once. Coach/Parent pass one group →
+  // show it flat with no toggle.
+  const collapsible = groups.length > 1;
+  const activeGroup =
+    groups.find((g) => g.items.some((i) => isActive(pathname, i.href)))?.group ?? null;
+  const [openGroup, setOpenGroup] = useState<string | null>(
+    activeGroup ?? (collapsible ? null : groups[0]?.group ?? null),
+  );
+  // Keep whichever section you navigate into expanded.
+  useEffect(() => {
+    if (collapsible && activeGroup) setOpenGroup(activeGroup);
+  }, [collapsible, activeGroup]);
+
   const nav = (
-    <nav className="space-y-6">
-      {groups.map((g) => (
-        <div key={g.group}>
-          <div className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            {g.group}
-          </div>
-          <div className="mt-2 space-y-0.5">
-            {g.items.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "group flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
-                    active
-                      ? "bg-green-50 font-semibold text-green-700"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                  )}
+    <nav className={collapsible ? "space-y-1" : "space-y-6"}>
+      {groups.map((g) => {
+        const expanded = !collapsible || openGroup === g.group;
+        return (
+          <div key={g.group}>
+            {collapsible ? (
+              <button
+                type="button"
+                onClick={() => setOpenGroup((cur) => (cur === g.group ? null : g.group))}
+                aria-expanded={expanded}
+                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+              >
+                {g.group}
+                <svg
+                  viewBox="0 0 12 12"
+                  className={cn("h-3 w-3 transition-transform", expanded && "rotate-90")}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
                 >
-                  <span
-                    className={cn(
-                      "h-1.5 w-1.5 shrink-0 rounded-full transition-colors",
-                      active ? "bg-green-600" : "bg-slate-300 group-hover:bg-slate-400",
-                    )}
-                  />
-                  {item.label}
-                </Link>
-              );
-            })}
+                  <path d="M4.5 2.5 8 6l-3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            ) : (
+              <div className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                {g.group}
+              </div>
+            )}
+            {expanded && (
+              <div className={cn("space-y-0.5", collapsible ? "mb-1 mt-1" : "mt-2")}>
+                {g.items.map((item) => {
+                  const active = isActive(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className={cn(
+                        "group flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                        active
+                          ? "bg-green-50 font-semibold text-green-700"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 shrink-0 rounded-full transition-colors",
+                          active ? "bg-green-600" : "bg-slate-300 group-hover:bg-slate-400",
+                        )}
+                      />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </nav>
   );
 

@@ -12,13 +12,12 @@ export interface NavItem {
   label: string;
 }
 
-// Admin sidebar — grouped by the 6 scope modules.
+// Admin sidebar — frequent sections first; occasional tools tucked under "More".
 export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Overview",
     items: [
       { href: "/admin", label: "Dashboard" },
-      { href: "/admin/settings", label: "Settings" },
     ],
   },
   {
@@ -44,15 +43,16 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/fee-plans", label: "Fee Plans" },
       { href: "/admin/invoices", label: "Invoices & Payments" },
       { href: "/admin/scorecards", label: "Score Cards" },
-      { href: "/admin/broadcast", label: "Broadcast" },
-      { href: "/admin/messages", label: "WhatsApp Log" },
     ],
   },
   {
-    group: "Reports",
+    group: "More",
     items: [
-      { href: "/admin/analytics", label: "Analytics" },
       { href: "/admin/reports", label: "Reports & Export" },
+      { href: "/admin/analytics", label: "Analytics" },
+      { href: "/admin/broadcast", label: "Broadcast" },
+      { href: "/admin/messages", label: "WhatsApp Log" },
+      { href: "/admin/settings", label: "Settings" },
     ],
   },
 ];

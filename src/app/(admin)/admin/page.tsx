@@ -1,8 +1,16 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatCard, Section, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { PageHeader, StatCard, Section, Badge, EmptyState } from "@/components/ui";
 import { formatTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+const QUICK_ACTIONS = [
+  { href: "/admin/attendance", icon: "📋", title: "Take attendance", sub: "Who's in today" },
+  { href: "/admin/scorecards", icon: "📊", title: "Score cards", sub: "Generate & send" },
+  { href: "/admin/invoices", icon: "💳", title: "Fees & invoices", sub: "Bill & track" },
+  { href: "/admin/students", icon: "👥", title: "Students", sub: "Add & manage" },
+];
 
 async function count(table: string, filter?: (q: any) => any) {
   const supabase = await createClient();
@@ -33,16 +41,25 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        description="Academy overview at a glance."
-        action={
-          <>
-            <LinkButton href="/admin/students/new" variant="secondary">+ Student</LinkButton>
-            <LinkButton href="/admin/invoices/new">+ Invoice</LinkButton>
-          </>
-        }
-      />
+      <PageHeader title="Dashboard" description="What would you like to do?" />
+
+      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {QUICK_ACTIONS.map((q) => (
+          <Link
+            key={q.href}
+            href={q.href}
+            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-green-300 hover:shadow-sm"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-50 text-2xl">
+              {q.icon}
+            </span>
+            <div className="min-w-0">
+              <div className="font-semibold leading-tight text-slate-900">{q.title}</div>
+              <div className="truncate text-xs text-slate-500">{q.sub}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Active students" value={students} tone="green" />
