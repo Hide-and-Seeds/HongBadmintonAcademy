@@ -32,6 +32,7 @@ export default async function AttendancePage() {
           <>
             <LinkButton href="/admin/attendance/live">▶ Live check-in</LinkButton>
             <LinkButton href="/admin/attendance/matrix" variant="secondary">▦ Matrix</LinkButton>
+            <LinkButton href="/admin/attendance/overview" variant="secondary">▤ Overview</LinkButton>
           </>
         }
       />
