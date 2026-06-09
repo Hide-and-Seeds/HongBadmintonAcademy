@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Badge, EmptyState, LinkButton } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +28,12 @@ export default async function AttendancePage() {
       <PageHeader
         title="Attendance"
         description="Tap a session to open its roster and mark students."
+        action={
+          <>
+            <LinkButton href="/admin/attendance/live">▶ Live check-in</LinkButton>
+            <LinkButton href="/admin/attendance/matrix" variant="secondary">▦ Matrix</LinkButton>
+          </>
+        }
       />
 
       {sessions && sessions.length > 0 ? (
