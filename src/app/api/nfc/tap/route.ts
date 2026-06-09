@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const db = createAdminClient();
   const now = new Date();
-  const today = now.toLocaleDateString("en-CA"); // YYYY-MM-DD, local tz
+  const today = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" }); // YYYY-MM-DD, MYT
 
   async function logEvent(fields: Record<string, unknown>) {
     await db.from("nfc_tap_events").insert({
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
 
   if (!existing) {
     // First tap of the day → tap-in. Flag late if past start + grace.
-    const start = new Date(`${today}T${session.start_time}`);
+    const start = new Date(`${today}T${session.start_time}+08:00`); // session times are MYT (UTC+8)
     const lateAfter = new Date(start.getTime() + session.grace_minutes * 60_000);
     const isLate = now > lateAfter;
     await db.from("attendance").insert({

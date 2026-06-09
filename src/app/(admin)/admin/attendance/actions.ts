@@ -27,7 +27,7 @@ export async function simulateTap(formData: FormData) {
   if (!existing) {
     let isLate = false;
     if (session) {
-      const start = new Date(`${session.session_date}T${session.start_time}`);
+      const start = new Date(`${session.session_date}T${session.start_time}+08:00`); // MYT
       isLate = now > new Date(start.getTime() + session.grace_minutes * 60_000);
     }
     await supabase.from("attendance").insert({

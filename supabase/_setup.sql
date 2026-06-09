@@ -369,7 +369,7 @@ create trigger on_auth_user_created
 
 -- â”€â”€â”€ Invoice number â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 create or replace function public.set_invoice_no()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = public as $$
 begin
   if new.invoice_no is null then
     new.invoice_no := 'INV-' || to_char(now(), 'YYYYMM') || '-' || nextval('invoice_no_seq');
@@ -436,7 +436,7 @@ begin
     raise exception 'not authorized';
   end if;
 
-  select class_id, (session_date + start_time)::timestamptz, grace_minutes
+  select class_id, (session_date + start_time) at time zone 'Asia/Kuala_Lumpur', grace_minutes
     into s_class, s_start, s_grace
   from public.sessions where id = p_session_id;
   if s_class is null then return; end if;
@@ -473,7 +473,7 @@ begin
   for r in
     select id from public.sessions
     where status in ('scheduled','in_progress')
-      and (session_date + end_time)::timestamptz < now()
+      and (session_date + end_time) at time zone 'Asia/Kuala_Lumpur' < now()
   loop
     perform public.process_session_attendance(r.id);
     update public.sessions set status = 'completed' where id = r.id;
@@ -486,6 +486,11 @@ revoke all on function public.flag_due_absences()             from public;
 revoke all on function public.process_session_attendance(uuid) from public;
 grant execute on function public.flag_due_absences()             to authenticated, service_role;
 grant execute on function public.process_session_attendance(uuid) to authenticated, service_role;
+-- Side-effecting: never callable by the public anon key. The in-function guard
+-- allows a null auth.uid() (for service-role/cron), which would otherwise let an
+-- anonymous REST caller (auth.uid() is null) pass straight through.
+revoke execute on function public.flag_due_absences()             from anon;
+revoke execute on function public.process_session_attendance(uuid) from anon;
 
 
 -- ===== 0003_rls.sql =====
