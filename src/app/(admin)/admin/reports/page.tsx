@@ -14,23 +14,25 @@ export default function ReportsPage() {
     <div>
       <PageHeader
         title="Reports & Export"
-        description="Download CSV extracts for accounting and analysis."
+        description="Download CSV, Excel or PDF extracts for accounting and analysis."
       />
       <div className="grid gap-4 sm:grid-cols-2">
         {EXPORTS.map((e) => (
-          <Card key={e.type} className="flex items-center justify-between gap-4 p-5 transition-shadow hover:shadow-md">
+          <Card key={e.type} className="p-5 transition-shadow hover:shadow-md">
             <div className="flex items-center gap-4">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xl">
                 {e.icon}
               </span>
-              <div>
+              <div className="min-w-0">
                 <div className="font-semibold text-slate-900">{e.label}</div>
                 <div className="text-sm text-slate-500">{e.desc}</div>
               </div>
             </div>
-            <LinkButton href={`/api/export?type=${e.type}`} variant="secondary">
-              Export CSV
-            </LinkButton>
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+              <LinkButton href={`/api/export?type=${e.type}&format=csv`} variant="secondary">CSV</LinkButton>
+              <LinkButton href={`/api/export?type=${e.type}&format=xlsx`} variant="secondary">Excel</LinkButton>
+              <LinkButton href={`/api/export?type=${e.type}&format=pdf`} variant="secondary">PDF</LinkButton>
+            </div>
           </Card>
         ))}
       </div>

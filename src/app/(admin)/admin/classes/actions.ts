@@ -169,7 +169,7 @@ export async function cancelSession(formData: FormData) {
   const id = String(formData.get("id"));
   const class_id = String(formData.get("class_id"));
   const supabase = await createClient();
-  await supabase.from("sessions").update({ status: "cancelled" }).eq("id", id);
+  await supabase.from("sessions").update({ status: "canceled" }).eq("id", id);
   revalidateSchedule(class_id);
 }
 

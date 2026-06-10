@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 
 const QUICK_ACTIONS = [
   { href: "/admin/attendance", icon: "📋", title: "Take attendance", sub: "Who's in today" },
+  { href: "/admin/sessions", icon: "📅", title: "Sessions", sub: "Manage schedule" },
   { href: "/admin/scorecards", icon: "📊", title: "Score cards", sub: "Generate & send" },
   { href: "/admin/invoices", icon: "💳", title: "Fees & invoices", sub: "Bill & track" },
-  { href: "/admin/students", icon: "👥", title: "Students", sub: "Add & manage" },
-  { href: "/admin/coaches", icon: "🧑‍🏫", title: "Coaches", sub: "Manage & payroll" },
+  { href: "/admin/people", icon: "👥", title: "People", sub: "Students, parents, coaches" },
 ];
 
 async function count(table: string, filter?: (q: any) => any) {

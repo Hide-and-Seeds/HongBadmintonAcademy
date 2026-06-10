@@ -219,13 +219,13 @@ export default async function ManageClassPage({
                   <Td>{formatTime(s.start_time)}–{formatTime(s.end_time)}</Td>
                   <Td className="text-slate-500">{s.location ?? "—"}</Td>
                   <Td>
-                    <Badge tone={s.status === "cancelled" ? "red" : s.status === "completed" ? "green" : "blue"}>
+                    <Badge tone={s.status === "canceled" ? "red" : s.status === "completed" ? "green" : "blue"}>
                       {s.status}
                     </Badge>
                   </Td>
                   <Td className="text-right">
                     <div className="flex justify-end gap-2">
-                      {s.status === "cancelled" ? (
+                      {s.status === "canceled" ? (
                         <form action={restoreSession}>
                           <input type="hidden" name="id" value={s.id} />
                           <input type="hidden" name="class_id" value={classRow.id} />

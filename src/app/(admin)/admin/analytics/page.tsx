@@ -50,11 +50,53 @@ export default async function AnalyticsPage() {
         <StatCard label="Avg skill score" value={a.avgScore != null ? `${a.avgScore}%` : "—"} sub={`${a.assessmentCount} assessments`} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Active students" value={a.counts.students} />
+        <StatCard label="New this month" value={a.newStudentsThisMonth} tone={a.newStudentsThisMonth ? "green" : "slate"} />
         <StatCard label="Coaches" value={a.counts.coaches} />
         <StatCard label="Parents" value={a.counts.parents} />
         <StatCard label="Active classes" value={a.counts.classes} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Section title="Revenue trend" description="Succeeded payments, last 6 months">
+          {a.revenueTrend.some((m) => m.amount > 0) ? (
+            <div className="space-y-2.5">
+              {(() => {
+                const max = Math.max(1, ...a.revenueTrend.map((m) => m.amount));
+                return a.revenueTrend.map((m) => (
+                  <div key={m.label} className="flex items-center gap-3 text-sm">
+                    <span className="w-10 shrink-0 text-slate-600">{m.label}</span>
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-2.5 rounded-full bg-green-500" style={{ width: `${(m.amount / max) * 100}%` }} />
+                    </div>
+                    <span className="w-24 text-right font-medium tabular-nums text-slate-700">
+                      {formatCurrency(m.amount, a.currency)}
+                    </span>
+                  </div>
+                ));
+              })()}
+            </div>
+          ) : (
+            <EmptyState message="No payments in the last 6 months." />
+          )}
+        </Section>
+
+        <Section title="Students per class" flush>
+          {a.studentsPerClass.length ? (
+            <Table>
+              <thead><tr><Th>Class</Th><Th className="text-right">Students</Th></tr></thead>
+              <tbody>
+                {a.studentsPerClass.map((c) => (
+                  <tr key={c.name} className="hover:bg-slate-50">
+                    <Td className="font-medium text-slate-900">{c.name}</Td>
+                    <Td className="text-right tabular-nums">{c.count}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          ) : <div className="p-5"><EmptyState message="No active enrolments yet." /></div>}
+        </Section>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

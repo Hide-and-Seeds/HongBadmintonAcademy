@@ -219,7 +219,7 @@ export default async function ChildDetailPage({
                     {s.location ? ` · ${s.location}` : ""}
                   </div>
                 </div>
-                <Badge tone={s.status === "completed" ? "green" : s.status === "cancelled" ? "red" : "blue"}>
+                <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>
                   {s.status}
                 </Badge>
               </li>

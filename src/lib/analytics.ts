@@ -14,6 +14,9 @@ export interface Analytics {
   invoiceStatus: Record<string, number>;
   messageStatus: Record<string, number>;
   topStudents: { name: string; points: number }[];
+  newStudentsThisMonth: number;
+  revenueTrend: { label: string; amount: number }[];
+  studentsPerClass: { name: string; count: number }[];
 }
 
 // Computes the academy analytics. Pass an authed Supabase client (admin RLS
@@ -21,6 +24,7 @@ export interface Analytics {
 export async function computeAnalytics(supabase: any): Promise<Analytics> {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
 
   const head = (table: string, filter?: (q: any) => any) => {
     let q = supabase.from(table).select("*", { count: "exact", head: true });
@@ -29,24 +33,29 @@ export async function computeAnalytics(supabase: any): Promise<Analytics> {
   };
 
   const [
-    students, coaches, parents, classes,
+    students, coaches, parents, classes, newStudents,
     { data: payments },
+    { data: trendPayments },
     { data: invoices },
     { data: attendance },
     { data: assessments },
     { data: ledger },
     { data: messages },
+    { data: activeEnrollments },
   ] = await Promise.all([
     head("students", (q: any) => q.eq("status", "active")),
     head("profiles", (q: any) => q.eq("role", "coach")),
     head("profiles", (q: any) => q.eq("role", "parent")),
     head("classes", (q: any) => q.eq("is_active", true)),
+    head("students", (q: any) => q.gte("created_at", monthStart)),
     supabase.from("payments").select("amount, status, created_at").gte("created_at", monthStart).eq("status", "succeeded"),
+    supabase.from("payments").select("amount, created_at").gte("created_at", trendStart).eq("status", "succeeded").limit(10000),
     supabase.from("invoices").select("amount, status"),
     supabase.from("attendance").select("status").limit(10000),
     supabase.from("assessments").select("overall_score").limit(10000),
     supabase.from("reward_ledger").select("points, students(full_name)").limit(10000),
     supabase.from("messages").select("status").limit(10000),
+    supabase.from("enrollments").select("classes(name)").eq("active", true).limit(10000),
   ]);
 
   const revenueThisMonth = (payments ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0);
@@ -82,6 +91,31 @@ export async function computeAnalytics(supabase: any): Promise<Analytics> {
   const messageStatus: Record<string, number> = {};
   for (const m of messages ?? []) messageStatus[m.status] = (messageStatus[m.status] ?? 0) + 1;
 
+  // Revenue trend — last 6 months of succeeded payments, bucketed by month.
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+    return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString("en-MY", { month: "short" }), amount: 0 };
+  });
+  const monthIdx = new Map(months.map((m, i) => [m.key, i]));
+  for (const p of trendPayments ?? []) {
+    const d = new Date(p.created_at);
+    const i = monthIdx.get(`${d.getFullYear()}-${d.getMonth()}`);
+    if (i != null) months[i].amount += Number(p.amount);
+  }
+  const revenueTrend = months.map((m) => ({ label: m.label, amount: Math.round(m.amount) }));
+
+  // Active enrolment headcount per class.
+  const perClass = new Map<string, number>();
+  for (const e of (activeEnrollments ?? []) as any[]) {
+    const name = e.classes?.name;
+    if (!name) continue;
+    perClass.set(name, (perClass.get(name) ?? 0) + 1);
+  }
+  const studentsPerClass = [...perClass.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+
   return {
     monthLabel: monthLabel(monthStart),
     currency: env.paymentCurrency,
@@ -100,5 +134,8 @@ export async function computeAnalytics(supabase: any): Promise<Analytics> {
     invoiceStatus,
     messageStatus,
     topStudents,
+    newStudentsThisMonth: newStudents.count ?? 0,
+    revenueTrend,
+    studentsPerClass,
   };
 }

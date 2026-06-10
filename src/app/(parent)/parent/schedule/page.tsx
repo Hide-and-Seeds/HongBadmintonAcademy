@@ -98,7 +98,7 @@ export default async function ParentSchedulePage() {
                           <div className="mt-1 text-xs text-slate-400">{names.join(", ")}</div>
                         )}
                       </div>
-                      <Badge tone={s.status === "completed" ? "green" : s.status === "cancelled" ? "red" : "blue"}>
+                      <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>
                         {s.status}
                       </Badge>
                     </li>
