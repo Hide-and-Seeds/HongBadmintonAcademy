@@ -55,21 +55,38 @@ export default async function MarkingListPage() {
     groups.sort((a, b) => a.className.localeCompare(b.className));
 
     if (studentIds.size) {
-      const [{ data: asd }, { data: wk }] = await Promise.all([
-        supabase
-          .from("assessments")
-          .select("student_id")
-          .in("student_id", [...studentIds])
-          .gte("assessed_on", start)
-          .lte("assessed_on", end),
-        supabase
-          .from("weekly_marks")
-          .select("student_id, rating")
-          .in("student_id", [...studentIds])
-          .eq("week_start", weekStart),
-      ]);
+      const { data: asd } = await supabase
+        .from("assessments")
+        .select("student_id")
+        .in("student_id", [...studentIds])
+        .gte("assessed_on", start)
+        .lte("assessed_on", end);
       for (const a of asd ?? []) assessed.add(a.student_id);
-      for (const w of (wk ?? []) as any[]) markedWeek.set(w.student_id, w.rating);
+
+      // Per-session marks for this week's sessions roll up into a weekly average
+      // shown per student (marks are entered on the Attendance screen).
+      const { data: wkSessions } = await supabase
+        .from("sessions")
+        .select("id")
+        .in("class_id", classIds)
+        .gte("session_date", weekStart);
+      const wkSessionIds = (wkSessions ?? []).map((s: any) => s.id);
+
+      if (wkSessionIds.length) {
+        const { data: sm } = await supabase
+          .from("session_marks")
+          .select("student_id, rating")
+          .in("session_id", wkSessionIds)
+          .in("student_id", [...studentIds]);
+        const agg = new Map<string, { sum: number; n: number }>();
+        for (const m of (sm ?? []) as any[]) {
+          const e = agg.get(m.student_id) ?? { sum: 0, n: 0 };
+          e.sum += m.rating;
+          e.n += 1;
+          agg.set(m.student_id, e);
+        }
+        for (const [sid, e] of agg) markedWeek.set(sid, Math.round((e.sum / e.n) * 10) / 10);
+      }
     }
   }
 
@@ -77,7 +94,7 @@ export default async function MarkingListPage() {
     <div className="space-y-5">
       <PageHeader
         title="Marking"
-        description={`Monthly assessment for ${monthLabel(start)} + a quick weekly mark. Tap a student to mark.`}
+        description={`Monthly assessment for ${monthLabel(start)}. Quick per-session marks are entered on the Attendance screen; the weekly average shows here.`}
       />
 
       {groups.length === 0 ? (
@@ -94,7 +111,7 @@ export default async function MarkingListPage() {
                     </span>
                     <span className="truncate font-medium text-slate-900">{s.full_name}</span>
                     {assessed.has(s.id) ? <Badge tone="green">month ✓</Badge> : <Badge tone="slate">month —</Badge>}
-                    {markedWeek.has(s.id) ? <Badge tone="blue">week {markedWeek.get(s.id)}/5</Badge> : <Badge tone="slate">week —</Badge>}
+                    {markedWeek.has(s.id) ? <Badge tone="blue">wk {markedWeek.get(s.id)}/5</Badge> : <Badge tone="slate">wk —</Badge>}
                   </div>
                   <LinkButton href={`/coach/marking/${s.id}`} variant="secondary" className="shrink-0 !px-3 !py-1.5 text-xs">
                     {assessed.has(s.id) ? "View / re-mark" : "Mark"}

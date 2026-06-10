@@ -23,3 +23,27 @@ export async function markAttendance(formData: FormData) {
 
   revalidatePath("/coach/attendance");
 }
+
+// Quick per-session performance mark (1–5), recorded right after the session
+// while it's fresh — replaces the old weekly mark. Upserts so re-tapping a
+// different number overwrites. RLS (session_marks) gates it to the student's
+// coach.
+export async function markSessionMark(formData: FormData) {
+  const session_id = String(formData.get("session_id"));
+  const student_id = String(formData.get("student_id"));
+  const rating = Number(formData.get("rating"));
+  if (!session_id || !student_id) return;
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  await supabase.from("session_marks").upsert(
+    { session_id, student_id, coach_id: user?.id ?? null, rating },
+    { onConflict: "session_id,student_id" },
+  );
+
+  revalidatePath("/coach/attendance");
+}

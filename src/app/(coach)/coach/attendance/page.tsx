@@ -4,7 +4,7 @@ import { PageHeader, Section, Badge, EmptyState, cn } from "@/components/ui";
 import { formatTime, formatDateTime } from "@/lib/format";
 import type { AttendanceStatus } from "@/lib/types";
 import { coachClassIds } from "../_data";
-import { markAttendance } from "./actions";
+import { markAttendance, markSessionMark } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -36,12 +36,18 @@ export default async function CoachAttendancePage() {
 
   const blocks = [];
   for (const s of sessions ?? []) {
-    const [{ data: enr }, { data: att }] = await Promise.all([
+    const [{ data: enr }, { data: att }, { data: marks }] = await Promise.all([
       supabase.from("enrollments").select("students(id, full_name)").eq("class_id", s.class_id).eq("active", true),
       supabase.from("attendance").select("student_id, status, tap_in_at").eq("session_id", s.id),
+      supabase.from("session_marks").select("student_id, rating").eq("session_id", s.id),
     ]);
     const map = new Map((att ?? []).map((a: any) => [a.student_id, a]));
-    const roster = (enr ?? []).map((e: any) => ({ student: e.students, att: map.get(e.students?.id) }));
+    const markMap = new Map((marks ?? []).map((m: any) => [m.student_id, m.rating as number]));
+    const roster = (enr ?? []).map((e: any) => ({
+      student: e.students,
+      att: map.get(e.students?.id),
+      mark: markMap.get(e.students?.id),
+    }));
     const present = roster.filter((r) => r.att && (r.att.status === "present" || r.att.status === "late")).length;
     blocks.push({ session: s, roster, present });
   }
@@ -98,6 +104,34 @@ export default async function CoachAttendancePage() {
                           </button>
                         </form>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Per-session performance mark (1–5) — mark now, while fresh. */}
+                  {r.student?.id && (
+                    <div className="flex w-full items-center gap-1.5 border-t border-dashed border-slate-100 pt-2">
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Perf</span>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <form key={n} action={markSessionMark}>
+                          <input type="hidden" name="session_id" value={session.id} />
+                          <input type="hidden" name="student_id" value={r.student.id} />
+                          <input type="hidden" name="rating" value={n} />
+                          <button
+                            type="submit"
+                            className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ring-1 ring-inset transition-colors",
+                              r.mark === n
+                                ? "bg-green-600 text-white ring-transparent"
+                                : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50",
+                            )}
+                          >
+                            {n}
+                          </button>
+                        </form>
+                      ))}
+                      <span className="ml-1 text-xs text-slate-400">
+                        {r.mark ? `${r.mark}/5` : "1 = needs work · 5 = excellent"}
+                      </span>
                     </div>
                   )}
                 </li>

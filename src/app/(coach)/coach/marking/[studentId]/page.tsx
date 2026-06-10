@@ -5,8 +5,8 @@ import {
   PageHeader, Section, Field, Input, Textarea, Button, LinkButton,
   Table, Th, Td, EmptyState, Badge,
 } from "@/components/ui";
-import { formatDate, formatDateTime, monthLabel, weekLabel, currentWeekStartMYT } from "@/lib/format";
-import { createAssessment, addNote, markWeek } from "../actions";
+import { formatDate, formatDateTime, monthLabel } from "@/lib/format";
+import { createAssessment, addNote } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -58,8 +58,7 @@ export default async function MarkStudentPage({
     ? await supabase.from("marking_criteria").select("*").eq("scheme_id", scheme.id).order("sort_order")
     : { data: [] as any[] };
 
-  const weekStart = currentWeekStartMYT();
-  const [{ data: history }, { data: notes }, { data: thisWeek }, { data: weekHistory }] = await Promise.all([
+  const [{ data: history }, { data: notes }, { data: sessionMarks }] = await Promise.all([
     supabase
       .from("assessments")
       .select("id, assessed_on, overall_score, comment, marking_schemes(name)")
@@ -73,19 +72,12 @@ export default async function MarkStudentPage({
       .order("created_at", { ascending: false })
       .limit(20),
     supabase
-      .from("weekly_marks")
-      .select("rating, comment, week_start")
+      .from("session_marks")
+      .select("id, rating, comment, created_at, sessions(session_date)")
       .eq("student_id", studentId)
-      .eq("week_start", weekStart)
-      .maybeSingle(),
-    supabase
-      .from("weekly_marks")
-      .select("week_start, rating, comment")
-      .eq("student_id", studentId)
-      .order("week_start", { ascending: false })
-      .limit(8),
+      .order("created_at", { ascending: false })
+      .limit(12),
   ]);
-  const weekRating = (thisWeek as any)?.rating as number | undefined;
 
   return (
     <div className="space-y-6">
@@ -105,39 +97,10 @@ export default async function MarkStudentPage({
 
       {saved && (
         <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          {saved === "week" ? "Weekly mark saved." : "Assessment saved."}
+          Assessment saved.
         </p>
       )}
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-
-      {/* This week — quick 1–5 check-in (separate from the monthly assessment) */}
-      <Section title="This week" description={`Quick progress mark · ${weekLabel(weekStart)}`}>
-        <form action={markWeek} className="space-y-3">
-          <input type="hidden" name="student_id" value={student.id} />
-          <div className="flex flex-wrap items-center gap-2">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="submit"
-                name="rating"
-                value={n}
-                className={
-                  "flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold ring-1 ring-inset transition-colors " +
-                  (weekRating === n
-                    ? "bg-green-600 text-white ring-transparent"
-                    : "bg-white text-slate-700 ring-slate-300 hover:bg-slate-50")
-                }
-              >
-                {n}
-              </button>
-            ))}
-            <span className="ml-2 text-xs text-slate-500">
-              {weekRating ? `Marked ${weekRating}/5 this week — tap to change` : "1 = needs work · 5 = excellent"}
-            </span>
-          </div>
-          <Input name="comment" placeholder="Optional note for this week…" defaultValue={(thisWeek as any)?.comment ?? ""} />
-        </form>
-      </Section>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* New assessment */}
@@ -217,25 +180,25 @@ export default async function MarkStudentPage({
         )}
       </Section>
 
-      {/* Weekly marks history */}
-      <Section title="Weekly marks" flush>
-        {weekHistory && weekHistory.length > 0 ? (
+      {/* Per-session marks history */}
+      <Section title="Session marks" description="Quick 1–5 marks recorded on the Attendance screen" flush>
+        {sessionMarks && sessionMarks.length > 0 ? (
           <Table>
             <thead>
-              <tr><Th>Week</Th><Th>Rating</Th><Th>Note</Th></tr>
+              <tr><Th>Session</Th><Th>Rating</Th><Th>Note</Th></tr>
             </thead>
             <tbody>
-              {(weekHistory as any[]).map((w) => (
-                <tr key={w.week_start} className="hover:bg-slate-50">
-                  <Td>{weekLabel(w.week_start)}</Td>
-                  <Td><Badge tone={w.rating >= 4 ? "green" : w.rating >= 3 ? "blue" : "yellow"}>{w.rating}/5</Badge></Td>
-                  <Td className="max-w-sm truncate text-slate-500" title={w.comment ?? ""}>{w.comment ?? "—"}</Td>
+              {(sessionMarks as any[]).map((m) => (
+                <tr key={m.id} className="hover:bg-slate-50">
+                  <Td>{formatDate(m.sessions?.session_date ?? m.created_at)}</Td>
+                  <Td><Badge tone={m.rating >= 4 ? "green" : m.rating >= 3 ? "blue" : "yellow"}>{m.rating}/5</Badge></Td>
+                  <Td className="max-w-sm truncate text-slate-500" title={m.comment ?? ""}>{m.comment ?? "—"}</Td>
                 </tr>
               ))}
             </tbody>
           </Table>
         ) : (
-          <div className="p-5"><EmptyState message="No weekly marks yet." /></div>
+          <div className="p-5"><EmptyState message="No session marks yet — mark students on the Attendance screen." /></div>
         )}
       </Section>
     </div>
