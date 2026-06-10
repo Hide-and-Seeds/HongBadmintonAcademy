@@ -6,7 +6,7 @@ import {
   PageHeader, StatCard, Section, Table, Th, Td, Badge, EmptyState, LinkButton,
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { formatDate, formatDateTime, formatCurrency, monthLabel } from "@/lib/format";
+import { formatDate, formatDateTime, formatCurrency, monthLabel, formatTime } from "@/lib/format";
 import type { AttendanceStatus, InvoiceStatus, FeeInterval } from "@/lib/types";
 import { payInvoice } from "../../invoices/actions";
 
@@ -52,7 +52,7 @@ export default async function ChildDetailPage({
   ] = await Promise.all([
     supabase
       .from("enrollments")
-      .select("classes(name, level)")
+      .select("class_id, classes(name)")
       .eq("student_id", id)
       .eq("active", true)
       .limit(1)
@@ -82,6 +82,19 @@ export default async function ChildDetailPage({
       .order("created_at", { ascending: false }),
   ]);
 
+  const classId = (enrollment as any)?.class_id ?? null;
+  const today = new Date().toLocaleDateString("en-CA");
+  const { data: upcomingSessions } = classId
+    ? await supabase
+        .from("sessions")
+        .select("id, session_date, start_time, end_time, location, status")
+        .eq("class_id", classId)
+        .gte("session_date", today)
+        .order("session_date")
+        .order("start_time")
+        .limit(6)
+    : { data: [] as any[] };
+
   const cls = (enrollment as any)?.classes ?? null;
   const age = ageFromDob(student.dob);
 
@@ -102,7 +115,6 @@ export default async function ChildDetailPage({
 
   const subtitle = [
     age != null ? `Age ${age}` : null,
-    cls?.level ?? null,
     cls?.name ?? null,
   ].filter(Boolean).join(" · ") || "No class enrolment yet";
 
@@ -194,6 +206,30 @@ export default async function ChildDetailPage({
         )}
       </Section>
 
+      {/* ─── Upcoming sessions ──────────────────────────────────────────── */}
+      <Section title="Upcoming sessions" flush>
+        {upcomingSessions && upcomingSessions.length ? (
+          <ul className="divide-y divide-slate-100">
+            {upcomingSessions.map((s: any) => (
+              <li key={s.id} className="flex items-center justify-between px-5 py-4">
+                <div>
+                  <div className="font-semibold text-slate-900">{formatDate(s.session_date)}</div>
+                  <div className="text-sm text-slate-500">
+                    {formatTime(s.start_time)}–{formatTime(s.end_time)}
+                    {s.location ? ` · ${s.location}` : ""}
+                  </div>
+                </div>
+                <Badge tone={s.status === "completed" ? "green" : s.status === "cancelled" ? "red" : "blue"}>
+                  {s.status}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="p-5"><EmptyState message="No upcoming sessions." /></div>
+        )}
+      </Section>
+
       {/* ─── Attendance (recent first; older collapsed) ──────────────────── */}
       <Section title="Attendance history" flush>
         {att.length ? (
@@ -202,7 +238,7 @@ export default async function ChildDetailPage({
               <table className="w-full text-sm">
                 <thead><tr><Th>Date</Th><Th>Class</Th><Th>Status</Th><Th>Tap in</Th></tr></thead>
                 <tbody>
-                  {att.slice(0, 6).map((a: any, i) => (
+                  {att.slice(0, 3).map((a: any, i) => (
                     <tr key={i}>
                       <Td>{formatDate(a.sessions?.session_date)}</Td>
                       <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
@@ -213,15 +249,15 @@ export default async function ChildDetailPage({
                 </tbody>
               </table>
             </div>
-            {att.length > 6 && (
+            {att.length > 3 && (
               <details className="border-t border-slate-100">
                 <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-green-700 hover:bg-slate-50">
-                  Show {att.length - 6} earlier sessions
+                  Show {att.length - 3} earlier sessions
                 </summary>
                 <div className="overflow-x-auto border-t border-slate-100">
                   <table className="w-full text-sm">
                     <tbody>
-                      {att.slice(6).map((a: any, i) => (
+                      {att.slice(3).map((a: any, i) => (
                         <tr key={i}>
                           <Td>{formatDate(a.sessions?.session_date)}</Td>
                           <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>

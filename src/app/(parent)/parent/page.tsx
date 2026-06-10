@@ -124,14 +124,7 @@ export default async function ParentDashboard() {
                       <div className="text-base font-semibold text-slate-900 group-hover:text-green-700">
                         {c.full_name}
                       </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                        {lvl?.level ? (
-                          <Badge tone="blue">{lvl.level}</Badge>
-                        ) : (
-                          <Badge tone="slate">No level</Badge>
-                        )}
-                        <span className="text-sm text-slate-500">{lvl?.name ?? "Not enrolled"}</span>
-                      </div>
+                      <div className="mt-1 text-sm text-slate-500">{lvl?.name ?? "Not enrolled"}</div>
                     </div>
                     <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
                   </div>

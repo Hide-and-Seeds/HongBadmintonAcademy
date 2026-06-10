@@ -65,6 +65,7 @@ export const COACH_NAV: NavItem[] = [
 
 export const PARENT_NAV: NavItem[] = [
   { href: "/parent", label: "Dashboard" },
+  { href: "/parent/schedule", label: "Schedule" },
   { href: "/parent/scorecards", label: "Score Cards" },
   { href: "/parent/invoices", label: "Fees & Payments" },
 ];
