@@ -2,8 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
+import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { formatDate } from "@/lib/format";
-import { deleteStudent } from "./actions";
+import { deleteStudent, deleteStudents } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -81,9 +82,11 @@ export default async function StudentsPage() {
           {/* Desktop: dense table */}
           <div className="hidden sm:block">
             <Section title={`Students (${students.length})`} flush>
+              <BulkProvider>
               <Table>
                 <thead>
                   <tr>
+                    <Th className="w-10"><BulkSelectAll /></Th>
                     <Th>Name</Th>
                     <Th>Parent</Th>
                     <Th>NFC tag</Th>
@@ -95,6 +98,7 @@ export default async function StudentsPage() {
                 <tbody>
                   {students.map((s: any) => (
                     <tr key={s.id} className="hover:bg-slate-50">
+                      <Td><BulkCheckbox id={s.id} /></Td>
                       <Td>
                         <Link href={`/admin/students/${s.id}`} className="group flex items-center gap-3">
                           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
@@ -127,6 +131,14 @@ export default async function StudentsPage() {
                   ))}
                 </tbody>
               </Table>
+              <div className="px-5 pb-5">
+                <BulkBar
+                  action={deleteStudents}
+                  label="student"
+                  confirmText="Delete {n} selected student(s)? This removes their attendance, marks and scorecards."
+                />
+              </div>
+              </BulkProvider>
             </Section>
           </div>
         </>

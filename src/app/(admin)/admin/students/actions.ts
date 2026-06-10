@@ -43,6 +43,14 @@ export async function deleteStudent(formData: FormData) {
   revalidatePath("/admin/students");
 }
 
+export async function deleteStudents(formData: FormData) {
+  const ids = formData.getAll("ids").map(String);
+  if (!ids.length) return;
+  const supabase = await createClient();
+  await supabase.from("students").delete().in("id", ids);
+  revalidatePath("/admin/students");
+}
+
 // Reward system: award points to a student (optionally tied to a rule).
 export async function awardReward(formData: FormData) {
   const student_id = String(formData.get("student_id"));

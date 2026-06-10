@@ -118,6 +118,25 @@ export function AppShell({
 
   // Logo is a one-tap shortcut back to the role's home (the main menu).
   const home = ROOTS.includes(`/${role}`) ? `/${role}` : "/";
+  const homeActive = pathname === home;
+
+  // Dashboard is pinned above the section groups so it's always one tap away
+  // (no expanding an accordion to find it).
+  const dashboardLink = (
+    <Link
+      href={home}
+      onClick={() => setOpen(false)}
+      className={cn(
+        "mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+        homeActive
+          ? "bg-green-50 font-semibold text-green-700"
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+      )}
+    >
+      <span className="text-base leading-none">🏠</span>
+      Dashboard
+    </Link>
+  );
   const brand = (
     <Link
       href={home}
@@ -162,6 +181,7 @@ export function AppShell({
         >
           <div className="mb-6 hidden px-2 md:block">{brand}</div>
 
+          {dashboardLink}
           {nav}
 
           <div className="mt-6 border-t border-slate-200 pt-4">

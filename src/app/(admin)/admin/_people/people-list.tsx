@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, LinkButton, Table, Th, Td, EmptyState, Badge } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
+import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { formatDate } from "@/lib/format";
 import type { Role } from "@/lib/types";
 import type { ReactNode } from "react";
@@ -15,10 +16,12 @@ function initials(name: string): string {
 export async function PeopleList({
   role,
   deleteAction,
+  deleteManyAction,
   extraAction,
 }: {
   role: Role;
   deleteAction: (formData: FormData) => void;
+  deleteManyAction: (formData: FormData) => void;
   extraAction?: ReactNode;
 }) {
   const supabase = await createClient();
@@ -50,9 +53,11 @@ export async function PeopleList({
 
       {people && people.length > 0 ? (
         <Section title={`${title} (${people.length})`} flush>
+          <BulkProvider>
           <Table>
             <thead>
               <tr>
+                <Th className="w-10"><BulkSelectAll /></Th>
                 <Th>Name</Th>
                 <Th>Email</Th>
                 <Th>Phone</Th>
@@ -64,6 +69,7 @@ export async function PeopleList({
             <tbody>
               {people.map((p: any) => (
                 <tr key={p.id} className="hover:bg-slate-50">
+                  <Td><BulkCheckbox id={p.id} /></Td>
                   <Td>
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
@@ -97,6 +103,14 @@ export async function PeopleList({
               ))}
             </tbody>
           </Table>
+          <div className="px-5 pb-5">
+            <BulkBar
+              action={deleteManyAction}
+              label={isCoach ? "coach" : "parent"}
+              confirmText={`Delete {n} selected ${isCoach ? "coach" : "parent"} account(s)? This permanently removes their logins.`}
+            />
+          </div>
+          </BulkProvider>
         </Section>
       ) : (
         <EmptyState message={`No ${title.toLowerCase()} yet.`} />

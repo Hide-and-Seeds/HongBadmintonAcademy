@@ -47,6 +47,14 @@ export async function deleteClass(formData: FormData) {
   revalidatePath("/admin/classes");
 }
 
+export async function deleteClasses(formData: FormData) {
+  const ids = formData.getAll("ids").map(String);
+  if (!ids.length) return;
+  const supabase = await createClient();
+  await supabase.from("classes").delete().in("id", ids);
+  revalidatePath("/admin/classes");
+}
+
 // ─── Schedules ──────────────────────────────────────────────────────────────
 export async function addSchedule(formData: FormData) {
   const class_id = String(formData.get("class_id"));
@@ -178,5 +186,15 @@ export async function deleteSession(formData: FormData) {
   const class_id = String(formData.get("class_id"));
   const supabase = await createClient();
   await supabase.from("sessions").delete().eq("id", id);
+  revalidateSchedule(class_id);
+}
+
+export async function deleteSessions(formData: FormData) {
+  const class_id = String(formData.get("class_id"));
+  const ids = formData.getAll("ids").map(String);
+  if (ids.length) {
+    const supabase = await createClient();
+    await supabase.from("sessions").delete().in("id", ids);
+  }
   revalidateSchedule(class_id);
 }

@@ -66,6 +66,15 @@ export async function deletePerson(role: Role, formData: FormData) {
   revalidatePath(basePath(role));
 }
 
+export async function deletePeople(role: Role, formData: FormData) {
+  const ids = formData.getAll("ids").map(String);
+  if (!ids.length) return;
+  const db = createAdminClient();
+  // No bulk auth-delete API — remove each user; the profile row cascades.
+  await Promise.all(ids.map((id) => db.auth.admin.deleteUser(id)));
+  revalidatePath(basePath(role));
+}
+
 // Set a coach's per-lesson pay rate (drives the auto-calculated payroll).
 export async function setCoachRate(formData: FormData) {
   const id = String(formData.get("id"));

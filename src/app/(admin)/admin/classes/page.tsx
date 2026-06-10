@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, LinkButton, Input, Button, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
-import { createClass, deleteClass } from "./actions";
+import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
+import { createClass, deleteClass, deleteClasses } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +28,11 @@ export default async function ClassesPage() {
 
       {classes && classes.length > 0 ? (
         <Section title={`Classes (${classes.length})`} flush>
+          <BulkProvider>
           <Table>
             <thead>
               <tr>
+                <Th className="w-10"><BulkSelectAll /></Th>
                 <Th>Name</Th>
                 <Th>Primary coach</Th>
                 <Th>Students</Th>
@@ -40,6 +43,7 @@ export default async function ClassesPage() {
             <tbody>
               {classes.map((c: any) => (
                 <tr key={c.id} className="hover:bg-slate-50">
+                  <Td><BulkCheckbox id={c.id} /></Td>
                   <Td className="font-medium text-slate-900">{c.name}</Td>
                   <Td className="text-slate-500">{c.coach?.full_name ?? "—"}</Td>
                   <Td className="tabular-nums">{c.enrollments?.[0]?.count ?? 0}</Td>
@@ -63,6 +67,14 @@ export default async function ClassesPage() {
               ))}
             </tbody>
           </Table>
+          <div className="px-5 pb-5">
+            <BulkBar
+              action={deleteClasses}
+              label="class"
+              confirmText="Delete {n} selected class(es)? This also removes their schedules and sessions."
+            />
+          </div>
+          </BulkProvider>
         </Section>
       ) : (
         <EmptyState message="No classes yet." />

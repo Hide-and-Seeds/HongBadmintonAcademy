@@ -5,12 +5,13 @@ import {
   Table, Th, Td, EmptyState, LinkButton,
 } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
+import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { dayName, formatDate, formatTime, DAY_NAMES } from "@/lib/format";
 import { ClassForm } from "../class-form";
 import {
   updateClass, addSchedule, deleteSchedule, addCoach, removeCoach,
   enrollStudent, unenrollStudent, generateSessions,
-  cancelSession, restoreSession, deleteSession,
+  cancelSession, restoreSession, deleteSession, deleteSessions,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -202,15 +203,18 @@ export default async function ManageClassPage({
           </form>
         </div>
         {upcoming && upcoming.length > 0 ? (
+          <BulkProvider>
           <Table>
             <thead>
               <tr>
+                <Th className="w-10"><BulkSelectAll /></Th>
                 <Th>Date</Th><Th>Time</Th><Th>Location</Th><Th>Status</Th><Th className="text-right">Actions</Th>
               </tr>
             </thead>
             <tbody>
               {(upcoming as any[]).map((s) => (
                 <tr key={s.id} className="hover:bg-slate-50">
+                  <Td><BulkCheckbox id={s.id} /></Td>
                   <Td className="font-medium text-slate-900">{formatDate(s.session_date)}</Td>
                   <Td>{formatTime(s.start_time)}–{formatTime(s.end_time)}</Td>
                   <Td className="text-slate-500">{s.location ?? "—"}</Td>
@@ -245,6 +249,15 @@ export default async function ManageClassPage({
               ))}
             </tbody>
           </Table>
+          <div className="px-5 pb-5">
+            <BulkBar
+              action={deleteSessions}
+              label="session"
+              hidden={[{ name: "class_id", value: classRow.id }]}
+              confirmText="Delete {n} selected session(s)?"
+            />
+          </div>
+          </BulkProvider>
         ) : (
           <div className="px-5 pt-5">
             <EmptyState message="No upcoming sessions. Add a schedule slot, then Generate." />

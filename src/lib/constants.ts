@@ -13,13 +13,9 @@ export interface NavItem {
 }
 
 // Admin sidebar — frequent sections first; occasional tools tucked under "More".
+// "Dashboard" (the role home) is pinned by AppShell above these groups, so it is
+// not repeated here.
 export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
-  {
-    group: "Overview",
-    items: [
-      { href: "/admin", label: "Dashboard" },
-    ],
-  },
   {
     group: "People",
     items: [
@@ -57,14 +53,13 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
   },
 ];
 
+// "Dashboard" is pinned by AppShell, so it is omitted from these lists.
 export const COACH_NAV: NavItem[] = [
-  { href: "/coach", label: "Dashboard" },
   { href: "/coach/marking", label: "Marking" },
   { href: "/coach/attendance", label: "Attendance" },
 ];
 
 export const PARENT_NAV: NavItem[] = [
-  { href: "/parent", label: "Dashboard" },
   { href: "/parent/scorecards", label: "Score Cards" },
   { href: "/parent/invoices", label: "Fees & Payments" },
 ];
