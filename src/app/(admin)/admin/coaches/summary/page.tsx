@@ -25,11 +25,17 @@ export default async function CoachSummaryPage() {
   const tm = monthBounds(0);
   const lm = monthBounds(-1);
 
-  const [{ data: coaches }, { data: classes }, { data: ccs }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, pay_per_lesson").eq("role", "coach").eq("is_active", true).order("full_name"),
+  const [{ data: coaches }, { data: classes }, { data: ccs }, { data: pay }] = await Promise.all([
+    supabase.from("profiles").select("id, full_name").eq("role", "coach").eq("is_active", true).order("full_name"),
     supabase.from("classes").select("id, coach_id"),
     supabase.from("class_coaches").select("class_id, coach_id"),
+    supabase.from("coach_pay").select("coach_id, pay_per_lesson"),
   ]);
+
+  // Pay lives in the admin-only coach_pay table; default to 0 when unset.
+  const rateByCoach = new Map<string, number>(
+    (pay ?? []).map((p: any) => [p.coach_id, Number(p.pay_per_lesson ?? 0)]),
+  );
 
   const { data: sess } = await supabase
     .from("sessions")
@@ -61,7 +67,7 @@ export default async function CoachSummaryPage() {
     const ids = classIdsFor(co.id);
     const thisSess = (sess ?? []).filter((s: any) => ids.has(s.class_id) && s.session_date >= tm.start);
     const lastSess = (sess ?? []).filter((s: any) => ids.has(s.class_id) && s.session_date < tm.start);
-    const rate = Number(co.pay_per_lesson ?? 0);
+    const rate = rateByCoach.get(co.id) ?? 0;
     let a = 0;
     let t = 0;
     for (const s of thisSess) {

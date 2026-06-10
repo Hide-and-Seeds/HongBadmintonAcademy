@@ -75,12 +75,16 @@ export async function deletePeople(role: Role, formData: FormData) {
   revalidatePath(basePath(role));
 }
 
-// Set a coach's per-lesson pay rate (drives the auto-calculated payroll).
+// Set a coach's per-lesson pay rate (drives the auto-calculated payroll). Stored
+// in the admin-only coach_pay table, not on profiles, so coaches can't read it.
+// Service-role client bypasses RLS.
 export async function setCoachRate(formData: FormData) {
   const id = String(formData.get("id"));
   const rate = Number(formData.get("rate"));
   if (!id || !Number.isFinite(rate) || rate < 0) return;
   const db = createAdminClient();
-  await db.from("profiles").update({ pay_per_lesson: rate }).eq("id", id);
+  await db
+    .from("coach_pay")
+    .upsert({ coach_id: id, pay_per_lesson: rate, updated_at: new Date().toISOString() });
   revalidatePath("/admin/coaches/summary");
 }
