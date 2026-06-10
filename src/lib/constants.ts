@@ -51,6 +51,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
 export const COACH_NAV: NavItem[] = [
   { href: "/coach/marking", label: "Marking" },
   { href: "/coach/attendance", label: "Attendance" },
+  { href: "/coach/payroll", label: "My Payroll" },
 ];
 
 export const PARENT_NAV: NavItem[] = [

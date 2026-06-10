@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 const COACH_ACTIONS = [
   { href: "/coach/marking", icon: "📊", title: "Marking", sub: "Score students this month" },
   { href: "/coach/attendance", icon: "📋", title: "Attendance", sub: "Today's tap-ins" },
+  { href: "/coach/payroll", icon: "💰", title: "My Payroll", sub: "Lessons & pay this month" },
 ];
 
 export default async function CoachDashboard() {
@@ -54,7 +55,7 @@ export default async function CoachDashboard() {
         description="Your classes and today's sessions."
       />
 
-      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {COACH_ACTIONS.map((q) => (
           <Link
             key={q.href}
