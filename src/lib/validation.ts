@@ -27,7 +27,6 @@ export const profileSchema = z.object({
 
 export const classSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
-  level: optionalStr,
   description: optionalStr,
   coach_id: optionalId,
   default_location: optionalStr,

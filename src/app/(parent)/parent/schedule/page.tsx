@@ -64,41 +64,50 @@ export default async function ParentSchedulePage() {
     if (e.class_id && e.classes?.name) classNames.set(e.class_id, e.classes.name);
   }
 
+  // Group sessions under one date heading so the same date isn't repeated row
+  // after row — parents scan by day, not by class.
+  const byDate = new Map<string, any[]>();
+  for (const s of (sessions ?? []) as any[]) {
+    const list = byDate.get(s.session_date) ?? [];
+    list.push(s);
+    byDate.set(s.session_date, list);
+  }
+  const dates = [...byDate.keys()];
+
   return (
     <div className="space-y-6">
       <PageHeader title="Schedule" description="Upcoming sessions for your children." />
 
-      {sessions && sessions.length ? (
-        <Section flush>
-          <ul className="divide-y divide-slate-100">
-            {(sessions as any[]).map((s) => {
-              const names = classToChildren.get(s.class_id) ?? [];
-              const clsName = classNames.get(s.class_id) ?? "—";
-              return (
-                <li key={s.id} className="px-5 py-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-slate-900">{clsName}</div>
-                      <div className="mt-0.5 text-sm font-medium text-slate-700">
-                        {formatDate(s.session_date)}
+      {dates.length ? (
+        <div className="space-y-5">
+          {dates.map((date) => (
+            <Section key={date} title={formatDate(date)} flush>
+              <ul className="divide-y divide-slate-100">
+                {byDate.get(date)!.map((s) => {
+                  const names = classToChildren.get(s.class_id) ?? [];
+                  const clsName = classNames.get(s.class_id) ?? "—";
+                  return (
+                    <li key={s.id} className="flex items-start justify-between gap-3 px-5 py-3.5">
+                      <div>
+                        <div className="font-semibold text-slate-900">{clsName}</div>
+                        <div className="text-sm text-slate-500">
+                          {formatTime(s.start_time)}–{formatTime(s.end_time)}
+                          {s.location ? ` · ${s.location}` : ""}
+                        </div>
+                        {names.length > 0 && (
+                          <div className="mt-1 text-xs text-slate-400">{names.join(", ")}</div>
+                        )}
                       </div>
-                      <div className="text-sm text-slate-500">
-                        {formatTime(s.start_time)}–{formatTime(s.end_time)}
-                        {s.location ? ` · ${s.location}` : ""}
-                      </div>
-                      {names.length > 0 && (
-                        <div className="mt-1 text-xs text-slate-400">{names.join(", ")}</div>
-                      )}
-                    </div>
-                    <Badge tone={s.status === "completed" ? "green" : s.status === "cancelled" ? "red" : "blue"}>
-                      {s.status}
-                    </Badge>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </Section>
+                      <Badge tone={s.status === "completed" ? "green" : s.status === "cancelled" ? "red" : "blue"}>
+                        {s.status}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Section>
+          ))}
+        </div>
       ) : (
         <EmptyState message="No upcoming sessions scheduled." />
       )}

@@ -1,15 +1,16 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  PageHeader, Section, Field, Input, Select, Button,
+  PageHeader, Section, Field, Input, Select, Button, Badge,
   Table, Th, Td, EmptyState, LinkButton,
 } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
-import { dayName, formatTime, DAY_NAMES } from "@/lib/format";
+import { dayName, formatDate, formatTime, DAY_NAMES } from "@/lib/format";
 import { ClassForm } from "../class-form";
 import {
   updateClass, addSchedule, deleteSchedule, addCoach, removeCoach,
   enrollStudent, unenrollStudent, generateSessions,
+  cancelSession, restoreSession, deleteSession,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export default async function ManageClassPage({
   const { id } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
+  const today = new Date().toLocaleDateString("en-CA");
 
   const [
     { data: classRow },
@@ -33,6 +35,7 @@ export default async function ManageClassPage({
     { data: enrollments },
     { data: students },
     { count: sessionCount },
+    { data: upcoming },
   ] = await Promise.all([
     supabase.from("classes").select("*").eq("id", id).maybeSingle(),
     supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name"),
@@ -41,6 +44,14 @@ export default async function ManageClassPage({
     supabase.from("enrollments").select("id, student_id, students(full_name)").eq("class_id", id),
     supabase.from("students").select("id, full_name").eq("status", "active").order("full_name"),
     supabase.from("sessions").select("*", { count: "exact", head: true }).eq("class_id", id),
+    supabase
+      .from("sessions")
+      .select("id, session_date, start_time, end_time, location, status")
+      .eq("class_id", id)
+      .gte("session_date", today)
+      .order("session_date")
+      .order("start_time")
+      .limit(50),
   ]);
 
   if (!classRow) notFound();
@@ -180,16 +191,65 @@ export default async function ManageClassPage({
       </Section>
 
       {/* Sessions */}
-      <Section title="Sessions">
-        <div className="flex items-center justify-between">
+      <Section title="Upcoming sessions" flush>
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-5">
           <div className="text-sm text-slate-600">
-            <span className="text-2xl font-bold text-slate-900">{sessionCount ?? 0}</span> session(s) scheduled.
+            <span className="text-2xl font-bold text-slate-900">{sessionCount ?? 0}</span> total scheduled.
           </div>
           <form action={generateSessions}>
             <input type="hidden" name="class_id" value={classRow.id} />
             <Button type="submit" variant="secondary">Generate next 4 weeks</Button>
           </form>
         </div>
+        {upcoming && upcoming.length > 0 ? (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Date</Th><Th>Time</Th><Th>Location</Th><Th>Status</Th><Th className="text-right">Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {(upcoming as any[]).map((s) => (
+                <tr key={s.id} className="hover:bg-slate-50">
+                  <Td className="font-medium text-slate-900">{formatDate(s.session_date)}</Td>
+                  <Td>{formatTime(s.start_time)}–{formatTime(s.end_time)}</Td>
+                  <Td className="text-slate-500">{s.location ?? "—"}</Td>
+                  <Td>
+                    <Badge tone={s.status === "cancelled" ? "red" : s.status === "completed" ? "green" : "blue"}>
+                      {s.status}
+                    </Badge>
+                  </Td>
+                  <Td className="text-right">
+                    <div className="flex justify-end gap-2">
+                      {s.status === "cancelled" ? (
+                        <form action={restoreSession}>
+                          <input type="hidden" name="id" value={s.id} />
+                          <input type="hidden" name="class_id" value={classRow.id} />
+                          <Button type="submit" variant="secondary">Restore</Button>
+                        </form>
+                      ) : (
+                        <form action={cancelSession}>
+                          <input type="hidden" name="id" value={s.id} />
+                          <input type="hidden" name="class_id" value={classRow.id} />
+                          <Button type="submit" variant="secondary">Cancel</Button>
+                        </form>
+                      )}
+                      <form action={deleteSession}>
+                        <input type="hidden" name="id" value={s.id} />
+                        <input type="hidden" name="class_id" value={classRow.id} />
+                        <ConfirmButton label="Delete" confirmText="Delete this session?" />
+                      </form>
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        ) : (
+          <div className="px-5 pt-5">
+            <EmptyState message="No upcoming sessions. Add a schedule slot, then Generate." />
+          </div>
+        )}
       </Section>
     </div>
   );

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Section, LinkButton, Input, Button, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
-import { deleteClass } from "./actions";
+import { createClass, deleteClass } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,12 @@ export default async function ClassesPage() {
       <PageHeader
         title="Classes & Schedule"
         description="Training classes, weekly schedules, coaches and enrolment."
-        action={<LinkButton href="/admin/classes/new">+ New class</LinkButton>}
+        action={
+          <form action={createClass} className="flex items-center gap-2">
+            <Input name="name" placeholder="New class name" required className="h-9 w-48" />
+            <Button type="submit">+ Create</Button>
+          </form>
+        }
       />
 
       {classes && classes.length > 0 ? (
@@ -26,7 +31,6 @@ export default async function ClassesPage() {
             <thead>
               <tr>
                 <Th>Name</Th>
-                <Th>Level</Th>
                 <Th>Primary coach</Th>
                 <Th>Students</Th>
                 <Th>Active</Th>
@@ -37,7 +41,6 @@ export default async function ClassesPage() {
               {classes.map((c: any) => (
                 <tr key={c.id} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{c.name}</Td>
-                  <Td>{c.level ? <Badge tone="blue">{c.level}</Badge> : "—"}</Td>
                   <Td className="text-slate-500">{c.coach?.full_name ?? "—"}</Td>
                   <Td className="tabular-nums">{c.enrollments?.[0]?.count ?? 0}</Td>
                   <Td>

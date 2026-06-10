@@ -9,6 +9,16 @@ function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
+// Sessions surface on the class page, the admin dashboard, and both parent
+// schedule views. Mutating a session must refresh all of them or those lists
+// serve stale rows from the router cache.
+function revalidateSchedule(class_id: string) {
+  revalidatePath(`/admin/classes/${class_id}`);
+  revalidatePath("/admin");
+  revalidatePath("/parent");
+  revalidatePath("/parent/schedule");
+}
+
 export async function createClass(formData: FormData) {
   const parsed = classSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) err("/admin/classes/new", parsed.error.issues[0].message);
@@ -143,5 +153,30 @@ export async function generateSessions(formData: FormData) {
       ignoreDuplicates: true,
     });
   }
-  revalidatePath(`/admin/classes/${class_id}`);
+  revalidateSchedule(class_id);
+}
+
+// ─── Single sessions (cancel / restore / delete) ─────────────────────────────
+export async function cancelSession(formData: FormData) {
+  const id = String(formData.get("id"));
+  const class_id = String(formData.get("class_id"));
+  const supabase = await createClient();
+  await supabase.from("sessions").update({ status: "cancelled" }).eq("id", id);
+  revalidateSchedule(class_id);
+}
+
+export async function restoreSession(formData: FormData) {
+  const id = String(formData.get("id"));
+  const class_id = String(formData.get("class_id"));
+  const supabase = await createClient();
+  await supabase.from("sessions").update({ status: "scheduled" }).eq("id", id);
+  revalidateSchedule(class_id);
+}
+
+export async function deleteSession(formData: FormData) {
+  const id = String(formData.get("id"));
+  const class_id = String(formData.get("class_id"));
+  const supabase = await createClient();
+  await supabase.from("sessions").delete().eq("id", id);
+  revalidateSchedule(class_id);
 }

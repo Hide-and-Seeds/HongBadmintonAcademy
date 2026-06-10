@@ -26,9 +26,6 @@ export function ClassForm({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Level">
-            <Input name="level" defaultValue={classRow?.level ?? ""} placeholder="Beginner / Intermediate" />
-          </Field>
           <Field label="Primary coach">
             <Select name="coach_id" defaultValue={classRow?.coach_id ?? ""}>
               <option value="">— none —</option>
