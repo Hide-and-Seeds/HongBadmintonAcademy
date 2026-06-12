@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Section, Table, Th, Td, Badge, EmptyState, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
-import { monthLabel, formatDateTime } from "@/lib/format";
+import { monthLabel } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
 import { generateScorecards, logScorecardSend, sendScorecard } from "./actions";
@@ -21,14 +21,14 @@ export default async function ScorecardsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Score Cards"
-        description="Monthly score cards — send to parents via WhatsApp (click-to-chat)."
+        title="Growth Reports"
+        description="Monthly growth reports — character, skills & the HBA Growth Index. Send to parents via WhatsApp."
       />
 
       <Card className="flex flex-wrap items-center justify-between gap-4 border-green-200 bg-green-50 p-5">
         <div className="text-sm text-green-800">
-          Generate score cards for <strong>{monthLabel(new Date().toISOString())}</strong> from this
-          month&apos;s marks, attendance and rewards.
+          Generate growth reports for <strong>{monthLabel(new Date().toISOString())}</strong> from this
+          month&apos;s assessments, attendance and rewards.
         </div>
         <form action={generateScorecards}>
           <SubmitButton pendingText="Generating…">Generate this month</SubmitButton>
@@ -36,12 +36,12 @@ export default async function ScorecardsPage() {
       </Card>
 
       {cards && cards.length > 0 ? (
-        <Section title={`Score cards (${cards.length})`} flush>
+        <Section title={`Growth reports (${cards.length})`} flush>
           <Table>
             <thead>
               <tr>
-                <Th>Student</Th><Th>Period</Th><Th>Avg score</Th><Th>Attendance</Th>
-                <Th>Points</Th><Th>Status</Th><Th className="text-right">Actions</Th>
+                <Th>Student</Th><Th>Period</Th><Th>Growth index</Th><Th>Stage</Th>
+                <Th>Attendance</Th><Th>Status</Th><Th className="text-right">Actions</Th>
               </tr>
             </thead>
             <tbody>
@@ -49,19 +49,21 @@ export default async function ScorecardsPage() {
                 const s = c.summary ?? {};
                 const parent = c.students?.parent;
                 const text =
-                  `🏸 ${monthLabel(c.period_month)} score card for ${c.students?.full_name ?? "your child"}\n` +
-                  `• Avg skill score: ${s.avg_score != null ? Number(s.avg_score).toFixed(1) : "—"}\n` +
+                  `🏸 ${monthLabel(c.period_month)} growth report — ${c.students?.full_name ?? "your child"}\n` +
+                  `• HBA Growth Index: ${s.growth_index != null ? s.growth_index : "—"}/100\n` +
+                  (s.stage?.label ? `• Stage: ${s.stage.label}\n` : "") +
                   `• Attendance: ${s.attendance_pct != null ? s.attendance_pct + "%" : "—"}\n` +
-                  `• Reward points: ${s.reward_points ?? 0}\n` +
-                  `View full card: ${baseUrl}/parent/scorecards`;
+                  `View full report: ${baseUrl}/parent/scorecards`;
                 const waUrl = waLink(parent?.phone, text);
                 return (
                   <tr key={c.id} className="hover:bg-slate-50">
                     <Td className="font-medium text-slate-900">{c.students?.full_name ?? "—"}</Td>
                     <Td>{monthLabel(c.period_month)}</Td>
-                    <Td className="tabular-nums">{s.avg_score != null ? Number(s.avg_score).toFixed(1) : "—"}</Td>
+                    <Td className="tabular-nums">
+                      {s.growth_index != null ? <span className="font-semibold text-emerald-700">{s.growth_index}</span> : "—"}
+                    </Td>
+                    <Td>{s.stage?.label ? <Badge tone="yellow">{s.stage.label}</Badge> : "—"}</Td>
                     <Td className="tabular-nums">{s.attendance_pct != null ? `${s.attendance_pct}%` : "—"}</Td>
-                    <Td className="tabular-nums">{s.reward_points ?? 0}</Td>
                     <Td>
                       <Badge tone={c.status === "sent" ? "green" : c.status === "generated" ? "blue" : "slate"}>
                         {c.status}
@@ -99,7 +101,7 @@ export default async function ScorecardsPage() {
           </Table>
         </Section>
       ) : (
-        <EmptyState message="No score cards yet. Generate this month's cards above." />
+        <EmptyState message="No growth reports yet. Generate this month's reports above." />
       )}
     </div>
   );

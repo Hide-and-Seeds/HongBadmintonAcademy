@@ -6,6 +6,7 @@ import {
   Table, Th, Td, EmptyState, Badge,
 } from "@/components/ui";
 import { formatDate, formatDateTime, monthLabel } from "@/lib/format";
+import { GROUP_LABEL, type GroupKey } from "@/lib/growth";
 import { createAssessment, addNote } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -83,7 +84,7 @@ export default async function MarkStudentPage({
     <div className="space-y-6">
       <LinkButton href="/coach/marking" variant="ghost" className="!px-0">← Back to students</LinkButton>
 
-      <PageHeader title={student.full_name} description={`Skills assessment · ${className ?? "—"} · ${monthLabel(mStart)}`} />
+      <PageHeader title={student.full_name} description={`Monthly growth assessment · ${className ?? "—"} · ${monthLabel(mStart)}`} />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm">
         <span className="font-medium text-slate-800">{monthLabel(mStart)} assessment</span>
@@ -107,26 +108,41 @@ export default async function MarkStudentPage({
         <div className="lg:col-span-2">
           <Section title="New assessment" description={scheme ? `Scheme: ${scheme.name}` : undefined}>
             {scheme ? (
-              <form action={createAssessment} className="space-y-4">
+              <form action={createAssessment} className="space-y-5">
                 <input type="hidden" name="student_id" value={student.id} />
                 <input type="hidden" name="scheme_id" value={scheme.id} />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {(criteria ?? []).map((c: any) => (
-                    <Field key={c.id} label={`${c.name}`} hint={`max ${Number(c.max_score)} · weight ${Number(c.weight)}`}>
-                      <Input
-                        type="number"
-                        name={`score_${c.id}`}
-                        min="0"
-                        max={c.max_score}
-                        step="0.1"
-                        defaultValue={0}
-                        required
-                      />
-                    </Field>
-                  ))}
-                </div>
-                <Field label="Comment">
-                  <Textarea name="comment" placeholder="Coach feedback for this assessment…" />
+                {(["physical", "technical", "character"] as GroupKey[]).map((g) => {
+                  const groupCrit = (criteria ?? []).filter((c: any) => c.category === g);
+                  if (!groupCrit.length) return null;
+                  return (
+                    <div key={g}>
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {GROUP_LABEL[g]}
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        {groupCrit.map((c: any) => (
+                          <Field key={c.id} label={c.name} hint={`out of ${Number(c.max_score)}`}>
+                            <Input type="number" name={`score_${c.id}`} min="0" max={c.max_score} step="1" defaultValue={0} required />
+                          </Field>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Any criteria without a group (e.g. an older scheme). */}
+                {(criteria ?? []).some((c: any) => !c.category) && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {(criteria ?? [])
+                      .filter((c: any) => !c.category)
+                      .map((c: any) => (
+                        <Field key={c.id} label={c.name} hint={`max ${Number(c.max_score)} · weight ${Number(c.weight)}`}>
+                          <Input type="number" name={`score_${c.id}`} min="0" max={c.max_score} step="0.1" defaultValue={0} required />
+                        </Field>
+                      ))}
+                  </div>
+                )}
+                <Field label="Coach observation">
+                  <Textarea name="comment" placeholder="A short narrative for the parent — effort, attitude, a moment that stood out…" />
                 </Field>
                 <Button type="submit">Save assessment</Button>
               </form>

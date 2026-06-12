@@ -31,7 +31,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/fee-plans", label: "Fee Plans" },
       { href: "/admin/invoices", label: "Invoices & Payments" },
-      { href: "/admin/scorecards", label: "Score Cards" },
+      { href: "/admin/scorecards", label: "Growth Reports" },
     ],
   },
   {
@@ -55,6 +55,6 @@ export const COACH_NAV: NavItem[] = [
 ];
 
 export const PARENT_NAV: NavItem[] = [
-  { href: "/parent/scorecards", label: "Score Cards" },
+  { href: "/parent/scorecards", label: "Growth Reports" },
   { href: "/parent/invoices", label: "Fees & Payments" },
 ];

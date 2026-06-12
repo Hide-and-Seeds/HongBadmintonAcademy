@@ -8,6 +8,7 @@ import { getBaseUrl } from "@/lib/url";
 import { monthLabel, formatDateTime } from "@/lib/format";
 import { APP_NAME } from "@/lib/constants";
 import { renderScorecardPdf } from "@/lib/scorecard-pdf";
+import { ageFromDob, stageForAge, type GroupKey } from "@/lib/growth";
 
 const BUCKET = "scorecards";
 
@@ -18,77 +19,111 @@ function monthBounds(d = new Date()) {
   return { start: fmt(start), end: fmt(end) };
 }
 
-// Aggregate the current month's data into a score card per active student,
-// render a branded PDF, and store it in the private `scorecards` bucket.
+// Aggregate the month's data into a Monthly Growth Report per active student:
+// grouped dimension scores, the HBA Growth Index (Character average), stage,
+// and a year-over-year index trend. Renders a branded PDF and stores it.
 export async function generateScorecards() {
   const supabase = await createClient();
   const admin = createAdminClient();
   const { start, end } = monthBounds();
+  const year = new Date(start).getFullYear();
+
+  // Resolve each criterion to its group (covers any scheme, old or new).
+  const { data: allCriteria } = await supabase.from("marking_criteria").select("id, name, category");
+  const catById = new Map<string, GroupKey | null>();
+  const catByName = new Map<string, GroupKey | null>();
+  for (const c of allCriteria ?? []) {
+    catById.set(c.id, (c.category as GroupKey) ?? null);
+    catByName.set(String(c.name).toLowerCase(), (c.category as GroupKey) ?? null);
+  }
 
   const { data: students } = await supabase
     .from("students")
-    .select("id, full_name")
+    .select("id, full_name, dob")
     .eq("status", "active");
 
   for (const s of students ?? []) {
-    const [{ data: assessments }, { data: att }, { data: rewards }, { data: latest }] =
-      await Promise.all([
-        supabase
-          .from("assessments")
-          .select("overall_score")
-          .eq("student_id", s.id)
-          .gte("assessed_on", start)
-          .lte("assessed_on", end),
-        supabase
-          .from("attendance")
-          .select("status, sessions!inner(session_date)")
-          .eq("student_id", s.id)
-          .gte("sessions.session_date", start)
-          .lte("sessions.session_date", end),
-        supabase
-          .from("reward_ledger")
-          .select("points")
-          .eq("student_id", s.id)
-          .gte("awarded_at", start)
-          .lte("awarded_at", `${end}T23:59:59`),
-        supabase
-          .from("assessments")
-          .select("id, comment, assessment_scores(criterion_name, score, max_score)")
-          .eq("student_id", s.id)
-          .gte("assessed_on", start)
-          .lte("assessed_on", end)
-          .order("assessed_on", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-
-    const scores = (assessments ?? [])
-      .map((a: any) => Number(a.overall_score))
-      .filter((n) => !Number.isNaN(n));
-    const avgScore = scores.length ? scores.reduce((x, y) => x + y, 0) / scores.length : null;
+    const [{ data: att }, { data: rewards }, { data: latest }, { data: prior }] = await Promise.all([
+      supabase
+        .from("attendance")
+        .select("status, sessions!inner(session_date)")
+        .eq("student_id", s.id)
+        .gte("sessions.session_date", start)
+        .lte("sessions.session_date", end),
+      supabase
+        .from("reward_ledger")
+        .select("points")
+        .eq("student_id", s.id)
+        .gte("awarded_at", start)
+        .lte("awarded_at", `${end}T23:59:59`),
+      supabase
+        .from("assessments")
+        .select("id, comment, assessment_scores(criterion_id, criterion_name, score, max_score)")
+        .eq("student_id", s.id)
+        .gte("assessed_on", start)
+        .lte("assessed_on", end)
+        .order("assessed_on", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("scorecards")
+        .select("period_month, summary")
+        .eq("student_id", s.id)
+        .order("period_month", { ascending: false })
+        .limit(40),
+    ]);
 
     const total = (att ?? []).length;
     const attended = (att ?? []).filter((a: any) => a.status === "present" || a.status === "late").length;
     const attendancePct = total ? Math.round((attended / total) * 100) : null;
     const rewardPoints = (rewards ?? []).reduce((x: number, r: any) => x + Number(r.points), 0);
 
-    const criteria = ((latest as any)?.assessment_scores ?? []).map((c: any) => ({
-      name: c.criterion_name,
-      score: Number(c.score),
-      max: Number(c.max_score),
-    }));
+    // Per-dimension scores from the latest assessment, normalized to 0–100.
+    const rawScores = ((latest as any)?.assessment_scores ?? []) as any[];
+    const dimensions = rawScores.map((c) => {
+      const max = Number(c.max_score) || 1;
+      const score = Math.round((Number(c.score) / max) * 100);
+      const category =
+        catById.get(c.criterion_id) ?? catByName.get(String(c.criterion_name).toLowerCase()) ?? null;
+      return { name: String(c.criterion_name), category, score };
+    });
 
-    // Render + upload PDF
+    const groupAvg = (key: GroupKey): number | null => {
+      const xs = dimensions.filter((d) => d.category === key).map((d) => d.score);
+      return xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null;
+    };
+    const groups = { physical: groupAvg("physical"), technical: groupAvg("technical"), character: groupAvg("character") };
+    const growthIndex = groups.character; // Character average = HBA Growth Index
+
+    const overall = dimensions.map((d) => d.score);
+    const avgScore = overall.length ? Math.round(overall.reduce((a, b) => a + b, 0) / overall.length) : null;
+
+    const age = ageFromDob(s.dob);
+    const stage = stageForAge(age);
+
+    // Year trend: latest growth index per calendar year, last 3 incl. this one.
+    const byYear = new Map<number, number>();
+    if (growthIndex != null) byYear.set(year, growthIndex);
+    for (const p of (prior ?? []) as any[]) {
+      const py = new Date(p.period_month).getFullYear();
+      const gi = p.summary?.growth_index;
+      if (gi != null && !byYear.has(py)) byYear.set(py, Math.round(Number(gi)));
+    }
+    const trend = [...byYear.entries()].sort((a, b) => a[0] - b[0]).slice(-3).map(([y, index]) => ({ year: y, index }));
+
     const bytes = await renderScorecardPdf({
       academyName: APP_NAME,
       studentName: s.full_name,
       periodLabel: monthLabel(start),
-      avgScore: avgScore != null ? Math.round(avgScore * 10) / 10 : null,
+      growthIndex,
+      stage: stage?.label ?? null,
+      groups,
+      dimensions,
       attendancePct,
       sessionsAttended: attended,
       sessionsTotal: total,
       rewardPoints,
-      criteria,
+      trend,
       comment: (latest as any)?.comment ?? null,
       generatedAt: formatDateTime(new Date().toISOString()),
     });
@@ -104,12 +139,19 @@ export async function generateScorecards() {
         student_id: s.id,
         period_month: start,
         summary: {
+          growth_index: growthIndex,
           avg_score: avgScore,
+          groups,
+          dimensions,
+          stage: stage ? { key: stage.key, label: stage.label } : null,
+          age,
           attendance_pct: attendancePct,
           sessions_attended: attended,
           sessions_total: total,
           reward_points: rewardPoints,
-          assessments: scores.length,
+          assessments: rawScores.length ? 1 : 0,
+          trend,
+          comment: (latest as any)?.comment ?? null,
         },
         pdf_url: path,
         status: "generated",
@@ -122,8 +164,8 @@ export async function generateScorecards() {
   revalidatePath("/admin/scorecards");
 }
 
-// Send a generated score card to the parent over WhatsApp (logged either way),
-// including a time-limited signed link to the PDF.
+// Send a generated growth report to the parent over WhatsApp (logged either
+// way), including a time-limited signed link to the PDF.
 export async function sendScorecard(formData: FormData) {
   const id = String(formData.get("id"));
   const supabase = await createClient();
@@ -154,11 +196,11 @@ export async function sendScorecard(formData: FormData) {
   }
 
   const text =
-    `🏸 ${monthLabel(sc.period_month)} score card for ${student.full_name}\n` +
-    `• Avg skill score: ${summary.avg_score != null ? summary.avg_score.toFixed(1) : "—"}\n` +
+    `🏸 ${monthLabel(sc.period_month)} growth report — ${student.full_name}\n` +
+    `• HBA Growth Index: ${summary.growth_index != null ? summary.growth_index : "—"}/100\n` +
+    (summary.stage?.label ? `• Stage: ${summary.stage.label}\n` : "") +
     `• Attendance: ${summary.attendance_pct != null ? summary.attendance_pct + "%" : "—"}\n` +
-    `• Reward points: ${summary.reward_points ?? 0}\n` +
-    `Score card PDF: ${pdfLink}`;
+    `Full report PDF: ${pdfLink}`;
 
   const result = await getWhatsappProvider().send({ to: parent.phone, text });
 
@@ -181,7 +223,7 @@ export async function sendScorecard(formData: FormData) {
 }
 
 // WhatsApp click-to-chat: the admin opened wa.me with the message; record it in
-// the log and mark the card sent. (No API/verification needed.)
+// the log and mark the report sent. (No API/verification needed.)
 export async function logScorecardSend(formData: FormData) {
   const scorecard_id = String(formData.get("scorecard_id"));
   const recipient_phone = String(formData.get("recipient_phone") ?? "");
