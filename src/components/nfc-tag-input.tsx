@@ -8,12 +8,14 @@ import { buttonClass, Input } from "@/components/ui";
 // Falls back to manual entry where Web NFC isn't available (iPhone/desktop).
 export function NfcTagInput({ defaultValue }: { defaultValue?: string }) {
   const [value, setValue] = useState(defaultValue ?? "");
+  const [mounted, setMounted] = useState(false);
   const [supported, setSupported] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    setSupported(typeof window !== "undefined" && "NDEFReader" in window);
+    setMounted(true);
+    setSupported("NDEFReader" in window);
   }, []);
 
   async function scan() {
@@ -49,12 +51,15 @@ export function NfcTagInput({ defaultValue }: { defaultValue?: string }) {
           placeholder="04A1B2C3"
           className="flex-1 font-mono"
         />
-        {supported && (
+        {mounted && supported && (
           <button type="button" onClick={scan} className={buttonClass("secondary", "shrink-0")}>
             {scanning ? "Hold tag…" : "📲 Scan"}
           </button>
         )}
       </div>
+      {mounted && !supported && (
+        <p className="text-xs text-slate-400">📲 Tap-to-scan needs an Android phone (Chrome). Type the UID here on desktop/iPhone.</p>
+      )}
       {err && <p className="text-xs text-red-600">{err}</p>}
     </div>
   );
