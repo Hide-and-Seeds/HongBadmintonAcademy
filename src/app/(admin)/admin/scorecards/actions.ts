@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateScorecardsCore } from "@/lib/scorecards";
+import { enqueueScorecards } from "@/lib/reminders";
+import { getBaseUrl } from "@/lib/url";
 
 // Manual "Generate this month" button: runs the report for the current month as
 // the logged-in admin (RLS client for reads/writes, service-role for storage).
@@ -12,6 +14,8 @@ export async function generateScorecards() {
   const supabase = await createClient();
   const admin = createAdminClient();
   await generateScorecardsCore(supabase, admin);
+  // Auto-queue the fresh reports for throttled WhatsApp drip-send.
+  await enqueueScorecards(await getBaseUrl());
   revalidatePath("/admin/scorecards");
 }
 

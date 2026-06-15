@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, monthLabel } from "@/lib/format";
 import { normalizePhoneMY } from "@/lib/wa";
 
 // Very-cautious throttle policy (anti-ban). The app enforces all of this; the
@@ -156,6 +156,53 @@ export async function enqueueDueReminders(baseUrl: string) {
   return { scanned, enqueued: rows.length };
 }
 
+// Enqueue still-unsent Monthly Growth Reports (status='generated') for drip
+// send. Scans ALL generated cards (not a window) so it self-heals: dedup by
+// (scorecard_id, 'scorecard') means already-queued/sent cards are skipped, and
+// cards whose parent had no phone earlier get picked up once a phone is added.
+export async function enqueueScorecards(baseUrl: string) {
+  const db = createAdminClient();
+  const { data: cards, error } = await db
+    .from("scorecards")
+    .select(
+      "id, period_month, summary, students(full_name, parent:profiles!students_parent_id_fkey(id, full_name, phone))",
+    )
+    .eq("status", "generated");
+  if (error) throw new Error(error.message);
+
+  const rows: Array<Record<string, unknown>> = [];
+  for (const c of cards ?? []) {
+    const parent = (c as any).students?.parent;
+    const phone = normalizePhoneMY(parent?.phone);
+    if (!phone) continue;
+    const s = (c as any).summary ?? {};
+    const studentName = (c as any).students?.full_name ?? "your child";
+    const gi = s.growth_index != null ? `${s.growth_index}/100` : "—";
+    const att = s.attendance_pct != null ? `${s.attendance_pct}%` : "—";
+    const body =
+      `🏸 ${monthLabel(c.period_month)} Growth Report — ${studentName}\n` +
+      `• HBA Growth Index: ${gi}\n` +
+      (s.stage?.label ? `• Stage: ${s.stage.label}\n` : "") +
+      `• Attendance: ${att}\n` +
+      `View the full report here: ${baseUrl}/parent/scorecards`;
+    rows.push({
+      kind: "scorecard",
+      scorecard_id: c.id,
+      recipient_profile_id: parent.id ?? null,
+      recipient_phone: phone,
+      body,
+    });
+  }
+
+  const scanned = cards?.length ?? 0;
+  if (rows.length === 0) return { scanned, enqueued: 0 };
+  const { error: upErr } = await db
+    .from("message_queue")
+    .upsert(rows, { onConflict: "scorecard_id,kind", ignoreDuplicates: true });
+  if (upErr) throw new Error(upErr.message);
+  return { scanned, enqueued: rows.length };
+}
+
 type NextResult =
   | { message: { id: string; to: string; text: string } }
   | { message: null; reason: string };
@@ -239,6 +286,18 @@ export async function recordQueueResult(
   const { data: row } = await db.from("message_queue").select("*").eq("id", id).maybeSingle();
   if (!row) return;
 
+  // Log shape depends on the queue row: scorecard rows log as 'scorecard' (with
+  // scorecard_id), everything else as a 'payment_reminder' (with invoice_id).
+  const isScorecard = !!row.scorecard_id;
+  const logBase = {
+    type: isScorecard ? "scorecard" : "payment_reminder",
+    recipient_profile_id: row.recipient_profile_id,
+    recipient_phone: row.recipient_phone,
+    body: row.body,
+    provider: "wwebjs",
+    ...(isScorecard ? { scorecard_id: row.scorecard_id } : { invoice_id: row.invoice_id }),
+  };
+
   if (status === "sent") {
     const sentAt = new Date().toISOString();
     await db
@@ -246,16 +305,15 @@ export async function recordQueueResult(
       .update({ status: "sent", sent_at: sentAt, provider_message_id: providerMessageId ?? null, error: null })
       .eq("id", id);
     await db.from("messages").insert({
-      type: "payment_reminder",
-      recipient_profile_id: row.recipient_profile_id,
-      recipient_phone: row.recipient_phone,
-      body: row.body,
-      invoice_id: row.invoice_id,
-      provider: "wwebjs",
+      ...logBase,
       status: "sent",
       provider_message_id: providerMessageId ?? null,
       sent_at: sentAt,
     });
+    // Reflect the send on the source record so the admin UI shows 'sent'.
+    if (isScorecard) {
+      await db.from("scorecards").update({ status: "sent" }).eq("id", row.scorecard_id);
+    }
     return;
   }
 
@@ -265,15 +323,6 @@ export async function recordQueueResult(
     await db.from("message_queue").update({ status: "queued", attempts, error: error ?? null }).eq("id", id);
   } else {
     await db.from("message_queue").update({ status: "failed", attempts, error: error ?? null }).eq("id", id);
-    await db.from("messages").insert({
-      type: "payment_reminder",
-      recipient_profile_id: row.recipient_profile_id,
-      recipient_phone: row.recipient_phone,
-      body: row.body,
-      invoice_id: row.invoice_id,
-      provider: "wwebjs",
-      status: "failed",
-      error: error ?? null,
-    });
+    await db.from("messages").insert({ ...logBase, status: "failed", error: error ?? null });
   }
 }
