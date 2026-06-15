@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
-import { setWorkerPaused, setFeeRemindersPaused } from "@/lib/settings";
+import { setWorkerPaused, setFeeRemindersPaused, setSendPolicy } from "@/lib/settings";
 
 const schema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
@@ -45,4 +45,25 @@ export async function toggleFeeReminders(formData: FormData) {
   await requireRole("admin");
   await setFeeRemindersPaused(formData.get("paused") === "true");
   revalidatePath("/admin/settings");
+}
+
+// Admin sets the worker's daily send schedule (window + cap + gap). Clamped to
+// sane anti-ban bounds; end must be after start.
+export async function saveSendPolicy(formData: FormData) {
+  await requireRole("admin");
+  const int = (k: string, d: number) => {
+    const n = Math.round(Number(formData.get(k)));
+    return Number.isFinite(n) ? n : d;
+  };
+  const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+
+  const windowStartHour = clamp(int("windowStartHour", 9), 0, 23);
+  let windowEndHour = clamp(int("windowEndHour", 20), 1, 24);
+  if (windowEndHour <= windowStartHour) windowEndHour = Math.min(24, windowStartHour + 1);
+  const dailyCap = clamp(int("dailyCap", 10), 1, 50);
+  const minGapMinutes = clamp(int("minGapMinutes", 10), 0, 240);
+
+  await setSendPolicy({ windowStartHour, windowEndHour, dailyCap, minGapMinutes });
+  revalidatePath("/admin/settings");
+  redirect("/admin/settings?saved=1");
 }

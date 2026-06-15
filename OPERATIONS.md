@@ -40,9 +40,10 @@ WhatsApp messages are sent by an always-on worker (`wa-worker/server.mjs`,
 **queue** messages; the worker polls and sends them under a cautious anti-ban
 policy:
 
-- ≤ 10 sends/day, ≥ 10-minute gap between sends
-- only 09:00–20:00 MYT, ~30% of polls skipped at random
-- polls every 8–15 minutes
+- **window, daily cap and min-gap are admin-set** in Settings → Send schedule
+  (defaults: 09:00–20:00 MYT, ≤ 10/day, ≥ 10-min gap)
+- ~30% of polls skipped at random (fixed), polls every 8–15 minutes
+- changes apply on the worker's next poll — no redeploy
 
 **If the worker VM is down or logged out, nothing sends — messages just pile up
 queued.** See §6 for running/recovering it.
@@ -58,6 +59,7 @@ queued.** See §6 for running/recovering it.
 | Post a free-text Community message (holiday greeting, schedule change) | Admin → **Announcements** → "Post to Community" |
 | Pause / resume the whole worker | Admin → **Settings** → WhatsApp worker |
 | Park / resume auto fee reminders only | Admin → **Settings** → Auto fee reminders |
+| Set send window / daily cap / min gap | Admin → **Settings** → Send schedule |
 | Mark an invoice paid | Invoices → row → "Mark paid" |
 | Create a one-off invoice | Invoices → "+ New invoice" |
 | Assign a monthly fee plan to a student | People → edit student → "Monthly fee plan" |

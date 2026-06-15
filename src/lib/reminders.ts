@@ -2,17 +2,14 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency, formatDate, monthLabel } from "@/lib/format";
 import { normalizePhoneMY } from "@/lib/wa";
-import { isWorkerPaused, isFeeRemindersPaused } from "@/lib/settings";
+import { isWorkerPaused, isFeeRemindersPaused, getSendPolicy } from "@/lib/settings";
 import { APP_NAME } from "@/lib/constants";
 import { env } from "@/lib/env";
 
-// Very-cautious throttle policy (anti-ban). The app enforces all of this; the
-// worker just polls and obeys, so the cadence stays irregular + low-volume.
+// Anti-ban knobs the app enforces (worker just polls + obeys). Window, daily cap
+// and min-gap are admin-tunable via Settings → getSendPolicy(); randomSkipChance
+// stays fixed so the cadence is always a bit irregular.
 export const POLICY = {
-  dailyCap: 10, // max auto-reminders per MYT day
-  minGapMinutes: 10, // never two sends closer than this
-  windowStartHour: 9, // MYT, inclusive
-  windowEndHour: 20, // MYT, exclusive (so last send by 19:59)
   randomSkipChance: 0.3, // chance a given poll is skipped even when eligible
 };
 
@@ -23,9 +20,9 @@ function mytParts() {
   const iso = new Date(Date.now() + MYT_MS).toISOString();
   return { dateStr: iso.slice(0, 10), hour: Number(iso.slice(11, 13)) };
 }
-function withinWindow(): boolean {
+function withinWindow(startHour: number, endHour: number): boolean {
   const { hour } = mytParts();
-  return hour >= POLICY.windowStartHour && hour < POLICY.windowEndHour;
+  return hour >= startHour && hour < endHour;
 }
 function todayStartUtcISO(): string {
   return new Date(`${mytParts().dateStr}T00:00:00+08:00`).toISOString();
@@ -245,7 +242,11 @@ export async function claimNextQueued(): Promise<NextResult> {
   // Admin kill switch (Settings → WhatsApp worker). Paused = drain nothing.
   if (await isWorkerPaused()) return { message: null, reason: "paused" };
 
-  if (!withinWindow()) return { message: null, reason: "outside-window" };
+  // Admin-tunable send schedule (Settings → Send schedule).
+  const policy = await getSendPolicy();
+  if (!withinWindow(policy.windowStartHour, policy.windowEndHour)) {
+    return { message: null, reason: "outside-window" };
+  }
 
   // Daily cap (MYT).
   const { count: sentToday } = await db
@@ -253,7 +254,7 @@ export async function claimNextQueued(): Promise<NextResult> {
     .select("id", { count: "exact", head: true })
     .eq("status", "sent")
     .gte("sent_at", todayStartUtcISO());
-  if ((sentToday ?? 0) >= POLICY.dailyCap) return { message: null, reason: "daily-cap" };
+  if ((sentToday ?? 0) >= policy.dailyCap) return { message: null, reason: "daily-cap" };
 
   // Minimum gap since the last send.
   const { data: last } = await db
@@ -263,7 +264,7 @@ export async function claimNextQueued(): Promise<NextResult> {
     .order("sent_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (last?.sent_at && Date.now() - new Date(last.sent_at).getTime() < POLICY.minGapMinutes * 60_000) {
+  if (last?.sent_at && Date.now() - new Date(last.sent_at).getTime() < policy.minGapMinutes * 60_000) {
     return { message: null, reason: "cooldown" };
   }
 
