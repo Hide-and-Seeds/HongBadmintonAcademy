@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateScorecardsCore } from "@/lib/scorecards";
@@ -10,13 +11,15 @@ import { getBaseUrl } from "@/lib/url";
 // Manual "Generate this month" button: runs the report for the current month as
 // the logged-in admin (RLS client for reads/writes, service-role for storage).
 // The same core runs headless from /api/cron/generate-scorecards each month.
+// Redirects back with a summary so the button gives visible feedback.
 export async function generateScorecards() {
   const supabase = await createClient();
   const admin = createAdminClient();
-  await generateScorecardsCore(supabase, admin);
+  const { generated } = await generateScorecardsCore(supabase, admin);
   // Auto-post ONE Community notice that the reports are ready (not per-parent).
-  await enqueueCommunityScorecardNotice(await getBaseUrl());
+  const notice = await enqueueCommunityScorecardNotice(await getBaseUrl());
   revalidatePath("/admin/scorecards");
+  redirect(`/admin/scorecards?generated=${generated}&notice=${notice.reason}`);
 }
 
 // WhatsApp click-to-chat: the admin opened wa.me with the message; record it in

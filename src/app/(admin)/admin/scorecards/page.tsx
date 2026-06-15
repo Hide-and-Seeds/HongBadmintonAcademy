@@ -9,7 +9,12 @@ import { generateScorecards, logScorecardSend } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function ScorecardsPage() {
+export default async function ScorecardsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ generated?: string; notice?: string }>;
+}) {
+  const { generated, notice } = await searchParams;
   const supabase = await createClient();
   const baseUrl = await getBaseUrl();
   const { data: cards } = await supabase
@@ -24,6 +29,24 @@ export default async function ScorecardsPage() {
         title="Growth Reports"
         description="Monthly growth reports — character, skills & the HBA Growth Index. When reports are generated, one privacy-safe notice is auto-posted to the parent WhatsApp Community (no names/scores). Per-card buttons below send an individual report to one parent."
       />
+
+      {generated !== undefined && (
+        (() => {
+          const n = Number(generated);
+          const map: Record<string, { tone: string; msg: string }> = {
+            queued: { tone: "border-green-200 bg-green-50 text-green-800", msg: "Community notice queued — the worker will post it to the parent WhatsApp Community shortly." },
+            exists: { tone: "border-blue-200 bg-blue-50 text-blue-800", msg: "This month's Community notice was already queued — not duplicated." },
+            "no-group-id": { tone: "border-amber-200 bg-amber-50 text-amber-800", msg: "⚠️ No Community group configured — set WA_COMMUNITY_GROUP_ID in Vercel to auto-post the notice." },
+          };
+          const m = map[notice ?? ""] ?? { tone: "border-slate-200 bg-slate-50 text-slate-700", msg: "" };
+          return (
+            <div className={`rounded-xl border p-4 text-sm ${m.tone}`}>
+              <strong>Generated {n} report{n === 1 ? "" : "s"} for {monthLabel(new Date().toISOString())}.</strong>{" "}
+              {m.msg}
+            </div>
+          );
+        })()
+      )}
 
       <Card className="flex flex-wrap items-center justify-between gap-4 border-green-200 bg-green-50 p-5">
         <div className="text-sm text-green-800">
