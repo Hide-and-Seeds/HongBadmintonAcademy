@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const WORKER_PAUSED = "worker_paused";
 const FEE_REMINDERS_PAUSED = "fee_reminders_paused";
 const SEND_POLICY = "send_policy";
+const MONTHLY_SCHEDULE = "monthly_schedule";
 
 // Generic app_settings value store. Read via the service-role client so
 // worker/cron endpoints (no user session) can read it.
@@ -52,3 +53,30 @@ export async function getSendPolicy(): Promise<SendPolicy> {
 }
 
 export const setSendPolicy = (p: SendPolicy) => setValue(SEND_POLICY, p);
+
+// Which day of the month each monthly run fires (1–28, kept ≤28 so it always
+// exists). invoiceDay = raise fees + post Community notice; reportDay = build
+// growth reports; dueDay = the invoice due date.
+export type MonthlySchedule = {
+  invoiceDay: number;
+  dueDay: number;
+  reportDay: number;
+};
+
+export const DEFAULT_MONTHLY_SCHEDULE: MonthlySchedule = {
+  invoiceDay: 1,
+  dueDay: 7,
+  reportDay: 1,
+};
+
+export async function getMonthlySchedule(): Promise<MonthlySchedule> {
+  const v = await getValue<Partial<MonthlySchedule>>(MONTHLY_SCHEDULE, {});
+  return { ...DEFAULT_MONTHLY_SCHEDULE, ...v };
+}
+
+export const setMonthlySchedule = (s: MonthlySchedule) => setValue(MONTHLY_SCHEDULE, s);
+
+// Day-of-month in Malaysia time (1–31) — for cron gating against the schedule.
+export function mytDayOfMonth(): number {
+  return Number(new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(8, 10));
+}

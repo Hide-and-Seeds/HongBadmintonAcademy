@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateScorecardsCore } from "@/lib/scorecards";
+import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
+import { getMonthlySchedule, mytDayOfMonth } from "@/lib/settings";
+import { getBaseUrl } from "@/lib/url";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -9,10 +12,10 @@ export const runtime = "nodejs";
 // grows large enough to need it).
 export const maxDuration = 60;
 
-// Monthly Vercel Cron (see vercel.json): auto-generates the *previous* month's
-// Monthly Growth Report PDF for every active student. Runs headless with the
-// service-role client (no user session). Secured by CRON_SECRET, which Vercel
-// sends as a Bearer header on scheduled invocations.
+// Runs DAILY (see vercel.json) but only acts on the admin-set report day
+// (Settings → Monthly schedule). Generates the *previous* month's Growth Report
+// PDF per active student, then upserts the monthly Community notice (so reports
+// are announced even if the report day differs from the billing day).
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   const secret = req.nextUrl.searchParams.get("secret");
@@ -21,17 +24,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Cron fires early in the new month; report on the month that just ended.
+  const schedule = await getMonthlySchedule();
+  const today = mytDayOfMonth();
+  if (today !== schedule.reportDay) {
+    return NextResponse.json({ ok: true, skipped: "not-report-day", today, reportDay: schedule.reportDay });
+  }
+
+  // Report on the month that just ended.
   const now = new Date();
   const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
   const db = createAdminClient();
   try {
     const result = await generateScorecardsCore(db, db, prevMonth);
-    // Community notice is posted by the invoice cron (runs after this), which can
-    // see both reports + fees and compose the combined monthly post.
+    const notice = await upsertCommunityMonthlyNotice(await getBaseUrl());
     const label = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, "0")}`;
-    return NextResponse.json({ ok: true, month: label, ...result });
+    return NextResponse.json({ ok: true, month: label, ...result, notice });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

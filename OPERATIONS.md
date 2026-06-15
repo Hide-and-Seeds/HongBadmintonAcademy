@@ -14,8 +14,8 @@ messaging to work.
 |-----|----------------|-----|--------------|
 | `flag-absences` | `0 16 * * *` | 00:00 daily | Closes finished sessions, marks late tap-ins + absentees |
 | `enqueue-reminders` | `0 1 * * *` | 09:00 daily | Queues fee reminders (before-due, due, overdue 3/7/14/28) for unpaid invoices |
-| `generate-scorecards` | `0 2 1 * *` | 10:00 on the 1st | Builds the previous month's Growth Report PDF per active student |
-| `generate-invoices` | `0 3 1 * *` | 11:00 on the 1st | Raises this month's fee invoice per student on a monthly plan, then posts the combined Community notice |
+| `generate-scorecards` | `0 2 * * *` | 10:00 daily | Acts only on the admin-set **report day**: builds the previous month's Growth Report PDF per active student + posts the Community notice |
+| `generate-invoices` | `0 3 * * *` | 11:00 daily | Acts only on the admin-set **invoice day**: raises this month's fee invoice per student on a monthly plan (due on the **due day**), then posts the combined Community notice |
 | `backup` | `0 18 * * *` | 02:00 daily | JSON snapshot of every table to the private `backups` bucket |
 | Stripe webhook | on payment | — | Marks the invoice paid + records the payment |
 | DB triggers | on write | — | New auth user → profile row; invoice number; `updated_at` |
@@ -59,6 +59,7 @@ queued.** See §6 for running/recovering it.
 | Post a free-text Community message (holiday greeting, schedule change) | Admin → **Announcements** → "Post to Community" |
 | Pause / resume the whole worker | Admin → **Settings** → WhatsApp worker |
 | Park / resume auto fee reminders only | Admin → **Settings** → Auto fee reminders |
+| Set invoice / report / due **dates** (day of month) | Admin → **Settings** → Monthly schedule |
 | Set send window / daily cap / min gap | Admin → **Settings** → Send schedule |
 | Mark an invoice paid | Invoices → row → "Mark paid" |
 | Create a one-off invoice | Invoices → "+ New invoice" |

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
-import { setWorkerPaused, setFeeRemindersPaused, setSendPolicy } from "@/lib/settings";
+import { setWorkerPaused, setFeeRemindersPaused, setSendPolicy, setMonthlySchedule } from "@/lib/settings";
 
 const schema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
@@ -64,6 +64,23 @@ export async function saveSendPolicy(formData: FormData) {
   const minGapMinutes = clamp(int("minGapMinutes", 10), 0, 240);
 
   await setSendPolicy({ windowStartHour, windowEndHour, dailyCap, minGapMinutes });
+  revalidatePath("/admin/settings");
+  redirect("/admin/settings?saved=1");
+}
+
+// Admin sets which day of the month invoices/reports go out + the due date.
+// Days clamped to 1–28 so they always exist in every month.
+export async function saveMonthlySchedule(formData: FormData) {
+  await requireRole("admin");
+  const day = (k: string, d: number) => {
+    const n = Math.round(Number(formData.get(k)));
+    return Number.isFinite(n) ? Math.min(28, Math.max(1, n)) : d;
+  };
+  await setMonthlySchedule({
+    invoiceDay: day("invoiceDay", 1),
+    dueDay: day("dueDay", 7),
+    reportDay: day("reportDay", 1),
+  });
   revalidatePath("/admin/settings");
   redirect("/admin/settings?saved=1");
 }

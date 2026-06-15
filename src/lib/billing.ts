@@ -7,22 +7,24 @@ function monthStart(d: Date): string {
   return new Date(d.getFullYear(), d.getMonth(), 1).toLocaleDateString("en-CA");
 }
 
-// Day-of-month the auto-raised fee falls due (kept simple/constant for now).
-const DUE_DAY = 7;
+// Default day-of-month the auto-raised fee falls due (admin-overridable).
+const DEFAULT_DUE_DAY = 7;
 
 // Raise the monthly fee invoice for every active student that has a *monthly*
 // fee plan assigned. Idempotent: the (student_id, period_month, fee_plan_id)
 // unique index + upsert ignore means re-runs (or the manual force button) never
 // double-bill. Mirrors generateScorecardsCore.
 //
-// `db`    — RLS client (manual admin path) or service-role client (headless cron).
-// `month` — any date within the month to bill (defaults to the current month).
+// `db`     — RLS client (manual admin path) or service-role client (headless cron).
+// `month`  — any date within the month to bill (defaults to the current month).
+// `dueDay` — day of month the invoice is due (defaults to the 7th).
 export async function generateInvoicesCore(
   db: SupabaseClient,
   month: Date = new Date(),
+  dueDay: number = DEFAULT_DUE_DAY,
 ): Promise<{ eligible: number; generated: number }> {
   const period = monthStart(month);
-  const dueDate = new Date(month.getFullYear(), month.getMonth(), DUE_DAY).toLocaleDateString("en-CA");
+  const dueDate = new Date(month.getFullYear(), month.getMonth(), dueDay).toLocaleDateString("en-CA");
   const label = monthLabel(period);
 
   const { data: students, error } = await db

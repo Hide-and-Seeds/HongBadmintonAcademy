@@ -2,8 +2,8 @@ import { requireRole } from "@/lib/auth";
 import { PageHeader, Card, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ROLE_LABEL } from "@/lib/constants";
-import { isWorkerPaused, isFeeRemindersPaused, getSendPolicy } from "@/lib/settings";
-import { updateOwnProfile, toggleWorker, toggleFeeReminders, saveSendPolicy } from "./actions";
+import { isWorkerPaused, isFeeRemindersPaused, getSendPolicy, getMonthlySchedule } from "@/lib/settings";
+import { updateOwnProfile, toggleWorker, toggleFeeReminders, saveSendPolicy, saveMonthlySchedule } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,7 @@ export default async function SettingsPage({
   const paused = await isWorkerPaused();
   const feePaused = await isFeeRemindersPaused();
   const policy = await getSendPolicy();
+  const schedule = await getMonthlySchedule();
 
   return (
     <div className="space-y-6">
@@ -60,6 +61,27 @@ export default async function SettingsPage({
             </SubmitButton>
           </form>
         </div>
+      </Section>
+
+      <Section title="Monthly schedule">
+        <form action={saveMonthlySchedule} className="space-y-4 p-5">
+          <p className="text-sm text-slate-600">
+            Which day of the month invoices &amp; growth reports go out (1–28). The crons check daily and
+            act only on these days. The manual &quot;Generate this month&quot; buttons work any day.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Invoice day" hint="Raise fees + post the Community notice.">
+              <Input type="number" name="invoiceDay" min={1} max={28} defaultValue={schedule.invoiceDay} />
+            </Field>
+            <Field label="Invoice due day">
+              <Input type="number" name="dueDay" min={1} max={28} defaultValue={schedule.dueDay} />
+            </Field>
+            <Field label="Growth report day">
+              <Input type="number" name="reportDay" min={1} max={28} defaultValue={schedule.reportDay} />
+            </Field>
+          </div>
+          <SubmitButton pendingText="Saving…">Save dates</SubmitButton>
+        </form>
       </Section>
 
       <Section title="Send schedule">
