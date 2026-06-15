@@ -13,6 +13,11 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+html {
+  /* default view = old 90% zoom; rem-based Tailwind scales text + spacing together */
+  font-size: 90%;
+}
+
 html,
 body {
   background: var(--background);

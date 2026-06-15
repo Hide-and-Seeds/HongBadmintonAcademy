@@ -7,11 +7,11 @@ export const dynamic = "force-dynamic";
 
 const QUICK_ACTIONS = [
   { href: "/admin/attendance", icon: "📋", title: "Take attendance", sub: "Who's in today" },
-  { href: "/admin/sessions", icon: "📅", title: "Sessions", sub: "Manage schedule" },
+  { href: "/admin/sessions", icon: "📅", title: "Sessions", sub: "Schedule" },
   { href: "/admin/scorecards", icon: "📊", title: "Growth reports", sub: "Generate & send" },
   { href: "/admin/invoices", icon: "💳", title: "Fees & invoices", sub: "Bill & track" },
-  { href: "/admin/people", icon: "👥", title: "People", sub: "Students, parents, coaches" },
-  { href: "/admin/announce", icon: "📢", title: "Announce", sub: "Post to community" },
+  { href: "/admin/people", icon: "👥", title: "People", sub: "Students & staff" },
+  { href: "/admin/announce", icon: "📢", title: "Announce", sub: "Community" },
 ];
 
 async function count(table: string, filter?: (q: any) => any) {
@@ -50,13 +50,13 @@ export default async function AdminDashboard() {
           <Link
             key={q.href}
             href={q.href}
-            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-green-300 hover:shadow-sm"
+            className="group flex flex-col items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-green-300 hover:shadow-sm"
           >
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-50 text-2xl">
               {q.icon}
             </span>
-            <div className="min-w-0">
-              <div className="font-semibold leading-tight text-slate-900">{q.title}</div>
+            <div className="w-full min-w-0">
+              <div className="line-clamp-2 min-h-[2.5em] font-semibold leading-tight text-slate-900">{q.title}</div>
               <div className="truncate text-xs text-slate-500">{q.sub}</div>
             </div>
           </Link>
