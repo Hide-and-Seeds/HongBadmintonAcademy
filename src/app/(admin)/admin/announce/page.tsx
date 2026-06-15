@@ -1,13 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, Badge, Table, Th, Td, EmptyState } from "@/components/ui";
+import { PageHeader, Section, Badge, Table, Th, Td, EmptyState, Textarea } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { formatDateTime } from "@/lib/format";
 import { env } from "@/lib/env";
 import { AnnounceComposer } from "@/components/announce-composer";
-import { logAnnouncement } from "./actions";
+import { logAnnouncement, postCommunityMessage } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AnnouncePage() {
+export default async function AnnouncePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ posted?: string; error?: string }>;
+}) {
+  const { posted, error } = await searchParams;
+  const botReady = !!env.waCommunityGroupId;
   const supabase = await createClient();
   const { data: history } = await supabase
     .from("messages")
@@ -21,12 +28,44 @@ export default async function AnnouncePage() {
     <div className="space-y-6">
       <PageHeader
         title="Announcements"
-        description="Compose a notice, then post it once in the parent WhatsApp Community — every parent sees it. No bot, no blast, no ban risk."
+        description="Send a one-off notice to the whole parent WhatsApp Community — the worker posts it for you. Great for holiday greetings, schedule changes, reminders."
       />
 
-      <Section title="New announcement">
-        <AnnounceComposer action={logAnnouncement} communityLink={env.waCommunityLink || null} />
-      </Section>
+      {posted && (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+          Posted to the Community — the worker will deliver it shortly (queued, throttled).
+        </div>
+      )}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+      )}
+
+      {botReady ? (
+        <Section title="New announcement">
+          <form action={postCommunityMessage} className="space-y-3">
+            <Textarea
+              name="text"
+              rows={4}
+              required
+              placeholder="e.g. 🎉 Happy holidays from HBA! No classes 25 Dec–1 Jan. See you in the new year!"
+            />
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-slate-500">
+                Goes to the whole parent Community — no private info (fees, scores, a child&apos;s name).
+              </p>
+              <SubmitButton pendingText="Posting…">Post to Community</SubmitButton>
+            </div>
+          </form>
+        </Section>
+      ) : (
+        <Section title="New announcement">
+          <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            Auto-posting isn&apos;t configured (set <code>WA_COMMUNITY_GROUP_ID</code>). Until then, post by
+            hand:
+          </p>
+          <AnnounceComposer action={logAnnouncement} communityLink={env.waCommunityLink || null} />
+        </Section>
+      )}
 
       <Section title={`Recent announcements (${history?.length ?? 0})`} flush>
         {history && history.length > 0 ? (
