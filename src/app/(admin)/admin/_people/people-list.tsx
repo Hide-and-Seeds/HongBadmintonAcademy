@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, LinkButton, Table, Th, Td, EmptyState, Badge } from "@/components/ui";
+import { PageHeader, Collapsible, LinkButton, Table, Th, Td, EmptyState, Badge } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { formatDate } from "@/lib/format";
@@ -58,7 +58,7 @@ export async function PeopleList({
       )}
 
       {people && people.length > 0 ? (
-        <Section title={`${title} (${people.length})`} flush>
+        <Collapsible title={title} count={people.length}>
           <BulkProvider>
           <Table>
             <thead>
@@ -119,7 +119,7 @@ export async function PeopleList({
             />
           </div>
           </BulkProvider>
-        </Section>
+        </Collapsible>
       ) : (
         <EmptyState message={`No ${title.toLowerCase()} yet.`} />
       )}

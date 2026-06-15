@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Section, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { formatDate } from "@/lib/format";
@@ -72,7 +72,7 @@ export async function StudentsList() {
 
       {/* Desktop: dense table */}
       <div className="hidden sm:block">
-        <Section title={`Students (${students.length})`} flush>
+        <Collapsible title="Students" count={students.length}>
           <BulkProvider>
           <Table>
             <thead>
@@ -130,7 +130,7 @@ export async function StudentsList() {
             />
           </div>
           </BulkProvider>
-        </Section>
+        </Collapsible>
       </div>
     </>
   );
