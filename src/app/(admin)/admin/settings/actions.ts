@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import { setWorkerPaused } from "@/lib/settings";
 
 const schema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
@@ -28,4 +30,12 @@ export async function updateOwnProfile(formData: FormData) {
 
   revalidatePath("/admin/settings");
   redirect("/admin/settings?saved=1");
+}
+
+// Pause/resume the WhatsApp drip worker. The desired new state arrives as a
+// hidden "paused" field ("true"/"false"). Admin-only.
+export async function toggleWorker(formData: FormData) {
+  await requireRole("admin");
+  await setWorkerPaused(formData.get("paused") === "true");
+  revalidatePath("/admin/settings");
 }

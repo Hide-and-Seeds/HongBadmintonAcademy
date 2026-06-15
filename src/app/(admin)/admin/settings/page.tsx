@@ -1,8 +1,9 @@
 import { requireRole } from "@/lib/auth";
-import { PageHeader, Card, Field, Input } from "@/components/ui";
+import { PageHeader, Card, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ROLE_LABEL } from "@/lib/constants";
-import { updateOwnProfile } from "./actions";
+import { isWorkerPaused } from "@/lib/settings";
+import { updateOwnProfile, toggleWorker } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,32 @@ export default async function SettingsPage({
 }) {
   const profile = await requireRole("admin");
   const { error, saved } = await searchParams;
+  const paused = await isWorkerPaused();
 
   return (
-    <div>
-      <PageHeader title="Account Settings" description="Edit your own profile details." />
+    <div className="space-y-6">
+      <PageHeader title="Settings" description="Account details and WhatsApp automation controls." />
+
+      <Section title="WhatsApp worker">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div className="text-sm text-slate-600">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="font-medium text-slate-800">Auto-send status:</span>
+              <Badge tone={paused ? "red" : "green"}>{paused ? "Paused" : "Running"}</Badge>
+            </div>
+            {paused
+              ? "Reminders & growth reports are NOT being sent. They stay queued and go out once resumed."
+              : "Queued reminders & growth reports drip-send automatically (throttled)."}
+          </div>
+          <form action={toggleWorker}>
+            <input type="hidden" name="paused" value={paused ? "false" : "true"} />
+            <SubmitButton variant={paused ? "primary" : "secondary"} pendingText="Saving…">
+              {paused ? "Resume worker" : "Pause worker"}
+            </SubmitButton>
+          </form>
+        </div>
+      </Section>
+
 
       <Card className="max-w-xl p-6">
         {saved && <p className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">Saved.</p>}

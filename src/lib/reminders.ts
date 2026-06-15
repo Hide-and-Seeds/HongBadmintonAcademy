@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency, formatDate, monthLabel } from "@/lib/format";
 import { normalizePhoneMY } from "@/lib/wa";
+import { isWorkerPaused } from "@/lib/settings";
 
 // Very-cautious throttle policy (anti-ban). The app enforces all of this; the
 // worker just polls and obeys, so the cadence stays irregular + low-volume.
@@ -211,6 +212,9 @@ type NextResult =
 // cautious policy allows right now; otherwise null + a reason.
 export async function claimNextQueued(): Promise<NextResult> {
   const db = createAdminClient();
+
+  // Admin kill switch (Settings → WhatsApp worker). Paused = drain nothing.
+  if (await isWorkerPaused()) return { message: null, reason: "paused" };
 
   if (!withinWindow()) return { message: null, reason: "outside-window" };
 
