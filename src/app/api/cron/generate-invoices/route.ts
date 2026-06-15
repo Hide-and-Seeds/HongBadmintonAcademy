@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateInvoicesCore } from "@/lib/billing";
+import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
+import { getBaseUrl } from "@/lib/url";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -20,7 +22,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await generateInvoicesCore(createAdminClient());
-    return NextResponse.json({ ok: true, ...result });
+    // Single monthly Community post — runs after the scorecard cron, so it can
+    // compose the combined "reports + fees" notice (or a one-sided fallback).
+    const notice = await upsertCommunityMonthlyNotice(await getBaseUrl());
+    return NextResponse.json({ ok: true, ...result, notice });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

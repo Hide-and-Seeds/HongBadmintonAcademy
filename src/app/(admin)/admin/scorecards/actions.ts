@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateScorecardsCore } from "@/lib/scorecards";
-import { enqueueCommunityScorecardNotice } from "@/lib/reminders";
+import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
 import { getBaseUrl } from "@/lib/url";
 
 // Manual "Generate this month" button: runs the report for the current month as
@@ -16,10 +16,10 @@ export async function generateScorecards() {
   const supabase = await createClient();
   const admin = createAdminClient();
   const { generated } = await generateScorecardsCore(supabase, admin);
-  // Auto-post ONE Community notice that the reports are ready (not per-parent).
-  const notice = await enqueueCommunityScorecardNotice(await getBaseUrl());
+  // Seed/refresh the monthly Community post (reports-only until invoices exist).
+  const notice = await upsertCommunityMonthlyNotice(await getBaseUrl());
   revalidatePath("/admin/scorecards");
-  redirect(`/admin/scorecards?generated=${generated}&notice=${notice.reason}`);
+  redirect(`/admin/scorecards?generated=${generated}&notice=${notice.posted}`);
 }
 
 // WhatsApp click-to-chat: the admin opened wa.me with the message; record it in

@@ -35,7 +35,9 @@ export default async function ScorecardsPage({
           const n = Number(generated);
           const map: Record<string, { tone: string; msg: string }> = {
             queued: { tone: "border-green-200 bg-green-50 text-green-800", msg: "Community notice queued — the worker will post it to the parent WhatsApp Community shortly." },
-            exists: { tone: "border-blue-200 bg-blue-50 text-blue-800", msg: "This month's Community notice was already queued — not duplicated." },
+            updated: { tone: "border-green-200 bg-green-50 text-green-800", msg: "This month's Community notice was refreshed (it will include fees too once invoices are raised)." },
+            "already-sent": { tone: "border-blue-200 bg-blue-50 text-blue-800", msg: "This month's Community notice was already posted — not duplicated." },
+            skipped: { tone: "border-slate-200 bg-slate-50 text-slate-700", msg: "Nothing to announce to the Community yet." },
             "no-group-id": { tone: "border-amber-200 bg-amber-50 text-amber-800", msg: "⚠️ No Community group configured — set WA_COMMUNITY_GROUP_ID in Vercel to auto-post the notice." },
           };
           const m = map[notice ?? ""] ?? { tone: "border-slate-200 bg-slate-50 text-slate-700", msg: "" };

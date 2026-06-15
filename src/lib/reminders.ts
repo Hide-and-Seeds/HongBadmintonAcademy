@@ -159,40 +159,78 @@ export async function enqueueDueReminders(baseUrl: string) {
   return { scanned, enqueued: rows.length };
 }
 
-// Queue ONE WhatsApp notice to the parent Community announcing that the month's
-// Growth Reports are ready — instead of messaging each parent privately. The
-// worker posts it to the Community Announcements group (WA_COMMUNITY_GROUP_ID).
-// Privacy-safe: no child names or scores, just a "log in to view" prompt.
+// Post ONE monthly notice to the parent Community — instead of messaging each
+// parent privately. The worker posts it to the Community Announcements group
+// (WA_COMMUNITY_GROUP_ID). Privacy-safe: no child names, scores, amounts or who
+// owes — just "log in to view/pay".
 //
-// Idempotent: the kind encodes the month (scorecard_community:YYYY-MM), so a
-// re-run (or the manual button) won't double-post. `month` = any date in the
-// reported month (defaults to current).
-export async function enqueueCommunityScorecardNotice(baseUrl: string, month: Date = new Date()) {
+// Content adapts to what actually happened this month:
+//   reports + fees → combined · reports only → reports-only · fees only → fees-only
+// Idempotent per month (kind community_monthly:YYYY-MM). While the row is still
+// queued it's UPDATED in place (so the scorecard run can seed it and the later
+// invoice run can upgrade it to combined); once the worker has sent it, it's
+// left alone. Returns the outcome for UI feedback.
+export async function upsertCommunityMonthlyNotice(baseUrl: string) {
   const groupId = env.waCommunityGroupId;
-  if (!groupId) return { enqueued: 0, reason: "no-group-id" as const };
+  if (!groupId) return { posted: "no-group-id" as const };
 
   const db = createAdminClient();
-  const period = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-  const kind = `scorecard_community:${period}`;
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("en-CA");
+  const kind = `community_monthly:${monthStart.slice(0, 7)}`;
+
+  // What's live for this calendar month?
+  const [{ count: reports }, { count: fees }] = await Promise.all([
+    db.from("scorecards").select("id", { count: "exact", head: true }).gte("generated_at", `${monthStart}T00:00:00Z`),
+    db.from("invoices").select("id", { count: "exact", head: true }).eq("period_month", monthStart),
+  ]);
+  const hasReports = (reports ?? 0) > 0;
+  const hasFees = (fees ?? 0) > 0;
+  if (!hasReports && !hasFees) return { posted: "skipped" as const };
+
+  let body: string;
+  let variant: "combined" | "reports" | "fees";
+  if (hasReports && hasFees) {
+    variant = "combined";
+    body =
+      `🏸 ${APP_NAME} — monthly update\n` +
+      `📊 New Growth Reports are ready\n` +
+      `💳 This month's fees have been issued\n` +
+      `Parents — log in to view your child's report and pay your invoice:\n${baseUrl}/parent`;
+  } else if (hasReports) {
+    variant = "reports";
+    body =
+      `🏸 ${APP_NAME}\n` +
+      `📊 New Growth Reports are ready.\n` +
+      `Parents — log in to view your child's full report:\n${baseUrl}/parent/scorecards`;
+  } else {
+    variant = "fees";
+    body =
+      `🏸 ${APP_NAME}\n` +
+      `💳 This month's fees have been issued.\n` +
+      `Parents — log in to view and pay your invoice:\n${baseUrl}/parent/invoices`;
+  }
 
   const { data: existing } = await db
     .from("message_queue")
-    .select("id")
+    .select("id, status")
     .eq("kind", kind)
     .limit(1)
     .maybeSingle();
-  if (existing) return { enqueued: 0, reason: "exists" as const };
 
-  const body =
-    `🏸 ${APP_NAME}\n` +
-    `${monthLabel(`${period}-01`)} Growth Reports are ready!\n` +
-    `Parents — log in to view your child's full report:\n${baseUrl}/parent/scorecards`;
+  if (existing) {
+    if (existing.status === "sent") return { posted: "already-sent" as const, variant };
+    const { error } = await db
+      .from("message_queue")
+      .update({ body, recipient_phone: groupId, status: "queued", error: null })
+      .eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return { posted: "updated" as const, variant };
+  }
 
-  const { error } = await db
-    .from("message_queue")
-    .insert({ kind, recipient_phone: groupId, body });
+  const { error } = await db.from("message_queue").insert({ kind, recipient_phone: groupId, body });
   if (error) throw new Error(error.message);
-  return { enqueued: 1, reason: "queued" as const };
+  return { posted: "queued" as const, variant };
 }
 
 type NextResult =
@@ -285,7 +323,7 @@ export async function recordQueueResult(
   //  • community notice (kind scorecard_community:*) → 'custom', recipient 'community'
   //  • scorecard row (scorecard_id)                 → 'scorecard'
   //  • otherwise                                    → 'payment_reminder' (invoice_id)
-  const isCommunity = typeof row.kind === "string" && row.kind.startsWith("scorecard_community");
+  const isCommunity = typeof row.recipient_phone === "string" && row.recipient_phone.endsWith("@g.us");
   const isScorecard = !isCommunity && !!row.scorecard_id;
   const logBase = isCommunity
     ? { type: "custom", recipient_phone: "community", body: row.body, provider: "wwebjs" }

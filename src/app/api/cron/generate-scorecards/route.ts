@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateScorecardsCore } from "@/lib/scorecards";
-import { enqueueCommunityScorecardNotice } from "@/lib/reminders";
-import { getBaseUrl } from "@/lib/url";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -30,10 +28,10 @@ export async function GET(req: NextRequest) {
   const db = createAdminClient();
   try {
     const result = await generateScorecardsCore(db, db, prevMonth);
-    // Auto-post ONE Community notice that the reports are ready (not per-parent).
-    const notice = await enqueueCommunityScorecardNotice(await getBaseUrl(), prevMonth);
+    // Community notice is posted by the invoice cron (runs after this), which can
+    // see both reports + fees and compose the combined monthly post.
     const label = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, "0")}`;
-    return NextResponse.json({ ok: true, month: label, ...result, notice });
+    return NextResponse.json({ ok: true, month: label, ...result });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

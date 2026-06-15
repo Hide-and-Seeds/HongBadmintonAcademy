@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { invoiceSchema } from "@/lib/validation";
 import { generateInvoicesCore } from "@/lib/billing";
+import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
+import { getBaseUrl } from "@/lib/url";
 
 function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -41,8 +43,11 @@ export async function createInvoice(formData: FormData) {
 // for all students on a monthly plan now, instead of waiting for the cron. Same
 // idempotent core, so clicking twice won't double-bill.
 export async function generateMonthlyInvoices() {
-  await generateInvoicesCore(createAdminClient());
+  const { generated } = await generateInvoicesCore(createAdminClient());
+  // Post/refresh the combined monthly Community notice (reports + fees).
+  const notice = await upsertCommunityMonthlyNotice(await getBaseUrl());
   revalidatePath("/admin/invoices");
+  redirect(`/admin/invoices?generated=${generated}&notice=${notice.posted}`);
 }
 
 export async function markPaid(formData: FormData) {

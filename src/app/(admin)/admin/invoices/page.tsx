@@ -17,7 +17,12 @@ const TONE: Record<InvoiceStatus, "green" | "yellow" | "red" | "slate"> = {
   canceled: "slate", refunded: "slate",
 };
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ generated?: string; notice?: string }>;
+}) {
+  const { generated, notice } = await searchParams;
   const supabase = await createClient();
   const baseUrl = await getBaseUrl();
 
@@ -48,6 +53,23 @@ export default async function InvoicesPage() {
             </>
           }
         />
+
+        {generated !== undefined && (() => {
+          const n = Number(generated);
+          const map: Record<string, { tone: string; msg: string }> = {
+            queued: { tone: "border-green-200 bg-green-50 text-green-800", msg: "Community notice queued — worker will post the combined update to parents shortly." },
+            updated: { tone: "border-green-200 bg-green-50 text-green-800", msg: "Combined Community notice (reports + fees) refreshed and queued." },
+            "already-sent": { tone: "border-blue-200 bg-blue-50 text-blue-800", msg: "This month's Community notice was already posted — not duplicated." },
+            skipped: { tone: "border-slate-200 bg-slate-50 text-slate-700", msg: "" },
+            "no-group-id": { tone: "border-amber-200 bg-amber-50 text-amber-800", msg: "⚠️ Set WA_COMMUNITY_GROUP_ID in Vercel to auto-post the Community notice." },
+          };
+          const m = map[notice ?? ""] ?? { tone: "border-slate-200 bg-slate-50 text-slate-700", msg: "" };
+          return (
+            <div className={`mb-5 rounded-xl border p-4 text-sm ${m.tone}`}>
+              <strong>Raised {n} invoice{n === 1 ? "" : "s"} for this month.</strong> {m.msg}
+            </div>
+          );
+        })()}
 
         {invoices && invoices.length > 0 ? (
           <Section title={`Invoices (${invoices.length})`} flush>
