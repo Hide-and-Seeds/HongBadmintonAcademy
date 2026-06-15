@@ -36,7 +36,24 @@ export async function PeopleList({
     .order("full_name");
 
   const isCoach = role === "coach";
+  const isParent = role === "parent";
   const base = isCoach ? "/admin/coaches" : "/admin/parents";
+
+  // For the parents tab, show each parent's children inline (the #1 thing admins
+  // want to see). One query, grouped by parent_id.
+  const childrenByParent = new Map<string, string[]>();
+  if (isParent && people && people.length) {
+    const { data: kids } = await supabase
+      .from("students")
+      .select("full_name, parent_id")
+      .in("parent_id", people.map((p: any) => p.id))
+      .order("full_name");
+    for (const k of kids ?? []) {
+      const arr = childrenByParent.get(k.parent_id) ?? [];
+      arr.push(k.full_name);
+      childrenByParent.set(k.parent_id, arr);
+    }
+  }
   const title = isCoach ? "Coaches" : "Parents";
   const description = isCoach
     ? "Coaching staff accounts and login credentials."
@@ -65,6 +82,7 @@ export async function PeopleList({
               <tr>
                 <Th className="w-10"><BulkSelectAll /></Th>
                 <Th>Name</Th>
+                {isParent && <Th>Children</Th>}
                 <Th>Email</Th>
                 <Th>Phone</Th>
                 <Th>Status</Th>
@@ -86,6 +104,15 @@ export async function PeopleList({
                       </Link>
                     </div>
                   </Td>
+                  {isParent && (
+                    <Td label="Children" className="text-slate-600">
+                      {(() => {
+                        const kids = childrenByParent.get(p.id) ?? [];
+                        if (!kids.length) return <span className="text-slate-400">—</span>;
+                        return kids.join(", ");
+                      })()}
+                    </Td>
+                  )}
                   <Td label="Email" className="text-slate-500">{p.email ?? "—"}</Td>
                   <Td label="Phone" className="text-slate-500">{p.phone ?? "—"}</Td>
                   <Td label="Status">
