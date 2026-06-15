@@ -186,7 +186,15 @@ app.get("/groups", async (_req, res) => {
     const chats = await client.getChats();
     const groups = chats
       .filter((c) => c.isGroup)
-      .map((c) => ({ id: c.id?._serialized, name: c.name }));
+      .map((c) => ({
+        id: c.id?._serialized,
+        name: c.name,
+        // announce=true → admins-only "Announcements" group (what we want for a
+        // Community notice). parent set → it's a subgroup of a Community.
+        announce: c.groupMetadata?.announce ?? null,
+        parent: c.groupMetadata?.parentGroup?._serialized ?? null,
+        size: c.participants?.length ?? null,
+      }));
     return res.json({ groups });
   } catch (e) {
     return res.status(500).json({ status: "failed", error: String(e?.message || e) });
