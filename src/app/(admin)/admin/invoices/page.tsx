@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
@@ -72,7 +72,7 @@ export default async function InvoicesPage({
         })()}
 
         {invoices && invoices.length > 0 ? (
-          <Section title={`Invoices (${invoices.length})`} flush>
+          <Collapsible title="Invoices" count={invoices.length}>
             <Table>
               <thead>
                 <tr>
@@ -132,13 +132,13 @@ export default async function InvoicesPage({
                 })}
               </tbody>
             </Table>
-          </Section>
+          </Collapsible>
         ) : (
           <EmptyState message="No invoices yet." />
         )}
       </div>
 
-      <Section title="Recent payments" flush>
+      <Collapsible title="Recent payments" count={payments?.length ?? 0}>
         {payments && payments.length > 0 ? (
           <Table>
             <thead>
@@ -165,7 +165,7 @@ export default async function InvoicesPage({
         ) : (
           <div className="p-5"><EmptyState message="No payments recorded yet." /></div>
         )}
-      </Section>
+      </Collapsible>
     </div>
   );
 }

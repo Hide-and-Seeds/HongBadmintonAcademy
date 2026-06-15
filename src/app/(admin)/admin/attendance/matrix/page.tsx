@@ -72,9 +72,9 @@ export default async function MatrixPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Attendance matrix"
-        description="Every lesson at a glance — green came, red missed."
-        action={<LinkButton href="/admin/attendance" variant="ghost">← Sessions</LinkButton>}
+        title="Attendance grid"
+        description="One dot per lesson, oldest to newest. Green = came, red = missed. Last 16 lessons."
+        action={<LinkButton href="/admin/attendance" variant="ghost">← Attendance</LinkButton>}
       />
 
       {classes && classes.length > 0 && (
@@ -111,9 +111,9 @@ export default async function MatrixPage({
                     </th>
                   );
                 })}
-                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Tot</th>
-                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">%</th>
-                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Str</th>
+                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Came</th>
+                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Rate</th>
+                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Streak</th>
               </tr>
             </thead>
             <tbody>

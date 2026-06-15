@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Section, Table, Th, Td, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { PageHeader, Card, Collapsible, Table, Th, Td, Badge, EmptyState, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { monthLabel } from "@/lib/format";
@@ -61,7 +61,7 @@ export default async function ScorecardsPage({
       </Card>
 
       {cards && cards.length > 0 ? (
-        <Section title={`Growth reports (${cards.length})`} flush>
+        <Collapsible title="Growth reports" count={cards.length}>
           <Table>
             <thead>
               <tr>
@@ -118,7 +118,7 @@ export default async function ScorecardsPage({
               })}
             </tbody>
           </Table>
-        </Section>
+        </Collapsible>
       ) : (
         <EmptyState message="No growth reports yet. Generate this month's reports above." />
       )}

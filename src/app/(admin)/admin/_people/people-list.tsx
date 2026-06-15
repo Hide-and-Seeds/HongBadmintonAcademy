@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, LinkButton, Table, Th, Td, EmptyState, Badge } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -80,7 +81,9 @@ export async function PeopleList({
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
                         {initials(p.full_name ?? "?")}
                       </span>
-                      <span className="font-medium text-slate-900">{p.full_name ?? "—"}</span>
+                      <Link href={`${base}/${p.id}`} className="font-medium text-slate-900 hover:text-green-700 hover:underline">
+                        {p.full_name ?? "—"}
+                      </Link>
                     </div>
                   </Td>
                   <Td label="Email" className="text-slate-500">{p.email ?? "—"}</Td>

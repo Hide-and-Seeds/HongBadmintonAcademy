@@ -122,6 +122,33 @@ export function Section({
   );
 }
 
+/** Collapsible card — native <details>, no client JS. Header shows title (+count).
+ *  Keep interactive controls OUT of the header (clicks there toggle the panel). */
+export function Collapsible({
+  title,
+  count,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  count?: number;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details {...(defaultOpen ? { open: true } : {})} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5">
+        <h2 className="text-sm font-semibold text-slate-900">
+          {title}
+          {count != null ? ` (${count})` : ""}
+        </h2>
+        <span className="text-xs text-slate-400 transition-transform group-open:rotate-180">▼</span>
+      </summary>
+      <div className="border-t border-slate-100">{children}</div>
+    </details>
+  );
+}
+
 export function PageHeader({
   title,
   description,

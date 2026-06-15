@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatTime } from "@/lib/format";
 
 export interface CalendarSession {
@@ -74,14 +75,15 @@ export function SessionCalendar({ sessions }: { sessions: CalendarSession[] }) {
                               ? "border-green-200 bg-green-50 text-green-800"
                               : "border-blue-200 bg-blue-50 text-blue-800";
                           return (
-                            <div
+                            <Link
                               key={s.id}
-                              title={`${s.className ?? "Class"} · ${formatTime(s.start_time)}–${formatTime(s.end_time)}${s.location ? " · " + s.location : ""}`}
-                              className={"rounded-md border px-1.5 py-1 text-[11px] leading-tight " + tone + (canceled ? " line-through opacity-70" : "")}
+                              href={`/admin/attendance/${s.id}`}
+                              title={`${s.className ?? "Class"} · ${formatTime(s.start_time)}–${formatTime(s.end_time)}${s.location ? " · " + s.location : ""} · open attendance`}
+                              className={"block rounded-md border px-1.5 py-1 text-[11px] leading-tight transition-shadow hover:shadow-sm " + tone + (canceled ? " line-through opacity-70" : "")}
                             >
                               <div className="font-medium">{formatTime(s.start_time)}</div>
                               <div className="truncate">{s.className ?? "Class"}</div>
-                            </div>
+                            </Link>
                           );
                         })}
                       </div>

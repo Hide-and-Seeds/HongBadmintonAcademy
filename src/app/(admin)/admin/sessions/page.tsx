@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
   PageHeader, Table, Th, Td, Badge, EmptyState, LinkButton, Button,
@@ -26,7 +27,7 @@ export default async function SessionsPage() {
     <div>
       <PageHeader
         title="Sessions"
-        description="Every upcoming session across all classes. Cancel, restore or delete."
+        description="Every upcoming session across all classes. Tap a session to take/see its attendance; or cancel, restore, delete below."
         action={
           <LinkButton href="/admin/classes" variant="secondary">
             + Generate (per class)
@@ -70,7 +71,11 @@ export default async function SessionsPage() {
                 {(sessions as any[]).map((s) => (
                   <tr key={s.id} className="hover:bg-slate-50">
                     <Td><BulkCheckbox id={s.id} /></Td>
-                    <Td className="font-medium text-slate-900">{formatDate(s.session_date)}</Td>
+                    <Td className="font-medium">
+                      <Link href={`/admin/attendance/${s.id}`} className="text-green-700 hover:underline">
+                        {formatDate(s.session_date)}
+                      </Link>
+                    </Td>
                     <Td>{formatTime(s.start_time)}–{formatTime(s.end_time)}</Td>
                     <Td className="text-slate-600">{s.classes?.name ?? "—"}</Td>
                     <Td className="text-slate-500">{s.location ?? "—"}</Td>
