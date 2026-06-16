@@ -47,7 +47,7 @@ const GROUP_LABEL: Record<string, string> = { physical: "Physical", technical: "
 
 export async function renderScorecardPdf(data: ScorecardPdfData): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  const page = doc.addPage([595.28, 841.89]); // A4
+  let page = doc.addPage([595.28, 841.89]); // A4 (more pages added if the remark is long)
   const W = page.getWidth();
   const H = page.getHeight();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -133,21 +133,31 @@ export async function renderScorecardPdf(data: ScorecardPdfData): Promise<Uint8A
   }
 
   // ── Coach observation ────────────────────────────────────────
-  if (data.comment && y > 130) {
+  // Footer is drawn on each page as we leave it; a long remark now flows onto a
+  // fresh page instead of being silently dropped near the page bottom.
+  const footer = () => {
+    page.drawLine({ start: { x: M, y: 64 }, end: { x: W - M, y: 64 }, thickness: 1, color: rgb(0.89, 0.91, 0.93) });
+    text("Explorer  •  Builder  •  Challenger  •  Leader  •  Champion", M, 48, 9, font, MUTED);
+    rightText(`Generated ${data.generatedAt}`, W - M, 48, 9, font, MUTED);
+  };
+  const newPage = () => {
+    footer();
+    page = doc.addPage([595.28, 841.89]);
+    y = H - 60;
+  };
+
+  if (data.comment) {
+    if (y < 120) newPage(); // not enough room for the heading + a line
     text("Coach observation", M, y, 12, bold);
     y -= 20;
     for (const line of wrap(data.comment, font, 11, W - M * 2)) {
+      if (y < 80) newPage();
       text(line, M, y, 11, font, INK);
       y -= 16;
-      if (y < 92) break;
     }
   }
 
-  // ── Footer ───────────────────────────────────────────────────
-  page.drawLine({ start: { x: M, y: 64 }, end: { x: W - M, y: 64 }, thickness: 1, color: rgb(0.89, 0.91, 0.93) });
-  text("Explorer  •  Builder  •  Challenger  •  Leader  •  Champion", M, 48, 9, font, MUTED);
-  rightText(`Generated ${data.generatedAt}`, W - M, 48, 9, font, MUTED);
-
+  footer();
   return doc.save();
 }
 
@@ -166,5 +176,5 @@ function wrap(s: string, font: any, size: number, maxW: number): string[] {
     }
   }
   if (line) lines.push(line);
-  return lines.slice(0, 6);
+  return lines.slice(0, 12);
 }
