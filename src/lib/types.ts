@@ -33,6 +33,7 @@ export interface Student {
   parent_id: string | null;
   fee_plan_id: string | null;
   nfc_tag_uid: string | null;
+  rank: string | null;
   status: StudentStatus;
   photo_url: string | null;
   notes: string | null;

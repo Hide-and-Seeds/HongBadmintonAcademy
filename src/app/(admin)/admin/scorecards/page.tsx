@@ -5,7 +5,7 @@ import { WhatsAppButton } from "@/components/whatsapp-button";
 import { monthLabel } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
-import { bestRank, rankBadgeClass } from "@/lib/ranks";
+import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { generateScorecards, logScorecardSend } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function ScorecardsPage({
   const baseUrl = await getBaseUrl();
   const { data: cards } = await supabase
     .from("scorecards")
-    .select("*, students(full_name, parent:profiles!students_parent_id_fkey(full_name, phone, id))")
+    .select("*, students(full_name, rank, parent:profiles!students_parent_id_fkey(full_name, phone, id))")
     .order("period_month", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -35,7 +35,7 @@ export default async function ScorecardsPage({
     arr.push(e.classes?.level ?? null);
     levelsByStudent.set(e.student_id, arr);
   }
-  const rankOf = (id: string) => bestRank(levelsByStudent.get(id) ?? []);
+  const rankOf = (ownRank: string | null, id: string) => studentRank(ownRank, levelsByStudent.get(id) ?? []);
 
   return (
     <div className="space-y-6">
@@ -98,11 +98,14 @@ export default async function ScorecardsPage({
                   <tr key={c.id} className="hover:bg-slate-50">
                     <Td className="font-medium text-slate-900">{c.students?.full_name ?? "—"}</Td>
                     <Td label="Rank">
-                      {rankOf(c.student_id) ? (
-                        <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(rankOf(c.student_id)))}>{rankOf(c.student_id)}</span>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
+                      {(() => {
+                        const r = rankOf(c.students?.rank ?? null, c.student_id);
+                        return r ? (
+                          <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(r))}>{r}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        );
+                      })()}
                     </Td>
                     <Td>{monthLabel(c.period_month)}</Td>
                     <Td className="tabular-nums">

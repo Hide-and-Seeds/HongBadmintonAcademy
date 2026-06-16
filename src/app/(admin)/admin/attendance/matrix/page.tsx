@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, EmptyState, cn } from "@/components/ui";
-import { bestRank, rankBadgeClass } from "@/lib/ranks";
+import { studentRank, rankBadgeClass } from "@/lib/ranks";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export default async function MatrixPage({
 
   if (classId) {
     const [{ data: enr }, { data: sess }] = await Promise.all([
-      supabase.from("enrollments").select("students(id, full_name)").eq("class_id", classId).eq("active", true),
+      supabase.from("enrollments").select("students(id, full_name, rank)").eq("class_id", classId).eq("active", true),
       supabase.from("sessions").select("id, session_date").eq("class_id", classId).order("session_date", { ascending: false }).limit(16),
     ]);
     const students = (enr ?? [])
@@ -56,7 +56,7 @@ export default async function MatrixPage({
       arr.push(e.classes?.level ?? null);
       levelsByStudent.set(e.student_id, arr);
     }
-    const rankOf = (id: string) => bestRank(levelsByStudent.get(id) ?? []);
+    const rankOf = (st: any) => studentRank(st.rank, levelsByStudent.get(st.id) ?? []);
 
     const attMap = new Map<string, string>();
     const sessionIds = sessions.map((s) => s.id);
@@ -79,7 +79,7 @@ export default async function MatrixPage({
         else if (cells[i] === null) continue; // skip unmarked
         else break;
       }
-      return { student: st, rank: rankOf(st.id), cells, attended, pct, streak };
+      return { student: st, rank: rankOf(st), cells, attended, pct, streak };
     });
   }
 

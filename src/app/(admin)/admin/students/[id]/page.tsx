@@ -2,12 +2,13 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   PageHeader, Section, StatCard, Table, Th, Td, Badge, EmptyState,
-  LinkButton, Field, Input, Select,
+  LinkButton, Field, Input, Select, Button, cn,
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/format";
+import { CLASS_RANKS, studentRank, rankBadgeClass } from "@/lib/ranks";
 import type { AttendanceStatus, InvoiceStatus } from "@/lib/types";
-import { awardReward } from "../actions";
+import { awardReward, setStudentRank, promoteStudent } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +68,7 @@ export default async function StudentProfilePage({
       .select("invoice_no, amount, currency, status, due_date")
       .eq("student_id", id)
       .order("created_at", { ascending: false }),
-    supabase.from("enrollments").select("classes(name)").eq("student_id", id).eq("active", true),
+    supabase.from("enrollments").select("classes(name, level)").eq("student_id", id).eq("active", true),
   ]);
 
   const att = attendance ?? [];
@@ -82,6 +83,9 @@ export default async function StudentProfilePage({
 
   const totalPoints = (ledger ?? []).reduce((x: number, r: any) => x + Number(r.points), 0);
   const classNames = (enrollments ?? []).map((e: any) => e.classes?.name).filter(Boolean).join(", ");
+  const levels = (enrollments ?? []).map((e: any) => e.classes?.level ?? null);
+  const effRank = studentRank(student.rank, levels);
+  const rankSource = student.rank ? "coach-assigned" : effRank ? "inherited from class" : "not set";
 
   return (
     <div className="space-y-6">
@@ -111,6 +115,36 @@ export default async function StudentProfilePage({
         <StatCard label="Reward points" value={totalPoints} tone="green" />
         <StatCard label="NFC tag" value={student.nfc_tag_uid ? "✓" : "—"} sub={student.nfc_tag_uid ?? "unbound"} />
       </div>
+
+      {/* Class rank — coach-assigned, falls back to the class's rank */}
+      <Section title="Class rank">
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex items-center gap-2">
+            {effRank ? (
+              <span className={cn("inline-flex rounded-full px-3 py-1 text-sm font-semibold", rankBadgeClass(effRank))}>{effRank}</span>
+            ) : (
+              <span className="text-sm text-slate-400">No rank yet</span>
+            )}
+            <span className="text-xs text-slate-400">({rankSource})</span>
+          </div>
+          <form action={setStudentRank} className="flex items-end gap-2">
+            <input type="hidden" name="id" value={id} />
+            <Field label="Set rank">
+              <Select name="rank" defaultValue={student.rank ?? ""} className="h-9 w-44">
+                <option value="">— inherit from class —</option>
+                {CLASS_RANKS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </Select>
+            </Field>
+            <SubmitButton variant="secondary" pendingText="Saving…">Save</SubmitButton>
+          </form>
+          <form action={promoteStudent}>
+            <input type="hidden" name="id" value={id} />
+            <SubmitButton pendingText="Promoting…">⬆ Promote</SubmitButton>
+          </form>
+        </div>
+      </Section>
 
       {/* Attendance history */}
       <Section title="Attendance history" flush>

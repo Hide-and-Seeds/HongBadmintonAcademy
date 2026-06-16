@@ -3,9 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRole } from "@/lib/auth";
+import { CLASS_RANKS } from "@/lib/ranks";
 
 function err(studentId: string, message: string): never {
   redirect(`/coach/marking/${studentId}?error=${encodeURIComponent(message)}`);
+}
+
+// Coach assigns a student's rank (typically after an assessment). Coaches don't
+// have RLS write on students, so this gated action uses the service-role client.
+export async function setStudentRank(formData: FormData) {
+  await requireRole("coach");
+  const student_id = String(formData.get("student_id"));
+  const raw = String(formData.get("rank") ?? "").trim();
+  const rank = (CLASS_RANKS as readonly string[]).includes(raw) ? raw : null;
+  const db = createAdminClient();
+  const { error } = await db.from("students").update({ rank }).eq("id", student_id);
+  if (error) err(student_id, error.message);
+  revalidatePath(`/coach/marking/${student_id}`);
+  redirect(`/coach/marking/${student_id}?saved=1`);
 }
 
 export async function createAssessment(formData: FormData) {

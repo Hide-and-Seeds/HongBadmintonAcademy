@@ -4,7 +4,7 @@ import { Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState, cn } from "@
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { formatDate } from "@/lib/format";
-import { bestRank, rankBadgeClass } from "@/lib/ranks";
+import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { deleteStudent, deleteStudents } from "./actions";
 
 function initials(name: string): string {
@@ -42,13 +42,13 @@ export async function StudentsList({
     arr.push(e.classes?.level ?? null);
     levelsByStudent.set(e.student_id, arr);
   }
-  const rankOf = (id: string) => bestRank(levelsByStudent.get(id) ?? []);
+  const rankOf = (s: any) => studentRank(s.rank, levelsByStudent.get(s.id) ?? []);
 
   const search = (q ?? "").trim().toLowerCase();
   const rows = (students ?? []).filter((s: any) => {
     if (search && !s.full_name.toLowerCase().includes(search)) return false;
     if (status && s.status !== status) return false;
-    if (rank && rankOf(s.id) !== rank) return false;
+    if (rank && rankOf(s) !== rank) return false;
     return true;
   });
 
@@ -76,7 +76,7 @@ export async function StudentsList({
                 </span>
               </Link>
               <div className="flex flex-shrink-0 items-center gap-2">
-                <RankPill rank={rankOf(s.id)} />
+                <RankPill rank={rankOf(s)} />
                 <Badge tone={s.status === "active" ? "green" : "slate"}>{s.status}</Badge>
               </div>
             </div>
@@ -134,7 +134,7 @@ export async function StudentsList({
                       <span className="font-medium text-slate-900 group-hover:text-green-700">{s.full_name}</span>
                     </Link>
                   </Td>
-                  <Td label="Rank"><RankPill rank={rankOf(s.id)} /></Td>
+                  <Td label="Rank"><RankPill rank={rankOf(s)} /></Td>
                   <Td className="text-slate-500">{s.parent?.full_name ?? "—"}</Td>
                   <Td>{s.nfc_tag_uid ? <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{s.nfc_tag_uid}</code> : "—"}</Td>
                   <Td className="text-slate-500">{formatDate(s.dob)}</Td>

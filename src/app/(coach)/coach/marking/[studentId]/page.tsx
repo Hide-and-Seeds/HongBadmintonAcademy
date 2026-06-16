@@ -2,13 +2,14 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
-  PageHeader, Section, Field, Input, Textarea, Button, LinkButton,
-  Table, Th, Td, EmptyState, Badge,
+  PageHeader, Section, Field, Input, Textarea, Button, LinkButton, Select,
+  Table, Th, Td, EmptyState, Badge, cn,
 } from "@/components/ui";
 import { formatDate, formatDateTime, monthLabel } from "@/lib/format";
 import { GROUP_LABEL, type GroupKey } from "@/lib/growth";
+import { CLASS_RANKS, studentRank, rankBadgeClass } from "@/lib/ranks";
 import { RatingButtons } from "@/components/rating-buttons";
-import { createAssessment, addNote } from "../actions";
+import { createAssessment, addNote, setStudentRank } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -33,18 +34,20 @@ export default async function MarkStudentPage({
 
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name")
+    .select("id, full_name, rank")
     .eq("id", studentId)
     .maybeSingle();
   if (!student) notFound();
 
   const { start: mStart, end: mEnd } = monthBounds();
   const [{ data: enrClass }, { data: monthAtt }, { data: existingAssess }] = await Promise.all([
-    supabase.from("enrollments").select("classes(name)").eq("student_id", studentId).eq("active", true).limit(1).maybeSingle(),
+    supabase.from("enrollments").select("classes(name, level)").eq("student_id", studentId).eq("active", true).limit(1).maybeSingle(),
     supabase.from("attendance").select("status, sessions!inner(session_date)").eq("student_id", studentId).gte("sessions.session_date", mStart).lte("sessions.session_date", mEnd),
     supabase.from("assessments").select("assessed_on").eq("student_id", studentId).gte("assessed_on", mStart).lte("assessed_on", mEnd).order("assessed_on", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const className = (enrClass as any)?.classes?.name ?? null;
+  const classLevel = (enrClass as any)?.classes?.level ?? null;
+  const effRank = studentRank((student as any).rank, [classLevel]);
   const attTotal = (monthAtt ?? []).length;
   const attHere = (monthAtt ?? []).filter((a: any) => a.status === "present" || a.status === "late").length;
 
@@ -95,6 +98,30 @@ export default async function MarkStudentPage({
         ) : (
           <span className="text-slate-400">not yet assessed this month</span>
         )}
+      </div>
+
+      {/* Rank — assign after assessing; blank inherits the class's rank */}
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-slate-700">Rank:</span>
+          {effRank ? (
+            <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", rankBadgeClass(effRank))}>{effRank}</span>
+          ) : (
+            <span className="text-sm text-slate-400">none</span>
+          )}
+        </div>
+        <form action={setStudentRank} className="flex items-end gap-2">
+          <input type="hidden" name="student_id" value={student.id} />
+          <Field label="Assign rank (after assessment)">
+            <Select name="rank" defaultValue={(student as any).rank ?? ""} className="h-9 w-44">
+              <option value="">— inherit from class —</option>
+              {CLASS_RANKS.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </Select>
+          </Field>
+          <Button type="submit">Save rank</Button>
+        </form>
       </div>
 
       {saved && (

@@ -56,3 +56,22 @@ export function bestRank(levels: (string | null | undefined)[]): string | null {
   }
   return best;
 }
+
+// A student's EFFECTIVE rank: their own coach-assigned rank if set + valid,
+// otherwise the highest rank of the classes they're enrolled in.
+export function studentRank(
+  ownRank: string | null | undefined,
+  classLevels: (string | null | undefined)[],
+): string | null {
+  if (ownRank && RANK_ORDER[ownRank]) return ownRank;
+  return bestRank(classLevels);
+}
+
+// The next tier up from `rank` (for "Promote"). Unset/unknown → Beginner; Elite
+// (top) → null (already maxed).
+export function nextRank(rank: string | null | undefined): string | null {
+  const order = rank ? RANK_ORDER[rank] : 0;
+  if (!order) return CLASS_RANKS[0];
+  if (order >= CLASS_RANKS.length) return null;
+  return CLASS_RANKS[order];
+}

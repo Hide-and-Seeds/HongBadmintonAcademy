@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Collapsible, LinkButton, Table, Th, Td, EmptyState, Badge } from "@/components/ui";
+import { PageHeader, Collapsible, LinkButton, Table, Th, Td, EmptyState, Badge, cn } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { formatDate } from "@/lib/format";
+import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import type { Role } from "@/lib/types";
 import type { ReactNode } from "react";
 
@@ -49,16 +50,27 @@ export async function PeopleList({
 
   // For the parents tab, show each parent's children inline (the #1 thing admins
   // want to see). One query, grouped by parent_id.
-  const childrenByParent = new Map<string, string[]>();
+  const childrenByParent = new Map<string, { name: string; rank: string | null }[]>();
   if (isParent && people && people.length) {
     const { data: kids } = await supabase
       .from("students")
-      .select("full_name, parent_id")
+      .select("id, full_name, parent_id, rank")
       .in("parent_id", people.map((p: any) => p.id))
       .order("full_name");
-    for (const k of kids ?? []) {
+    // Effective rank per child = own rank, else highest enrolled-class rank.
+    const kidIds = (kids ?? []).map((k: any) => k.id);
+    const { data: enr } = kidIds.length
+      ? await supabase.from("enrollments").select("student_id, classes(level)").eq("active", true).in("student_id", kidIds)
+      : { data: [] as any[] };
+    const levelsByKid = new Map<string, (string | null)[]>();
+    for (const e of (enr ?? []) as any[]) {
+      const arr = levelsByKid.get(e.student_id) ?? [];
+      arr.push(e.classes?.level ?? null);
+      levelsByKid.set(e.student_id, arr);
+    }
+    for (const k of (kids ?? []) as any[]) {
       const arr = childrenByParent.get(k.parent_id) ?? [];
-      arr.push(k.full_name);
+      arr.push({ name: k.full_name, rank: studentRank(k.rank, levelsByKid.get(k.id) ?? []) });
       childrenByParent.set(k.parent_id, arr);
     }
   }
@@ -117,7 +129,18 @@ export async function PeopleList({
                       {(() => {
                         const kids = childrenByParent.get(p.id) ?? [];
                         if (!kids.length) return <span className="text-slate-400">—</span>;
-                        return kids.join(", ");
+                        return (
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            {kids.map((k, i) => (
+                              <span key={i} className="inline-flex items-center gap-1">
+                                {k.name}
+                                {k.rank && (
+                                  <span className={cn("inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold", rankBadgeClass(k.rank))}>{k.rank}</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        );
                       })()}
                     </Td>
                   )}

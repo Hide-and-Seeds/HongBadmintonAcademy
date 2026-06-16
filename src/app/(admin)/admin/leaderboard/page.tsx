@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, EmptyState } from "@/components/ui";
 import { LeaderboardTable, type LbRow } from "@/components/leaderboard-table";
-import { bestRank } from "@/lib/ranks";
+import { studentRank } from "@/lib/ranks";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export default async function LeaderboardPage() {
   const supabase = await createClient();
 
   const [{ data: students }, { data: att }, { data: enrollments }] = await Promise.all([
-    supabase.from("students").select("id, full_name, dob").eq("status", "active").order("full_name"),
+    supabase.from("students").select("id, full_name, dob, rank").eq("status", "active").order("full_name"),
     supabase.from("attendance").select("student_id, status, sessions(session_date)"),
     supabase.from("enrollments").select("student_id, classes(level)").eq("active", true),
   ]);
@@ -66,7 +66,7 @@ export default async function LeaderboardPage() {
         streak = 0;
       }
     }
-    return { id: s.id, name: s.full_name, age: ageFrom(s.dob), attended, sessions: marked, rate, streak: max, rank: rankOf(rate, attended), classRank: bestRank(levelsByStudent.get(s.id) ?? []) };
+    return { id: s.id, name: s.full_name, age: ageFrom(s.dob), attended, sessions: marked, rate, streak: max, rank: rankOf(rate, attended), classRank: studentRank(s.rank, levelsByStudent.get(s.id) ?? []) };
   });
 
   return (
