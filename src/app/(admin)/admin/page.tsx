@@ -9,6 +9,7 @@ const QUICK_ACTIONS = [
   { href: "/admin/sessions", icon: "📅", title: "Sessions", sub: "Schedule" },
   { href: "/admin/scorecards", icon: "📊", title: "Growth reports", sub: "Generate & send" },
   { href: "/admin/invoices", icon: "💳", title: "Fees & invoices", sub: "Bill & track" },
+  { href: "/admin/coaches/summary", icon: "💰", title: "Coaches & Payroll", sub: "Lessons & pay" },
   { href: "/admin/people", icon: "👥", title: "Directory", sub: "Students & staff" },
   { href: "/admin/announce", icon: "📢", title: "Announce", sub: "Community" },
 ];

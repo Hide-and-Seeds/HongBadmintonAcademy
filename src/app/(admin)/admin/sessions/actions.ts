@@ -55,6 +55,16 @@ export async function deleteSession(formData: FormData) {
   revalidate();
 }
 
+// Delete from the session detail page, then return to the month list (the
+// detail route would 404 if we stayed).
+export async function removeSession(formData: FormData) {
+  const id = String(formData.get("id"));
+  const supabase = await createClient();
+  await supabase.from("sessions").delete().eq("id", id);
+  revalidate();
+  redirect("/admin/sessions");
+}
+
 export async function deleteSessions(formData: FormData) {
   const ids = formData.getAll("ids").map(String);
   if (!ids.length) return;

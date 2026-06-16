@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatTime } from "@/lib/format";
-import { rankBadgeClass } from "@/lib/ranks";
+import { rankBadgeClass, rankCardClass } from "@/lib/ranks";
 
 export interface CalendarSession {
   id: string;
@@ -26,10 +26,11 @@ function todayMYT(): string {
   return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
-function statusTone(status: string): string {
-  if (status === "canceled") return "border-red-200 bg-red-50 text-red-700";
-  if (status === "completed") return "border-green-200 bg-green-50 text-green-800";
-  return "border-blue-200 bg-blue-50 text-blue-800";
+// Tiles are tinted by CLASS RANK (the academy's grouping). Status is conveyed
+// separately: canceled overrides to red + strikethrough; completed adds a ✓.
+function cardTone(rank: string | null | undefined, status: string): string {
+  if (status === "canceled") return "border-red-300 bg-red-50 text-red-700";
+  return rankCardClass(rank);
 }
 
 // Month grid (Mon-first) of dated sessions. Server component — month navigation
@@ -110,18 +111,19 @@ export function MonthCalendar({
                       return (
                         <Link
                           key={s.id}
-                          href={`/admin/attendance/${s.id}`}
-                          title={`${s.className ?? "Class"} · ${formatTime(s.start_time)}–${formatTime(s.end_time)}${s.location ? " · " + s.location : ""} · open attendance`}
-                          className={"block rounded-md border px-1.5 py-1 text-[11px] leading-tight transition-shadow hover:shadow-sm " + statusTone(s.status) + (canceled ? " line-through opacity-70" : "")}
+                          href={`/admin/sessions/${s.id}`}
+                          title={`${s.className ?? "Class"} · ${formatTime(s.start_time)}–${formatTime(s.end_time)}${s.location ? " · " + s.location : ""} · ${s.status} · open session`}
+                          className={"block rounded-md border px-1.5 py-1 text-[11px] leading-tight transition-shadow hover:shadow-sm " + cardTone(s.classRank, s.status) + (canceled ? " line-through opacity-70" : "")}
                         >
-                          <div className="font-medium">{formatTime(s.start_time)}</div>
+                          <div className="font-medium">{s.status === "completed" ? "✓ " : ""}{formatTime(s.start_time)}</div>
                           <div className="truncate">{s.className ?? "Class"}</div>
                           {s.classRank && (
                             <span className={"mt-0.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase leading-none " + rankBadgeClass(s.classRank)}>
                               {s.classRank}
                             </span>
                           )}
-                          {s.coachName && <div className="mt-0.5 truncate text-[10px] text-slate-500">🎯 {s.coachName}</div>}
+                          {s.coachName && <div className="mt-0.5 truncate text-[10px] text-slate-600">🎯 {s.coachName}</div>}
+                          {s.location && <div className="mt-px truncate text-[10px] text-slate-500">📍 {s.location}</div>}
                         </Link>
                       );
                     })}

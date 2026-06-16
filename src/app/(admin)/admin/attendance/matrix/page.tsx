@@ -74,7 +74,7 @@ export default async function MatrixPage({
       <PageHeader
         title="Attendance grid"
         description="One dot per lesson, oldest to newest. Green = came, red = missed. Last 16 lessons."
-        action={<LinkButton href="/admin/attendance" variant="ghost">← Attendance</LinkButton>}
+        action={<LinkButton href="/admin" variant="ghost">← Dashboard</LinkButton>}
       />
 
       {classes && classes.length > 0 && (

@@ -179,7 +179,7 @@ export default async function SessionsPage({
                   <tr key={s.id} className="hover:bg-slate-50">
                     <Td><BulkCheckbox id={s.id} /></Td>
                     <Td className="font-medium">
-                      <Link href={`/admin/attendance/${s.id}`} className="text-green-700 hover:underline">
+                      <Link href={`/admin/sessions/${s.id}`} className="text-green-700 hover:underline">
                         {formatDate(s.session_date)}
                       </Link>
                     </Td>

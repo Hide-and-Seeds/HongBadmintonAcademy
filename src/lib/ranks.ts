@@ -16,16 +16,30 @@ export const RANK_ORDER: Record<string, number> = {
 };
 
 // Tailwind badge classes per rank (rendered as a plain <span>, not <Badge>,
-// because Badge supports only a fixed tone set + capitalizes).
+// because Badge supports only a fixed tone set + capitalizes). Elite is purple
+// (not red) so red stays reserved for the "canceled" session status — keeping
+// rank colour and status colour from clashing on the calendar.
 export const RANK_BADGE: Record<string, string> = {
   Beginner: "bg-green-100 text-green-700",
   Intermediate: "bg-blue-100 text-blue-700",
   Advanced: "bg-amber-100 text-amber-700",
-  Elite: "bg-red-100 text-red-700",
+  Elite: "bg-purple-100 text-purple-700",
+};
+
+// Softer card-fill variant (border + bg + text) used to tint calendar tiles.
+export const RANK_CARD: Record<string, string> = {
+  Beginner: "border-green-200 bg-green-50 text-green-800",
+  Intermediate: "border-blue-200 bg-blue-50 text-blue-800",
+  Advanced: "border-amber-200 bg-amber-50 text-amber-800",
+  Elite: "border-purple-200 bg-purple-50 text-purple-800",
 };
 
 export function rankBadgeClass(rank: string | null | undefined): string {
   return (rank && RANK_BADGE[rank]) || "bg-slate-100 text-slate-500";
+}
+
+export function rankCardClass(rank: string | null | undefined): string {
+  return (rank && RANK_CARD[rank]) || "border-slate-200 bg-slate-50 text-slate-700";
 }
 
 // Highest-ranked of several class levels (e.g. a student in multiple classes).
