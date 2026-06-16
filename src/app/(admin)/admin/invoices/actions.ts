@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { invoiceSchema } from "@/lib/validation";
 import { generateInvoicesCore } from "@/lib/billing";
 import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
+import { getMonthlySchedule } from "@/lib/settings";
 import { getBaseUrl } from "@/lib/url";
 
 function err(path: string, message: string): never {
@@ -43,7 +44,10 @@ export async function createInvoice(formData: FormData) {
 // for all students on a monthly plan now, instead of waiting for the cron. Same
 // idempotent core, so clicking twice won't double-bill.
 export async function generateMonthlyInvoices() {
-  const { generated } = await generateInvoicesCore(createAdminClient());
+  // Honour the admin-set due day (Settings → Monthly schedule) so the manual
+  // button and the daily cron raise identical due dates.
+  const schedule = await getMonthlySchedule();
+  const { generated } = await generateInvoicesCore(createAdminClient(), new Date(), schedule.dueDay);
   // Post/refresh the combined monthly Community notice (reports + fees).
   const notice = await upsertCommunityMonthlyNotice(await getBaseUrl());
   revalidatePath("/admin/invoices");

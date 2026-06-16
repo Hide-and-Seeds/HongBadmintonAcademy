@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Collapsible, LinkButton, Select, Input, Button, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateTime, monthLabel } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
+import { getMonthlySchedule } from "@/lib/settings";
 import { waLink } from "@/lib/wa";
 import { feeReminderText } from "@/lib/reminder-text";
 import type { InvoiceStatus } from "@/lib/types";
@@ -17,33 +18,64 @@ const TONE: Record<InvoiceStatus, "green" | "yellow" | "red" | "slate"> = {
   canceled: "slate", refunded: "slate",
 };
 
+const STATUSES: InvoiceStatus[] = ["draft", "unpaid", "paid", "overdue", "canceled", "refunded"];
+
+// Ordinal suffix for "due on the 7th" copy.
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
+
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ generated?: string; notice?: string }>;
+  searchParams: Promise<{ generated?: string; notice?: string; status?: string; month?: string; q?: string }>;
 }) {
-  const { generated, notice } = await searchParams;
+  const { generated, notice, status, month, q } = await searchParams;
   const supabase = await createClient();
   const baseUrl = await getBaseUrl();
+  const schedule = await getMonthlySchedule();
 
-  const [{ data: invoices }, { data: payments }] = await Promise.all([
-    supabase
-      .from("invoices")
-      .select("*, students(full_name), parent:profiles!invoices_parent_id_fkey(full_name, phone, id)")
-      .order("created_at", { ascending: false }),
+  const statusFilter = status && (STATUSES as string[]).includes(status) ? status : "";
+  const monthFilter = month && /^\d{4}-\d{2}-\d{2}$/.test(month) ? month : "";
+  const search = (q ?? "").trim().toLowerCase();
+
+  let invQuery = supabase
+    .from("invoices")
+    .select("*, students(full_name), parent:profiles!invoices_parent_id_fkey(full_name, phone, id)")
+    .order("created_at", { ascending: false });
+  if (statusFilter) invQuery = invQuery.eq("status", statusFilter);
+  if (monthFilter) invQuery = invQuery.eq("period_month", monthFilter);
+
+  const [{ data: rawInvoices }, { data: payments }, { data: monthRows }] = await Promise.all([
+    invQuery,
     supabase
       .from("payments")
       .select("*, invoices(invoice_no)")
       .order("created_at", { ascending: false })
       .limit(10),
+    supabase.from("invoices").select("period_month").not("period_month", "is", null),
   ]);
+
+  // Distinct billing months for the dropdown (newest first).
+  const monthOptions = [...new Set((monthRows ?? []).map((r: any) => r.period_month as string))].sort().reverse();
+
+  // Name search is applied in-memory (Supabase can't ILIKE across embedded relations).
+  const invoices = search
+    ? (rawInvoices ?? []).filter((i: any) =>
+        `${i.students?.full_name ?? ""} ${i.parent?.full_name ?? ""}`.toLowerCase().includes(search),
+      )
+    : rawInvoices ?? [];
+
+  const filtered = Boolean(statusFilter || monthFilter || search);
 
   return (
     <div className="space-y-8">
       <div>
         <PageHeader
           title="Invoices & Payments"
-          description="Monthly fees auto-raise for students on a fee plan (1st of month). Reconcile payments; reminders drip-send automatically."
+          description={`Monthly fees auto-raise for students on a fee plan. Every fee falls due on the ${ordinal(schedule.dueDay)} of the month (Settings → Monthly schedule). Reconcile payments; reminders drip-send automatically.`}
           action={
             <>
               <form action={generateMonthlyInvoices}>
@@ -71,8 +103,38 @@ export default async function InvoicesPage({
           );
         })()}
 
+        {/* Filters */}
+        <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-slate-600">Status</span>
+            <Select name="status" defaultValue={statusFilter} className="h-9 w-40">
+              <option value="">All statuses</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </Select>
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-slate-600">Month</span>
+            <Select name="month" defaultValue={monthFilter} className="h-9 w-44">
+              <option value="">All months</option>
+              {monthOptions.map((mo) => (
+                <option key={mo} value={mo}>{monthLabel(mo)}</option>
+              ))}
+            </Select>
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-slate-600">Student / parent</span>
+            <Input name="q" defaultValue={q ?? ""} placeholder="Search name…" className="h-9 w-52" />
+          </label>
+          <Button type="submit" variant="secondary">Filter</Button>
+          {filtered && (
+            <LinkButton href="/admin/invoices" variant="ghost">Clear</LinkButton>
+          )}
+        </form>
+
         {invoices && invoices.length > 0 ? (
-          <Collapsible title="Invoices" count={invoices.length}>
+          <Collapsible title={filtered ? "Invoices (filtered)" : "Invoices"} count={invoices.length}>
             <Table>
               <thead>
                 <tr>
@@ -134,7 +196,7 @@ export default async function InvoicesPage({
             </Table>
           </Collapsible>
         ) : (
-          <EmptyState message="No invoices yet." />
+          <EmptyState message={filtered ? "No invoices match these filters." : "No invoices yet."} />
         )}
       </div>
 

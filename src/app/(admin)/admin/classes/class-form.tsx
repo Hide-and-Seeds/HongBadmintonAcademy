@@ -1,6 +1,7 @@
 import { Card, Field, Input, Select, Textarea, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import type { ClassRow } from "@/lib/types";
+import { CLASS_RANKS } from "@/lib/ranks";
 
 export function ClassForm({
   action,
@@ -26,6 +27,16 @@ export function ClassForm({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Class rank" hint="Skill tier — colour-coded on the class list & leaderboard.">
+            <Select name="level" defaultValue={classRow?.level ?? ""}>
+              <option value="">— none —</option>
+              {CLASS_RANKS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <Field label="Primary coach">
             <Select name="coach_id" defaultValue={classRow?.coach_id ?? ""}>
               <option value="">— none —</option>

@@ -6,11 +6,10 @@ import { formatTime } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 const QUICK_ACTIONS = [
-  { href: "/admin/attendance", icon: "📋", title: "Take attendance", sub: "Who's in today" },
   { href: "/admin/sessions", icon: "📅", title: "Sessions", sub: "Schedule" },
   { href: "/admin/scorecards", icon: "📊", title: "Growth reports", sub: "Generate & send" },
   { href: "/admin/invoices", icon: "💳", title: "Fees & invoices", sub: "Bill & track" },
-  { href: "/admin/people", icon: "👥", title: "People", sub: "Students & staff" },
+  { href: "/admin/people", icon: "👥", title: "Directory", sub: "Students & staff" },
   { href: "/admin/announce", icon: "📢", title: "Announce", sub: "Community" },
 ];
 
@@ -26,11 +25,11 @@ export default async function AdminDashboard() {
   const supabase = await createClient();
   const today = new Date().toLocaleDateString("en-CA");
 
-  const [students, coaches, parents, classes, unpaid, queued] = await Promise.all([
+  const [students, coaches, activeClasses, totalClasses, unpaid, queued] = await Promise.all([
     count("students", (q) => q.eq("status", "active")),
     count("profiles", (q) => q.eq("role", "coach")),
-    count("profiles", (q) => q.eq("role", "parent")),
     count("classes", (q) => q.eq("is_active", true)),
+    count("classes"),
     count("invoices", (q) => q.in("status", ["unpaid", "overdue"])),
     count("messages", (q) => q.eq("status", "queued")),
   ]);
@@ -66,8 +65,9 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Active students" value={students} tone="green" />
         <StatCard label="Coaches" value={coaches} />
-        <StatCard label="Parents" value={parents} />
-        <StatCard label="Active classes" value={classes} tone="blue" />
+        <Link href="/admin/classes" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+          <StatCard label="Active classes" value={activeClasses} sub={`marked active · of ${totalClasses} total`} tone="blue" />
+        </Link>
         <StatCard label="Unpaid invoices" value={unpaid} sub="incl. overdue" tone={unpaid ? "red" : "slate"} />
         <StatCard label="Queued messages" value={queued} sub="WhatsApp" tone={queued ? "amber" : "slate"} />
       </div>

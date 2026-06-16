@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, EmptyState } from "@/components/ui";
 import { LeaderboardTable, type LbRow } from "@/components/leaderboard-table";
+import { bestRank } from "@/lib/ranks";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +28,19 @@ function rankOf(rate: number, attended: number): string {
 export default async function LeaderboardPage() {
   const supabase = await createClient();
 
-  const [{ data: students }, { data: att }] = await Promise.all([
+  const [{ data: students }, { data: att }, { data: enrollments }] = await Promise.all([
     supabase.from("students").select("id, full_name, dob").eq("status", "active").order("full_name"),
     supabase.from("attendance").select("student_id, status, sessions(session_date)"),
+    supabase.from("enrollments").select("student_id, classes(level)").eq("active", true),
   ]);
+
+  // Each student's class rank = the highest tier among the classes they're in.
+  const levelsByStudent = new Map<string, (string | null)[]>();
+  for (const e of (enrollments ?? []) as any[]) {
+    const arr = levelsByStudent.get(e.student_id) ?? [];
+    arr.push(e.classes?.level ?? null);
+    levelsByStudent.set(e.student_id, arr);
+  }
 
   const byStudent = new Map<string, { date: string; status: string }[]>();
   for (const a of att ?? []) {
@@ -56,7 +66,7 @@ export default async function LeaderboardPage() {
         streak = 0;
       }
     }
-    return { id: s.id, name: s.full_name, age: ageFrom(s.dob), attended, sessions: marked, rate, streak: max, rank: rankOf(rate, attended) };
+    return { id: s.id, name: s.full_name, age: ageFrom(s.dob), attended, sessions: marked, rate, streak: max, rank: rankOf(rate, attended), classRank: bestRank(levelsByStudent.get(s.id) ?? []) };
   });
 
   return (

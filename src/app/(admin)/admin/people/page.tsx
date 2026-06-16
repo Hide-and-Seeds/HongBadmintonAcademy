@@ -35,7 +35,7 @@ export default async function PeoplePage({
   return (
     <div>
       <PageHeader
-        title="People"
+        title="Directory"
         description="Students, parents and coaches — all in one place."
         action={
           <>

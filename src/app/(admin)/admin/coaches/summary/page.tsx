@@ -1,15 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, LinkButton, EmptyState, StatCard, Card } from "@/components/ui";
+import { PageHeader, LinkButton, EmptyState, StatCard, Card, Input, Button } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
 import { setCoachRate } from "../../_people/actions";
 
 export const dynamic = "force-dynamic";
 
-// Month bounds in Malaysia time (offset 0 = this month, -1 = last month).
-function monthBounds(offset = 0) {
-  const now = new Date(Date.now() + 8 * 3600 * 1000);
-  const y = now.getUTCFullYear();
-  const m = now.getUTCMonth() + offset;
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+// Month bounds in Malaysia time for a specific year + 0-based month.
+function monthBoundsFor(y: number, m: number) {
   const start = new Date(Date.UTC(y, m, 1));
   const end = new Date(Date.UTC(y, m + 1, 0));
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
@@ -20,10 +21,27 @@ function monthBounds(offset = 0) {
   };
 }
 
-export default async function CoachSummaryPage() {
+export default async function CoachSummaryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string; q?: string }>;
+}) {
+  const { month, q } = await searchParams;
   const supabase = await createClient();
-  const tm = monthBounds(0);
-  const lm = monthBounds(-1);
+
+  // Displayed month (defaults to current MYT month); previous month follows it.
+  const now = new Date(Date.now() + 8 * 3600 * 1000);
+  const curY = now.getUTCFullYear();
+  const curM = now.getUTCMonth();
+  const monthStr = /^\d{4}-\d{2}$/.test(month ?? "") ? month! : `${curY}-${pad(curM + 1)}`;
+  const [dispY, dispM1] = monthStr.split("-").map(Number);
+  const dispM = dispM1 - 1;
+  const tm = monthBoundsFor(dispY, dispM);
+  const lm = monthBoundsFor(dispM === 0 ? dispY - 1 : dispY, dispM === 0 ? 11 : dispM - 1);
+  const prevMonth = `${dispM === 0 ? dispY - 1 : dispY}-${pad(dispM === 0 ? 12 : dispM)}`;
+  const nextMonth = `${dispM === 11 ? dispY + 1 : dispY}-${pad(dispM === 11 ? 1 : dispM + 2)}`;
+  const thisMonth = `${curY}-${pad(curM + 1)}`;
+  const search = (q ?? "").trim().toLowerCase();
 
   const [{ data: coaches }, { data: classes }, { data: ccs }, { data: pay }] = await Promise.all([
     supabase.from("profiles").select("id, full_name").eq("role", "coach").eq("is_active", true).order("full_name"),
@@ -93,26 +111,45 @@ export default async function CoachSummaryPage() {
   for (const e of attBySession.values()) { oa += e.att; ot += e.total; }
   const overallPct = ot ? Math.round((oa / ot) * 100) : 0;
 
+  // Stat cards summarise the whole displayed month; the search only narrows the
+  // per-coach card list below.
+  const visibleRows = search ? rows.filter((r) => r.name.toLowerCase().includes(search)) : rows;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Coaches Summary"
-        description={`Lessons, attendance % & auto-calculated payroll · ${tm.label}`}
+        description="Lessons, attendance % & auto-calculated payroll. Pick a month or search a coach."
         action={<LinkButton href="/admin/coaches" variant="ghost">Manage coaches →</LinkButton>}
       />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          <LinkButton href={`/admin/coaches/summary?month=${prevMonth}`} variant="secondary" aria-label="Previous month">←</LinkButton>
+          <LinkButton href={`/admin/coaches/summary?month=${thisMonth}`} variant="secondary">Today</LinkButton>
+          <LinkButton href={`/admin/coaches/summary?month=${nextMonth}`} variant="secondary" aria-label="Next month">→</LinkButton>
+          <span className="ml-2 text-sm font-semibold text-slate-800">{tm.label}</span>
+        </div>
+        <form method="get" className="flex items-center gap-2">
+          <input type="hidden" name="month" value={monthStr} />
+          <Input name="q" defaultValue={q ?? ""} placeholder="Search coach…" className="h-9 w-48" />
+          <Button type="submit" variant="secondary">Search</Button>
+          {search && <LinkButton href={`/admin/coaches/summary?month=${monthStr}`} variant="ghost">Clear</LinkButton>}
+        </form>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Active coaches" value={rows.length} />
         <StatCard label="Lessons" value={totalLessons} sub={tm.label} />
-        <StatCard label="Attendance" value={`${overallPct}%`} tone={overallPct >= 70 ? "green" : "amber"} sub="this month" />
+        <StatCard label="Attendance" value={`${overallPct}%`} tone={overallPct >= 70 ? "green" : "amber"} sub={tm.label} />
         <StatCard label="Total payroll" value={formatCurrency(totalPay)} tone="green" sub="auto-calculated" />
       </div>
 
-      {rows.length === 0 ? (
-        <EmptyState message="No active coaches yet." />
+      {visibleRows.length === 0 ? (
+        <EmptyState message={search ? "No coaches match your search." : "No active coaches yet."} />
       ) : (
         <div className="space-y-3">
-          {rows.map((r) => (
+          {visibleRows.map((r) => (
             <Card key={r.id} className="p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="font-semibold text-green-700">{r.name}</div>
@@ -135,14 +172,14 @@ export default async function CoachSummaryPage() {
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">This month</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{tm.label}</div>
                   <div className="mt-1 text-sm text-slate-700">
                     {r.thisLessons} lessons · {r.attPct != null ? `${r.attPct}% attendance` : "no data"}
                   </div>
                   <div className="mt-1 text-lg font-bold text-green-700">{formatCurrency(r.thisPay)}</div>
                 </div>
                 <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Previous month</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{lm.label}</div>
                   <div className="mt-1 text-sm text-slate-700">{r.lastLessons} lessons</div>
                   <div className="mt-1 text-lg font-bold text-slate-700">{formatCurrency(r.lastPay)}</div>
                 </div>

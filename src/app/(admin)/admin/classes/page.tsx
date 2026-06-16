@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, LinkButton, Input, Button, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Section, LinkButton, Input, Button, Table, Th, Td, Badge, EmptyState, cn } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { WeeklyTimetable } from "@/components/weekly-timetable";
+import { rankBadgeClass } from "@/lib/ranks";
 import { createClass, deleteClass, deleteClasses } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +56,7 @@ export default async function ClassesPage() {
               <tr>
                 <Th className="w-10"><BulkSelectAll /></Th>
                 <Th>Name</Th>
+                <Th>Rank</Th>
                 <Th>Primary coach</Th>
                 <Th>Students</Th>
                 <Th>Active</Th>
@@ -66,6 +68,15 @@ export default async function ClassesPage() {
                 <tr key={c.id} className="hover:bg-slate-50">
                   <Td><BulkCheckbox id={c.id} /></Td>
                   <Td className="font-medium text-slate-900">{c.name}</Td>
+                  <Td label="Rank">
+                    {c.level ? (
+                      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(c.level))}>
+                        {c.level}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </Td>
                   <Td className="text-slate-500">{c.coach?.full_name ?? "—"}</Td>
                   <Td className="tabular-nums">{c.enrollments?.[0]?.count ?? 0}</Td>
                   <Td>

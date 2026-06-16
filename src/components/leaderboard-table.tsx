@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { cn } from "@/components/ui";
+import { rankBadgeClass, RANK_ORDER as CLASS_RANK_ORDER } from "@/lib/ranks";
 
 export type LbRow = {
   id: string;
@@ -12,9 +13,10 @@ export type LbRow = {
   rate: number;
   streak: number;
   rank: string;
+  classRank: string | null;
 };
 
-type Col = "rank" | "name" | "age" | "attended" | "rate" | "streak";
+type Col = "rank" | "classRank" | "name" | "age" | "attended" | "rate" | "streak";
 
 const RANK_STYLE: Record<string, string> = {
   LEGEND: "bg-green-100 text-green-700",
@@ -32,7 +34,13 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
 
   const sorted = useMemo(() => {
     const val = (r: LbRow): number | string =>
-      col === "name" ? r.name.toLowerCase() : col === "rank" ? RANK_ORDER[r.rank] : (r[col] as number);
+      col === "name"
+        ? r.name.toLowerCase()
+        : col === "rank"
+          ? RANK_ORDER[r.rank]
+          : col === "classRank"
+            ? CLASS_RANK_ORDER[r.classRank ?? ""] ?? 0
+            : (r[col] as number);
     return [...rows].sort((a, b) => {
       const x = val(a);
       const y = val(b);
@@ -72,11 +80,12 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
           <tr>
             <th className="border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">#</th>
             <Header c="name" label="Name" align="left" />
+            <Header c="classRank" label="Class rank" />
             <Header c="age" label="Age" />
             <Header c="attended" label="Attended" />
             <Header c="rate" label="Rate" />
             <Header c="streak" label="Max streak" />
-            <Header c="rank" label="Rank" />
+            <Header c="rank" label="Tier" />
           </tr>
         </thead>
         <tbody>
@@ -84,6 +93,13 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
             <tr key={r.id} className="hover:bg-slate-50">
               <td className="border-b border-slate-100 px-3 py-2.5 text-center text-slate-400">{i < 3 ? MEDAL[i] : i + 1}</td>
               <td className="border-b border-slate-100 px-3 py-2.5 font-medium text-slate-900">{r.name}</td>
+              <td className="border-b border-slate-100 px-3 py-2.5 text-center">
+                {r.classRank ? (
+                  <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(r.classRank))}>{r.classRank}</span>
+                ) : (
+                  <span className="text-slate-300">—</span>
+                )}
+              </td>
               <td className="border-b border-slate-100 px-3 py-2.5 text-center text-slate-500">{r.age ?? "—"}</td>
               <td className="border-b border-slate-100 px-3 py-2.5 text-center text-slate-700">
                 {r.attended}

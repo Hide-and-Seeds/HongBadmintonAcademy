@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizePhoneMY } from "@/lib/wa";
+import { CLASS_RANKS } from "@/lib/ranks";
 
 const optionalStr = z.string().trim().optional().transform((v) => (v ? v : null));
 
@@ -33,10 +34,25 @@ export const profileSchema = z.object({
 
 export const classSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
+  // Class rank — must be one of the fixed tiers; anything else (incl. "") → null.
+  level: z.string().trim().optional().transform((v) =>
+    v && (CLASS_RANKS as readonly string[]).includes(v) ? v : null,
+  ),
   description: optionalStr,
   coach_id: optionalId,
   default_location: optionalStr,
   capacity: z.coerce.number().int().positive().optional().nullable().or(z.literal("")).transform((v) => (v === "" ? null : v)),
+});
+
+// Ad-hoc single session (makeup / one-off), created directly from the Sessions
+// page without setting up a recurring weekly schedule.
+export const sessionSchema = z.object({
+  class_id: requiredId,
+  session_date: z.string().trim().min(1, "Date is required"),
+  start_time: z.string().trim().min(1, "Start time is required"),
+  end_time: z.string().trim().min(1, "End time is required"),
+  location: optionalStr,
+  grace_minutes: z.coerce.number().int().min(0).max(120).default(15),
 });
 
 export const scheduleSchema = z.object({
