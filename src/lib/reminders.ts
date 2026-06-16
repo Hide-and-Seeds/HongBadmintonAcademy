@@ -391,10 +391,12 @@ export async function recordQueueResult(
   }
 }
 
-// When a session is canceled, queue a WhatsApp heads-up to every enrolled
-// student's parent. These rows have no invoice_id, so the worker sends them even
-// while fee reminders are parked. One message per parent (siblings deduped).
-// Returns how many were queued. Service-role client (RLS-bypassing).
+// When a session is canceled, notify every enrolled student's parent on WhatsApp.
+// A cancellation is time-sensitive, so each parent is messaged IMMEDIATELY (in
+// parallel) rather than parked in the slow drip. Sends that fail (worker offline)
+// fall back to the queue. One message per parent (siblings deduped). These rows
+// carry no invoice_id, so even the queued fallbacks flow while fees are parked.
+// Returns how many parents were notified. Service-role client (RLS-bypassing).
 export async function enqueueSessionCancelNotice(sessionId: string): Promise<number> {
   const db = createAdminClient();
 
@@ -414,24 +416,50 @@ export async function enqueueSessionCancelNotice(sessionId: string): Promise<num
   const className = (s as any).classes?.name ?? "class";
   const when = `${formatDate((s as any).session_date)} (${formatTime((s as any).start_time)}–${formatTime((s as any).end_time)})`;
 
-  const rows: Array<Record<string, unknown>> = [];
   const seen = new Set<string>();
+  const recipients: { parentId: string | null; phone: string; body: string }[] = [];
   for (const e of (enr ?? []) as any[]) {
     const parent = e.students?.parent;
     const phone = normalizePhoneMY(parent?.phone);
     if (!phone || seen.has(phone)) continue;
     seen.add(phone);
-    rows.push({
-      kind: "session_canceled",
-      recipient_profile_id: parent?.id ?? null,
-      recipient_phone: phone,
+    recipients.push({
+      parentId: parent?.id ?? null,
+      phone,
       body:
         `🏸 ${APP_NAME}\n` +
         `Hi ${parent?.full_name ?? "there"}, the ${className} session on ${when} has been CANCELLED. ` +
         `Sorry for the inconvenience — we'll see you at the next session!`,
     });
   }
+  if (recipients.length === 0) return 0;
 
-  if (rows.length) await db.from("message_queue").insert(rows);
-  return rows.length;
+  // Send all in parallel (each capped by the provider's own timeout).
+  const provider = getWhatsappProvider();
+  const results = await Promise.allSettled(recipients.map((r) => provider.send({ to: r.phone, text: r.body })));
+
+  const sentLogs: Array<Record<string, unknown>> = [];
+  const queueFallback: Array<Record<string, unknown>> = [];
+  const now = new Date().toISOString();
+  recipients.forEach((r, i) => {
+    const res = results[i];
+    if (res.status === "fulfilled" && res.value.status === "sent") {
+      sentLogs.push({
+        type: "custom",
+        recipient_profile_id: r.parentId,
+        recipient_phone: r.phone,
+        body: r.body,
+        provider: "wwebjs",
+        status: "sent",
+        sent_at: now,
+        provider_message_id: res.value.providerMessageId ?? null,
+      });
+    } else {
+      queueFallback.push({ kind: "session_canceled", recipient_profile_id: r.parentId, recipient_phone: r.phone, body: r.body });
+    }
+  });
+
+  if (sentLogs.length) await db.from("messages").insert(sentLogs);
+  if (queueFallback.length) await db.from("message_queue").insert(queueFallback);
+  return recipients.length;
 }
