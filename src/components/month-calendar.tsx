@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatTime } from "@/lib/format";
+import { rankBadgeClass } from "@/lib/ranks";
 
 export interface CalendarSession {
   id: string;
@@ -9,6 +10,8 @@ export interface CalendarSession {
   location: string | null;
   status: string;
   className?: string | null;
+  classRank?: string | null;
+  coachName?: string | null;
 }
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -113,6 +116,12 @@ export function MonthCalendar({
                         >
                           <div className="font-medium">{formatTime(s.start_time)}</div>
                           <div className="truncate">{s.className ?? "Class"}</div>
+                          {s.classRank && (
+                            <span className={"mt-0.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase leading-none " + rankBadgeClass(s.classRank)}>
+                              {s.classRank}
+                            </span>
+                          )}
+                          {s.coachName && <div className="mt-0.5 truncate text-[10px] text-slate-500">🎯 {s.coachName}</div>}
                         </Link>
                       );
                     })}

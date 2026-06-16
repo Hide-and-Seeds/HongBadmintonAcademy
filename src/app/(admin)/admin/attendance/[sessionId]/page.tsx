@@ -67,7 +67,7 @@ export default async function RosterPage({
       <PageHeader
         title={(session as any).classes?.name ?? "Session"}
         description={`${formatDate(session.session_date)} · ${formatTime(session.start_time)}–${formatTime(session.end_time)} · ${session.location ?? "—"}`}
-        action={<LinkButton href="/admin/attendance" variant="ghost">← Sessions</LinkButton>}
+        action={<LinkButton href="/admin/sessions" variant="ghost">← Sessions</LinkButton>}
       />
 
       {/* Compact tally + finalise — no tall stat cards to scroll past */}
