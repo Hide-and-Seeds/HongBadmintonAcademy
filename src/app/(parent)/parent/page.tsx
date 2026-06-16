@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 const INTERVAL_SUFFIX: Record<FeeInterval, string> = { monthly: "/mo", one_time: "" };
 
 const PARENT_ACTIONS = [
+  { href: "/parent/schedule", icon: "📅", title: "Schedule", sub: "Upcoming sessions" },
   { href: "/parent/scorecards", icon: "📊", title: "Score cards", sub: "Monthly reports" },
   { href: "/parent/invoices", icon: "💳", title: "Fees & payments", sub: "Pay & history" },
 ];
@@ -113,7 +114,7 @@ export default async function ParentDashboard() {
         description="Your children's level, progress and package fees at a glance."
       />
 
-      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {PARENT_ACTIONS.map((q) => (
           <Link
             key={q.href}
@@ -131,10 +132,9 @@ export default async function ParentDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4">
         <StatCard label="Children" value={children?.length ?? 0} />
         <StatCard label="Unpaid invoices" value={unpaid ?? 0} tone={unpaid ? "red" : "green"} />
-        <StatCard label="Score cards" value={scorecards ?? 0} />
       </div>
 
       {/* ─── Upcoming sessions ──────────────────────────────────────────── */}

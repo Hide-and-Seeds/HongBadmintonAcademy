@@ -54,7 +54,7 @@ export default async function CoachAttendancePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Attendance" description="Live tap status for today's sessions." />
+      <PageHeader title="Register" description="Mark present/absent by hand for today's sessions (Check-in handles NFC scans)." />
 
       {blocks.length === 0 && <EmptyState message="No sessions scheduled today." />}
 
