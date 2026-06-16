@@ -76,9 +76,8 @@ export default async function DirectoryPage({
         })}
       </div>
 
-      {/* Filters (auto-apply). Hidden tab keeps the active tab on submit. */}
-      <form method="get" className="mb-5 flex flex-wrap items-end gap-3">
-        <input type="hidden" name="tab" value={active} />
+      {/* Filters (auto-apply, soft navigation). The active tab is preserved via the URL. */}
+      <div className="mb-5 flex flex-wrap items-end gap-3">
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-slate-600">Search</span>
           <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Name…" className="h-9 w-48" />
@@ -105,7 +104,7 @@ export default async function DirectoryPage({
           </>
         )}
         {filtered && <LinkButton href={`/admin/people?tab=${active}`} variant="ghost">Clear</LinkButton>}
-      </form>
+      </div>
 
       {active === "students" && <StudentsList q={q} status={statusFilter} rank={rankFilter} />}
       {active === "parents" && (

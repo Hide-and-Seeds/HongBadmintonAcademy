@@ -67,10 +67,12 @@ export default async function AdminDashboard() {
         <StatCard label="Active students" value={students} tone="green" />
         <StatCard label="Coaches" value={coaches} />
         <Link href="/admin/classes" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
-          <StatCard label="Classes switched on" value={`${activeClasses} / ${totalClasses}`} sub="active vs total — not a weekly count" tone="blue" />
+          <StatCard label="Active / total classes" value={`${activeClasses} / ${totalClasses}`} tone="blue" />
         </Link>
-        <StatCard label="Unpaid invoices" value={unpaid} sub="incl. overdue" tone={unpaid ? "red" : "slate"} />
-        <StatCard label="Queued messages" value={queued} sub="WhatsApp" tone={queued ? "amber" : "slate"} />
+        <StatCard label="Unpaid invoices" value={unpaid} tone={unpaid ? "red" : "slate"} />
+        <Link href="/admin/messages" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+          <StatCard label="Queued messages" value={queued} tone={queued ? "amber" : "slate"} />
+        </Link>
       </div>
 
       <div className="mt-8">

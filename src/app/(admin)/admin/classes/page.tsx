@@ -41,8 +41,8 @@ export default async function ClassesPage({
         action={<LinkButton href="/admin/classes/new">+ New class</LinkButton>}
       />
 
-      {/* Filters (auto-apply) */}
-      <form method="get" className="mb-5 flex flex-wrap items-end gap-3">
+      {/* Filters (auto-apply, soft navigation) */}
+      <div className="mb-5 flex flex-wrap items-end gap-3">
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-slate-600">Search</span>
           <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Class name…" className="h-9 w-48" />
@@ -65,7 +65,7 @@ export default async function ClassesPage({
           </FilterSelect>
         </label>
         {filtered && <LinkButton href="/admin/classes" variant="ghost">Clear</LinkButton>}
-      </form>
+      </div>
 
       {rows.length > 0 ? (
         <Section title={`${filtered ? "Classes (filtered)" : "Classes"} (${rows.length})`} flush>

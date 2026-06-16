@@ -76,7 +76,7 @@ export default async function InvoicesPage({
       <div>
         <PageHeader
           title="Invoices & Payments"
-          description={`Monthly fees auto-raise for students on a fee plan. Every fee falls due on the ${ordinal(schedule.dueDay)} of the month (Settings → Monthly schedule). Reconcile payments; reminders drip-send automatically.`}
+          description={`Fees auto-raise monthly, due on the ${ordinal(schedule.dueDay)}. Reconcile payments here.`}
           action={
             <>
               <form action={generateMonthlyInvoices}>
@@ -104,8 +104,8 @@ export default async function InvoicesPage({
           );
         })()}
 
-        {/* Filters (auto-apply) */}
-        <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+        {/* Filters (auto-apply, soft navigation) */}
+        <div className="mb-4 flex flex-wrap items-end gap-3">
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-slate-600">Status</span>
             <FilterSelect name="status" defaultValue={statusFilter} className="h-9 w-40">
@@ -131,7 +131,7 @@ export default async function InvoicesPage({
           {filtered && (
             <LinkButton href="/admin/invoices" variant="ghost">Clear</LinkButton>
           )}
-        </form>
+        </div>
 
         {invoices && invoices.length > 0 ? (
           <Collapsible title={filtered ? "Invoices (filtered)" : "Invoices"} count={invoices.length}>

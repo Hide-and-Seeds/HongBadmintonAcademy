@@ -131,11 +131,10 @@ export default async function CoachSummaryPage({
           <LinkButton href={`/admin/coaches/summary?month=${nextMonth}`} variant="secondary" aria-label="Next month">→</LinkButton>
           <span className="ml-2 text-sm font-semibold text-slate-800">{tm.label}</span>
         </div>
-        <form method="get" className="flex items-center gap-2">
-          <input type="hidden" name="month" value={monthStr} />
+        <div className="flex items-center gap-2">
           <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Search coach…" className="h-9 w-48" />
           {search && <LinkButton href={`/admin/coaches/summary?month=${monthStr}`} variant="ghost">Clear</LinkButton>}
-        </form>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

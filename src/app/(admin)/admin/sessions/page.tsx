@@ -61,7 +61,7 @@ export default async function SessionsPage({
     <div>
       <PageHeader
         title="Sessions"
-        description="Browse sessions month by month. Tap a session to take/see attendance. Add a one-off below, or generate a class's whole schedule."
+        description="Sessions by month — tap one for details. Add a one-off below."
         action={
           <LinkButton href="/admin/classes" variant="secondary">
             Generate (per class) →
@@ -112,9 +112,8 @@ export default async function SessionsPage({
         )}
       </Section>
 
-      {/* Filters (auto-apply) — narrow the month's calendar + list by class or status. */}
-      <form method="get" className="mb-6 flex flex-wrap items-end gap-3">
-        <input type="hidden" name="month" value={monthStr} />
+      {/* Filters (auto-apply, soft navigation) — narrow the month's calendar + list. */}
+      <div className="mb-6 flex flex-wrap items-end gap-3">
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-slate-600">Class</span>
           <FilterSelect name="class" defaultValue={classFilter} className="h-9 w-48">
@@ -136,7 +135,7 @@ export default async function SessionsPage({
         {filtered && (
           <LinkButton href={`/admin/sessions?month=${monthStr}`} variant="ghost">Clear</LinkButton>
         )}
-      </form>
+      </div>
 
       <div className="space-y-6">
         <MonthCalendar

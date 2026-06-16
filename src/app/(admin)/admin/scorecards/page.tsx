@@ -41,7 +41,7 @@ export default async function ScorecardsPage({
     <div className="space-y-6">
       <PageHeader
         title="Growth Reports"
-        description="Monthly growth reports — character, skills & the HBA Growth Index. When reports are generated, one privacy-safe notice is auto-posted to the parent WhatsApp Community (no names/scores). Per-card buttons below send an individual report to one parent."
+        description="Monthly growth reports. Generating posts one privacy-safe Community notice; per-card buttons send to one parent."
       />
 
       {generated !== undefined && (
