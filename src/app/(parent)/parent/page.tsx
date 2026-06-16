@@ -133,7 +133,6 @@ export default async function ParentDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <StatCard label="Children" value={children?.length ?? 0} />
         <StatCard label="Unpaid invoices" value={unpaid ?? 0} tone={unpaid ? "red" : "green"} />
       </div>
 

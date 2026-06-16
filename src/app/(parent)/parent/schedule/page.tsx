@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, EmptyState, Badge } from "@/components/ui";
+import { PageHeader, Section, EmptyState, Badge, Table, Th, Td } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { MY_PUBLIC_HOLIDAYS } from "@/lib/holidays";
 
@@ -112,35 +112,32 @@ export default async function ParentSchedulePage() {
       )}
 
       {dates.length ? (
-        <div className="space-y-5">
-          {dates.map((date) => (
-            <Section key={date} title={formatDate(date)} flush>
-              <ul className="divide-y divide-slate-100">
-                {byDate.get(date)!.map((s) => {
-                  const names = classToChildren.get(s.class_id) ?? [];
-                  const clsName = classNames.get(s.class_id) ?? "—";
-                  return (
-                    <li key={s.id} className="flex items-start justify-between gap-3 px-5 py-3.5">
-                      <div>
-                        <div className="font-semibold text-slate-900">{clsName}</div>
-                        <div className="text-sm text-slate-500">
-                          {formatTime(s.start_time)}–{formatTime(s.end_time)}
-                          {s.location ? ` · ${s.location}` : ""}
-                        </div>
-                        {names.length > 0 && (
-                          <div className="mt-1 text-xs text-slate-400">{names.join(", ")}</div>
-                        )}
-                      </div>
+        <Section title="Upcoming sessions" flush>
+          <Table>
+            <thead>
+              <tr><Th>Date</Th><Th>Time</Th><Th>Class</Th><Th>Who</Th><Th>Status</Th></tr>
+            </thead>
+            <tbody>
+              {(sessions ?? []).map((s: any) => {
+                const names = classToChildren.get(s.class_id) ?? [];
+                const clsName = classNames.get(s.class_id) ?? "—";
+                return (
+                  <tr key={s.id} className="hover:bg-slate-50">
+                    <Td label="Date" className="font-medium text-slate-900">{formatDate(s.session_date)}</Td>
+                    <Td label="Time">{formatTime(s.start_time)}–{formatTime(s.end_time)}{s.location ? ` · ${s.location}` : ""}</Td>
+                    <Td label="Class" className="text-slate-700">{clsName}</Td>
+                    <Td label="Who" className="text-slate-500">{names.join(", ") || "—"}</Td>
+                    <Td label="Status">
                       <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>
                         {s.status}
                       </Badge>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Section>
-          ))}
-        </div>
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </Section>
       ) : (
         <EmptyState message="No upcoming sessions scheduled." />
       )}

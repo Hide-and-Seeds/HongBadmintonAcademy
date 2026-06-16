@@ -6,6 +6,7 @@ import {
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { MonthCalendar } from "@/components/month-calendar";
+import { AddSessionModal } from "@/components/add-session-modal";
 import { FilterSelect } from "@/components/filter-controls";
 import { formatDate, formatTime } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
@@ -69,11 +70,14 @@ export default async function SessionsPage({
     <div>
       <PageHeader
         title="Sessions"
-        description="Sessions by month — tap one for details. Add a one-off below."
+        description="Sessions by month — tap one for details."
         action={
-          <LinkButton href="/admin/classes" variant="secondary">
-            Generate (per class) →
-          </LinkButton>
+          <>
+            <AddSessionModal classes={classes ?? []} monthStr={monthStr} today={todayMYT()} />
+            <LinkButton href="/admin/classes" variant="secondary">
+              Generate (per class) →
+            </LinkButton>
+          </>
         }
       />
 
@@ -83,42 +87,6 @@ export default async function SessionsPage({
           Session added.
         </p>
       )}
-
-      {/* Add a single session — the friendly path (no weekly schedule needed). */}
-      <Section title="Add a session" description="A one-off or makeup class on a specific date." className="mb-6">
-        {classes && classes.length > 0 ? (
-          <form action={createSession} className="grid items-end gap-4 sm:grid-cols-6">
-            <input type="hidden" name="month" value={monthStr} />
-            <div className="sm:col-span-2">
-              <Field label="Class" required>
-                <Select name="class_id" required defaultValue="">
-                  <option value="" disabled>— pick a class —</option>
-                  {classes.map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-            <Field label="Date" required>
-              <Input type="date" name="session_date" required defaultValue={todayMYT()} />
-            </Field>
-            <Field label="Start" required>
-              <Input type="time" name="start_time" required defaultValue="18:00" />
-            </Field>
-            <Field label="End" required>
-              <Input type="time" name="end_time" required defaultValue="19:30" />
-            </Field>
-            <Button type="submit">+ Add</Button>
-            <div className="sm:col-span-6">
-              <Field label="Location (optional)">
-                <Input name="location" placeholder="e.g. Court 1" className="sm:max-w-xs" />
-              </Field>
-            </div>
-          </form>
-        ) : (
-          <EmptyState message="No active classes yet — create a class first." />
-        )}
-      </Section>
 
       {/* Filters (auto-apply, soft navigation) — narrow the month's calendar + list. */}
       <div className="mb-6 flex flex-wrap items-end gap-3">
