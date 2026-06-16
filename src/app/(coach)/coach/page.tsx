@@ -8,9 +8,9 @@ import { coachClassIds } from "./_data";
 export const dynamic = "force-dynamic";
 
 const COACH_ACTIONS = [
-  { href: "/coach/checkin", icon: "📲", title: "Check-in (scan)", sub: "Tap NFC cards with your phone" },
+  { href: "/coach/checkin", icon: "📲", title: "Check-in & mark", sub: "Tap cards or mark by hand" },
+  { href: "/coach/schedule", icon: "📅", title: "Schedule", sub: "Your sessions this month" },
   { href: "/coach/marking", icon: "📊", title: "Marking", sub: "Score students this month" },
-  { href: "/coach/attendance", icon: "📋", title: "Register", sub: "Mark present/absent by hand" },
   { href: "/coach/payroll", icon: "💰", title: "My Payroll", sub: "Lessons & pay this month" },
 ];
 

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { SessionTile, type CalendarSession } from "@/components/session-tile";
+import { rankBadgeClass, rankCardClass } from "@/lib/ranks";
+import { formatTime } from "@/lib/format";
 
 export type { CalendarSession };
 
@@ -7,6 +9,27 @@ const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
+}
+
+// Read-only tile (no modal) for views where the viewer can't edit sessions
+// (e.g. the coach schedule). Mirrors SessionTile's look.
+function ReadonlyTile({ s }: { s: CalendarSession }) {
+  const canceled = s.status === "canceled";
+  const tone = canceled ? "border-red-300 bg-red-50 text-red-700" : rankCardClass(s.classRank);
+  return (
+    <div
+      title={`${s.className ?? "Class"} · ${formatTime(s.start_time)}–${formatTime(s.end_time)} · ${s.status}`}
+      className={"block rounded-md border px-1.5 py-1 text-[11px] leading-tight " + tone + (canceled ? " line-through opacity-70" : "")}
+    >
+      <div className="font-medium">{s.status === "completed" ? "✓ " : ""}{formatTime(s.start_time)}</div>
+      <div className="truncate">{s.className ?? "Class"}</div>
+      {s.classRank && (
+        <span className={"mt-0.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase leading-none " + rankBadgeClass(s.classRank)}>{s.classRank}</span>
+      )}
+      {s.coachName && <div className="mt-0.5 truncate text-[10px] text-slate-600">🎯 {s.coachName}</div>}
+      {s.location && <div className="mt-px truncate text-[10px] text-slate-500">📍 {s.location}</div>}
+    </div>
+  );
 }
 
 // Today in Malaysia time, as YYYY-MM-DD.
@@ -21,11 +44,13 @@ export function MonthCalendar({
   monthStr, // "YYYY-MM" of the displayed month
   basePath = "/admin/sessions",
   holidays = {},
+  interactive = true,
 }: {
   sessions: CalendarSession[];
   monthStr: string;
   basePath?: string;
   holidays?: Record<string, string>; // ymd -> holiday name
+  interactive?: boolean; // false = read-only tiles (no modal), e.g. coach view
 }) {
   const [yStr, mStr] = monthStr.split("-");
   const year = Number(yStr);
@@ -91,7 +116,7 @@ export function MonthCalendar({
                     <div className="mb-1 truncate text-[9px] font-medium text-rose-600" title={holiday}>🎌 {holiday}</div>
                   )}
                   <div className="space-y-1">
-                    {list.map((s) => <SessionTile key={s.id} s={s} />)}
+                    {list.map((s) => (interactive ? <SessionTile key={s.id} s={s} /> : <ReadonlyTile key={s.id} s={s} />))}
                   </div>
                 </div>
               );
