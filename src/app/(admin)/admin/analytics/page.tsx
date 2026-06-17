@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatCard, Section, Table, Th, Td, EmptyState, LinkButton, Badge } from "@/components/ui";
+import { PageHeader, StatCard, Section, Table, Th, Td, EmptyState, LinkButton, Badge, cn } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
+import { rankBadgeClass } from "@/lib/ranks";
 import { computeAnalytics } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
 
-function Bars({ data, tones }: { data: Record<string, number>; tones?: Record<string, string> }) {
+function Bars({ data, tones, suffix = "" }: { data: Record<string, number>; tones?: Record<string, string>; suffix?: string }) {
   const entries = Object.entries(data);
   const max = Math.max(1, ...entries.map(([, v]) => v));
   if (entries.length === 0) return <EmptyState message="No data yet." />;
@@ -13,14 +14,11 @@ function Bars({ data, tones }: { data: Record<string, number>; tones?: Record<st
     <div className="space-y-2.5">
       {entries.map(([k, v]) => (
         <div key={k} className="flex items-center gap-3 text-sm">
-          <span className="w-24 shrink-0 capitalize text-slate-600">{k}</span>
+          <span className="w-28 shrink-0 truncate capitalize text-slate-600" title={k}>{k}</span>
           <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className={`h-2.5 rounded-full ${tones?.[k] ?? "bg-green-500"}`}
-              style={{ width: `${(v / max) * 100}%` }}
-            />
+            <div className={`h-2.5 rounded-full ${tones?.[k] ?? "bg-green-500"}`} style={{ width: `${(v / max) * 100}%` }} />
           </div>
-          <span className="w-8 text-right font-medium tabular-nums text-slate-700">{v}</span>
+          <span className="w-12 text-right font-medium tabular-nums text-slate-700">{v}{suffix}</span>
         </div>
       ))}
     </div>
@@ -42,11 +40,14 @@ export default async function AnalyticsPage({
   const nextM = `${mm === 12 ? my + 1 : my}-${String(mm === 12 ? 1 : mm + 1).padStart(2, "0")}`;
   const thisM = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
 
+  const rankTotal = Object.values(a.rankDistribution).reduce((x, y) => x + y, 0);
+  const RANK_BAR = { Beginner: "bg-green-500", Intermediate: "bg-blue-500", Advanced: "bg-amber-500", Elite: "bg-purple-500", Unranked: "bg-slate-400" } as Record<string, string>;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Analytics"
-        description={`Academy metrics · ${a.monthLabel}`}
+        description={`Academy KPIs · ${a.monthLabel}`}
         action={
           <div className="flex flex-wrap items-center gap-1.5">
             <LinkButton href={`/admin/analytics?month=${prevM}`} variant="secondary" aria-label="Previous month">←</LinkButton>
@@ -58,27 +59,83 @@ export default async function AnalyticsPage({
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatCard label="Revenue (this month)" value={formatCurrency(a.revenueThisMonth, a.currency)} tone="green" />
+      {/* Headline KPIs */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+        <StatCard label="Revenue (month)" value={formatCurrency(a.revenueThisMonth, a.currency)} tone="green" />
         <StatCard
           label="Collection rate"
           value={a.collection.rate != null ? `${a.collection.rate}%` : "—"}
           sub={`${formatCurrency(a.collection.collected, a.currency)} / ${formatCurrency(a.collection.billed, a.currency)}`}
           tone={a.collection.rate == null ? "slate" : a.collection.rate >= 80 ? "green" : a.collection.rate >= 50 ? "amber" : "red"}
         />
-        <StatCard label="Outstanding fees" value={formatCurrency(a.outstanding, a.currency)} tone={a.outstanding > 0 ? "red" : "slate"} />
+        <StatCard label="Active students" value={a.counts.students} />
         <StatCard label="Attendance rate" value={a.attendanceRate != null ? `${a.attendanceRate}%` : "—"} tone="blue" />
-        <StatCard label="Avg skill score" value={a.avgScore != null ? `${a.avgScore}%` : "—"} sub={`${a.assessmentCount} assessments`} />
+        <StatCard
+          label="Retention (30d)"
+          value={a.retention.rate != null ? `${a.retention.rate}%` : "—"}
+          sub="attended in last 30 days"
+          tone={a.retention.rate == null ? "slate" : a.retention.rate >= 80 ? "green" : a.retention.rate >= 60 ? "amber" : "red"}
+        />
+        <StatCard
+          label="Avg skill"
+          value={a.avgScore != null ? `${a.avgScore}%` : "—"}
+          sub={
+            a.avgScore != null
+              ? `≈ ${(a.avgScore / 10).toFixed(1)}/10${a.skillImprovement != null ? ` · ${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} vs last mo` : ""}`
+              : "no assessments"
+          }
+          tone={a.skillImprovement != null ? (a.skillImprovement >= 0 ? "green" : "red") : "slate"}
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatCard label="Active students" value={a.counts.students} />
+      {/* Secondary KPIs */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+        <StatCard label="Outstanding fees" value={formatCurrency(a.outstanding, a.currency)} tone={a.outstanding > 0 ? "red" : "slate"} />
         <StatCard label="New this month" value={a.newStudentsThisMonth} tone={a.newStudentsThisMonth ? "green" : "slate"} />
+        <StatCard label="Inactive students" value={a.inactiveStudents} tone={a.inactiveStudents ? "amber" : "slate"} />
+        <StatCard label="Avg attendance/student" value={a.retention.avgAttendancePct != null ? `${a.retention.avgAttendancePct}%` : "—"} />
+        <StatCard label="No-show >30 days" value={a.retention.inactive30} tone={a.retention.inactive30 ? "red" : "green"} />
+        <StatCard label="Class occupancy" value={a.avgOccupancyPct != null ? `${a.avgOccupancyPct}%` : "—"} sub="avg of capacity" tone="blue" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
         <StatCard label="Coaches" value={a.counts.coaches} />
         <StatCard label="Parents" value={a.counts.parents} />
         <StatCard label="Active classes" value={a.counts.classes} />
       </div>
 
+      {/* Skills + rank */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Section title="Skills breakdown" description="Average % per criterion, this month">
+          {a.skillsBreakdown.length ? (
+            <Bars data={Object.fromEntries(a.skillsBreakdown.map((s) => [s.name, s.pct]))} suffix="%" />
+          ) : (
+            <EmptyState message="No assessments scored this month." />
+          )}
+        </Section>
+
+        <Section title="Students by rank" flush>
+          <Table>
+            <thead><tr><Th>Rank</Th><Th className="text-right">Students</Th><Th className="text-right">Share</Th></tr></thead>
+            <tbody>
+              {(["Beginner", "Intermediate", "Advanced", "Elite", "Unranked"] as const).map((r) => {
+                const n = a.rankDistribution[r] ?? 0;
+                return (
+                  <tr key={r} className="hover:bg-slate-50">
+                    <Td>
+                      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", r === "Unranked" ? "bg-slate-100 text-slate-500" : rankBadgeClass(r))}>{r}</span>
+                    </Td>
+                    <Td className="text-right tabular-nums">{n}</Td>
+                    <Td className="text-right tabular-nums text-slate-500">{rankTotal ? Math.round((n / rankTotal) * 100) : 0}%</Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </Section>
+      </div>
+
+      {/* Growth trends */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Revenue trend" description="Succeeded payments, last 6 months">
           {a.revenueTrend.some((m) => m.amount > 0) ? (
@@ -91,9 +148,7 @@ export default async function AnalyticsPage({
                     <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
                       <div className="h-2.5 rounded-full bg-green-500" style={{ width: `${(m.amount / max) * 100}%` }} />
                     </div>
-                    <span className="w-24 text-right font-medium tabular-nums text-slate-700">
-                      {formatCurrency(m.amount, a.currency)}
-                    </span>
+                    <span className="w-24 text-right font-medium tabular-nums text-slate-700">{formatCurrency(m.amount, a.currency)}</span>
                   </div>
                 ));
               })()}
@@ -103,43 +158,96 @@ export default async function AnalyticsPage({
           )}
         </Section>
 
-        <Section title="Students per class" flush>
-          {a.studentsPerClass.length ? (
+        <Section title="New students" description="Sign-ups per month, last 6 months">
+          {a.newStudentTrend.some((m) => m.count > 0) ? (
+            <div className="space-y-2.5">
+              {(() => {
+                const max = Math.max(1, ...a.newStudentTrend.map((m) => m.count));
+                return a.newStudentTrend.map((m) => (
+                  <div key={m.label} className="flex items-center gap-3 text-sm">
+                    <span className="w-10 shrink-0 text-slate-600">{m.label}</span>
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-2.5 rounded-full bg-blue-500" style={{ width: `${(m.count / max) * 100}%` }} />
+                    </div>
+                    <span className="w-8 text-right font-medium tabular-nums text-slate-700">{m.count}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          ) : (
+            <EmptyState message="No sign-ups in the last 6 months." />
+          )}
+        </Section>
+      </div>
+
+      {/* Coach performance */}
+      <Section title="Coach performance" description="Students, attendance % and average skill score given — this month" flush>
+        {a.coachPerformance.length ? (
+          <Table>
+            <thead><tr><Th>Coach</Th><Th className="text-right">Students</Th><Th className="text-right">Attendance</Th><Th className="text-right">Avg skill given</Th></tr></thead>
+            <tbody>
+              {a.coachPerformance.map((c) => (
+                <tr key={c.name} className="hover:bg-slate-50">
+                  <Td className="font-medium text-slate-900">{c.name}</Td>
+                  <Td className="text-right tabular-nums">{c.students}</Td>
+                  <Td className="text-right tabular-nums">{c.attendancePct != null ? `${c.attendancePct}%` : "—"}</Td>
+                  <Td className="text-right tabular-nums">{c.avgSkill != null ? `${c.avgSkill}%` : "—"}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        ) : <div className="p-5"><EmptyState message="No coaches yet." /></div>}
+      </Section>
+
+      {/* Occupancy + fee aging */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Section title="Class occupancy" description="Enrolled vs capacity" flush>
+          {a.classOccupancy.length ? (
             <Table>
-              <thead><tr><Th>Class</Th><Th className="text-right">Students</Th></tr></thead>
+              <thead><tr><Th>Class</Th><Th className="text-right">Filled</Th><Th className="text-right">Occupancy</Th></tr></thead>
               <tbody>
-                {a.studentsPerClass.map((c) => (
+                {a.classOccupancy.map((c) => (
                   <tr key={c.name} className="hover:bg-slate-50">
                     <Td className="font-medium text-slate-900">{c.name}</Td>
-                    <Td className="text-right tabular-nums">{c.count}</Td>
+                    <Td className="text-right tabular-nums text-slate-500">{c.enrolled}/{c.capacity}</Td>
+                    <Td className="text-right">
+                      <span className={cn("font-semibold tabular-nums", c.pct >= 90 ? "text-red-600" : c.pct >= 60 ? "text-green-600" : "text-amber-600")}>{c.pct}%</span>
+                    </Td>
                   </tr>
                 ))}
               </tbody>
             </Table>
-          ) : <div className="p-5"><EmptyState message="No active enrolments yet." /></div>}
+          ) : <div className="p-5"><EmptyState message="Set a capacity on classes to track occupancy." /></div>}
+        </Section>
+
+        <Section title="Fee aging" description="Unpaid / overdue, by days past due">
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "0–30 days", v: a.feeAging.d0, tone: "text-slate-700" },
+              { label: "31–60 days", v: a.feeAging.d30, tone: "text-amber-600" },
+              { label: "61–90 days", v: a.feeAging.d60, tone: "text-orange-600" },
+              { label: "90+ days", v: a.feeAging.d90, tone: "text-red-600" },
+            ].map((b) => (
+              <div key={b.label} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{b.label}</div>
+                <div className={cn("mt-1 text-lg font-bold tabular-nums", b.tone)}>{formatCurrency(b.v, a.currency)}</div>
+              </div>
+            ))}
+          </div>
         </Section>
       </div>
 
+      {/* Attendance + invoices + rewards + WhatsApp */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Students by rank" description="Effective class rank across active students">
-          <Bars
-            data={a.rankDistribution}
-            tones={{ Beginner: "bg-green-500", Intermediate: "bg-blue-500", Advanced: "bg-amber-500", Elite: "bg-purple-500", Unranked: "bg-slate-400" }}
-          />
-        </Section>
-
         <Section title="Attendance breakdown">
-          <Bars
-            data={a.attendanceBreakdown}
-            tones={{ present: "bg-green-500", late: "bg-amber-500", absent: "bg-red-500", excused: "bg-slate-400" }}
-          />
+          <Bars data={a.attendanceBreakdown} tones={{ present: "bg-green-500", late: "bg-amber-500", absent: "bg-red-500", excused: "bg-slate-400" }} />
         </Section>
 
         <Section title="Invoices by status">
           <Bars data={a.invoiceStatus} tones={{ paid: "bg-green-500", unpaid: "bg-amber-500", overdue: "bg-red-500" }} />
         </Section>
 
-        <Section title="Reward leaderboard" flush>
+        <Section title={`Reward leaderboard · ${a.rewardPeriod}`} flush>
           {a.topStudents.length ? (
             <Table>
               <thead><tr><Th>#</Th><Th>Student</Th><Th className="text-right">Points</Th></tr></thead>
@@ -153,14 +261,11 @@ export default async function AnalyticsPage({
                 ))}
               </tbody>
             </Table>
-          ) : <div className="p-5"><EmptyState message="No rewards awarded yet." /></div>}
+          ) : <div className="p-5"><EmptyState message="No rewards awarded this month." /></div>}
         </Section>
 
         <Section title="WhatsApp delivery">
-          <Bars
-            data={a.messageStatus}
-            tones={{ delivered: "bg-green-500", read: "bg-green-600", sent: "bg-blue-500", queued: "bg-slate-400", failed: "bg-red-500" }}
-          />
+          <Bars data={a.messageStatus} tones={{ delivered: "bg-green-500", read: "bg-green-600", sent: "bg-blue-500", queued: "bg-slate-400", failed: "bg-red-500" }} />
         </Section>
       </div>
     </div>

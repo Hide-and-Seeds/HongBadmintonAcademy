@@ -60,17 +60,30 @@ export async function GET(req: Request) {
 
   heading("Finance");
   row("Revenue this month", formatCurrency(a.revenueThisMonth, a.currency));
+  row("Collection rate", a.collection.rate != null ? `${a.collection.rate}%` : "—");
   row("Outstanding fees", formatCurrency(a.outstanding, a.currency));
+  row("Fee aging 0/31/61/90+", `${formatCurrency(a.feeAging.d0, a.currency)} · ${formatCurrency(a.feeAging.d30, a.currency)} · ${formatCurrency(a.feeAging.d60, a.currency)} · ${formatCurrency(a.feeAging.d90, a.currency)}`);
 
   heading("Engagement");
   row("Attendance rate", a.attendanceRate != null ? `${a.attendanceRate}%` : "—");
+  row("Retention (30 days)", a.retention.rate != null ? `${a.retention.rate}%` : "—");
+  row("Avg attendance / student", a.retention.avgAttendancePct != null ? `${a.retention.avgAttendancePct}%` : "—");
   row("Avg skill score", a.avgScore != null ? `${a.avgScore}% (${a.assessmentCount} assessments)` : "—");
+  row("Skill improvement", a.skillImprovement != null ? `${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} pts vs last mo` : "—");
+  row("Class occupancy (avg)", a.avgOccupancyPct != null ? `${a.avgOccupancyPct}%` : "—");
   row("Attendance", `present ${a.attendanceBreakdown.present} · late ${a.attendanceBreakdown.late} · absent ${a.attendanceBreakdown.absent} · excused ${a.attendanceBreakdown.excused}`);
 
   heading("People");
   row("Active students", String(a.counts.students));
+  row("New / Inactive this month", `${a.newStudentsThisMonth} new · ${a.inactiveStudents} inactive`);
   row("Coaches / Parents", `${a.counts.coaches} / ${a.counts.parents}`);
   row("Active classes", String(a.counts.classes));
+
+  heading("Coach performance (this month)");
+  if (a.coachPerformance.length === 0) row("—", "no coaches");
+  a.coachPerformance.forEach((c) =>
+    row(c.name, `${c.students} students · ${c.attendancePct ?? "—"}% att · ${c.avgSkill ?? "—"}% skill`),
+  );
 
   heading("Invoices by status");
   for (const [k, v] of Object.entries(a.invoiceStatus)) row(k, String(v));
