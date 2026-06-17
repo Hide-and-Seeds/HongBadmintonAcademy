@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { CLASS_RANKS } from "@/lib/ranks";
+import { CLASS_RANKS, RANK_ORDER, studentRank } from "@/lib/ranks";
+import { sendRankUpNotice } from "@/lib/reminders";
 
 function err(studentId: string, message: string): never {
   redirect(`/coach/marking/${studentId}?error=${encodeURIComponent(message)}`);
@@ -19,8 +20,23 @@ export async function setStudentRank(formData: FormData) {
   const raw = String(formData.get("rank") ?? "").trim();
   const rank = (CLASS_RANKS as readonly string[]).includes(raw) ? raw : null;
   const db = createAdminClient();
+
+  // Effective rank before vs after, to congratulate only on a genuine rank-up.
+  const [{ data: cur }, { data: enr }] = await Promise.all([
+    db.from("students").select("rank").eq("id", student_id).maybeSingle(),
+    db.from("enrollments").select("classes(level)").eq("student_id", student_id).eq("active", true),
+  ]);
+  const levels = (enr ?? []).map((e: any) => e.classes?.level ?? null);
+  const prev = studentRank(cur?.rank, levels);
+
   const { error } = await db.from("students").update({ rank }).eq("id", student_id);
   if (error) err(student_id, error.message);
+
+  const next = studentRank(rank, levels);
+  const ord = (r: string | null) => (r ? RANK_ORDER[r] ?? 0 : 0);
+  if (ord(next) > ord(prev)) {
+    try { await sendRankUpNotice(student_id, next); } catch { /* never block the rank change */ }
+  }
   revalidatePath(`/coach/marking/${student_id}`);
   redirect(`/coach/marking/${student_id}?saved=1`);
 }

@@ -463,3 +463,41 @@ export async function enqueueSessionCancelNotice(sessionId: string): Promise<num
   if (queueFallback.length) await db.from("message_queue").insert(queueFallback);
   return recipients.length;
 }
+
+// Congratulate a parent when their child is promoted to a higher rank. Positive,
+// personalized, low-volume → low ban risk. Sent immediately (one DM), queued as
+// a fallback if the worker is offline. Caller decides it's a genuine rank-UP.
+export async function sendRankUpNotice(studentId: string, newRank: string | null): Promise<boolean> {
+  if (!newRank) return false;
+  const db = createAdminClient();
+  const { data: s } = await db
+    .from("students")
+    .select("full_name, parent:profiles!students_parent_id_fkey(id, full_name, phone)")
+    .eq("id", studentId)
+    .maybeSingle();
+  const parent = (s as any)?.parent;
+  const phone = normalizePhoneMY(parent?.phone);
+  if (!phone) return false;
+
+  const body =
+    `🏸 ${APP_NAME}\n` +
+    `🎉 Congratulations! ${(s as any).full_name} has been promoted to ${newRank} rank. ` +
+    `Well done — keep up the great work! 👏`;
+
+  const result = await getWhatsappProvider().send({ to: phone, text: body });
+  if (result.status === "sent") {
+    await db.from("messages").insert({
+      type: "custom",
+      recipient_profile_id: parent?.id ?? null,
+      recipient_phone: phone,
+      body,
+      provider: "wwebjs",
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      provider_message_id: result.providerMessageId ?? null,
+    });
+    return true;
+  }
+  await db.from("message_queue").insert({ kind: "rank_up", recipient_profile_id: parent?.id ?? null, recipient_phone: phone, body });
+  return false;
+}

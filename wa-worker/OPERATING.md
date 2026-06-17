@@ -43,14 +43,26 @@ Open `https://hba-wa.tail9ab5d1.ts.net/health` → expect `{"ready":true}`.
 - Restart: `pm2 restart hba-wa`
 - Auto-starts on VM reboot (already set via `pm2 startup` + `pm2 save`).
 
-## Re-link the phone (lost session / new number)
+## Re-link the phone (lost session)
+Three ways, easiest first. **B and C need the worker running the latest code** —
+deploy once: `cd ~/HongBadmintonAcademy/wa-worker && git pull && pm2 restart hba-wa`.
+
+**A — In the web app (no SSH, easiest).** Admin → **Settings → "Link WhatsApp (scan QR)"** → scan with the dedicated phone (WhatsApp → Linked devices → Link a device). Turns green when linked.
+
+**B — Browser QR (no SSH).** Open on a laptop/2nd screen, then scan:
+```
+https://hba-wa.tail9ab5d1.ts.net/qr?secret=<WA_WORKER_SECRET>
+```
+> Use the **Tailscale Funnel URL above** — NOT `http://<vm-ip>:8787` (port 8787 isn't open publicly; the funnel is the only way in).
+
+**C — SSH (always works).**
 ```bash
 cd ~/HongBadmintonAcademy/wa-worker
-rm -rf .wwebjs_auth .wwebjs_cache
 pm2 restart hba-wa
-pm2 logs hba-wa            # scan the QR with the phone; or download qr.png and scan that
+pm2 logs hba-wa            # scan the QR; or ⚙ Download file → wa-worker/qr.png and scan that
 ```
-Wait for `WhatsApp client READY`.
+For a brand-new number, wipe the old session first: `rm -rf .wwebjs_auth .wwebjs_cache` before the restart.
+Wait for `WhatsApp client READY` either way.
 
 ## If the number gets BANNED (cold-swap recovery)
 1. New SIM → phone → install WhatsApp → register that number (OTP).

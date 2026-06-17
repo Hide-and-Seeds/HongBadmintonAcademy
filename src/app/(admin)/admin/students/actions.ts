@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { studentSchema } from "@/lib/validation";
-import { CLASS_RANKS, studentRank, nextRank } from "@/lib/ranks";
+import { CLASS_RANKS, RANK_ORDER, studentRank, nextRank } from "@/lib/ranks";
+import { sendRankUpNotice } from "@/lib/reminders";
+
+const order = (r: string | null) => (r ? RANK_ORDER[r] ?? 0 : 0);
 
 function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -22,8 +25,22 @@ export async function setStudentRank(formData: FormData) {
   const raw = String(formData.get("rank") ?? "").trim();
   const rank = (CLASS_RANKS as readonly string[]).includes(raw) ? raw : null;
   const supabase = await createClient();
+
+  // Effective rank before vs after, to congratulate only on a genuine rank-up.
+  const [{ data: cur }, { data: enr }] = await Promise.all([
+    supabase.from("students").select("rank").eq("id", id).maybeSingle(),
+    supabase.from("enrollments").select("classes(level)").eq("student_id", id).eq("active", true),
+  ]);
+  const levels = (enr ?? []).map((e: any) => e.classes?.level ?? null);
+  const prev = studentRank(cur?.rank, levels);
+
   const { error } = await supabase.from("students").update({ rank }).eq("id", id);
   if (error) err(`/admin/students/${id}`, error.message);
+
+  const next = studentRank(rank, levels);
+  if (order(next) > order(prev)) {
+    try { await sendRankUpNotice(id, next); } catch { /* never block the rank change */ }
+  }
   revalidateRank(id);
 }
 
@@ -40,6 +57,7 @@ export async function promoteStudent(formData: FormData) {
   if (!promoted) err(`/admin/students/${id}`, "Already at the top rank (Elite).");
   const { error } = await supabase.from("students").update({ rank: promoted }).eq("id", id);
   if (error) err(`/admin/students/${id}`, error.message);
+  try { await sendRankUpNotice(id, promoted); } catch { /* never block the promotion */ }
   revalidateRank(id);
 }
 
