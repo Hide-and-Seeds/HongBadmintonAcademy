@@ -159,6 +159,20 @@ app.get("/qr", async (_req, res) => {
   }
 });
 
+// JSON QR for the web app to embed in admin Settings (server-side fetch, Bearer-
+// authed). Returns the QR as a data URL so the app needs no QR library.
+app.get("/qr.json", async (_req, res) => {
+  res.set("cache-control", "no-store");
+  if (ready) return res.json({ ready: true, dataUrl: null });
+  if (!lastQr) return res.json({ ready: false, dataUrl: null });
+  try {
+    const dataUrl = await QR.toDataURL(lastQr, { width: 320, margin: 2 });
+    return res.json({ ready: false, dataUrl });
+  } catch (e) {
+    return res.status(500).json({ ready: false, dataUrl: null, error: String(e?.message || e) });
+  }
+});
+
 // Resolve a number + send, retrying transient Puppeteer errors (the WhatsApp
 // Web page can reload mid-call on low-RAM hosts -> "Execution context was
 // destroyed"). Shared by the /send route and the drip sender.

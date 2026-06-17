@@ -1,0 +1,91 @@
+<svg viewBox="0 0 780 670" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" role="img">
+  <title>How the WhatsApp worker sends a message — Hong Badminton Academy</title>
+  <desc>Two paths: an instant path where the app calls the worker /send directly, and a queued drip path where cron jobs enqueue messages that the worker polls and sends under a throttle gate. Both converge on the worker VM, then WhatsApp/Meta, then the recipient.</desc>
+
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="#64748b"/></marker>
+    <marker id="ahA" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="#2563eb"/></marker>
+  </defs>
+
+  <style>
+    .box{ fill:#ffffff; stroke:#cbd5e1; stroke-width:1.5; }
+    .gate{ fill:#eff6ff; stroke:#2563eb; stroke-width:1.5; }
+    .t{ fill:#0f172a; font-size:13px; font-weight:600; }
+    .s{ fill:#64748b; font-size:10.5px; }
+    .lane{ fill:#475569; font-size:11px; font-weight:700; letter-spacing:.3px; }
+    .lbl{ fill:#64748b; font-size:9.5px; }
+    .solid{ stroke:#2563eb; stroke-width:2; fill:none; }
+    .dash{ stroke:#94a3b8; stroke-width:1.6; fill:none; stroke-dasharray:5 4; }
+    .dot{ stroke:#94a3b8; stroke-width:1.4; fill:none; stroke-dasharray:1.5 3; }
+    .g{ fill:#1d4ed8; font-size:10.5px; }
+    .title{ fill:#0f172a; font-size:15px; font-weight:700; }
+  </style>
+
+  <rect x="0" y="0" width="780" height="670" fill="#ffffff"/>
+  <text class="title" x="40" y="20">How the WhatsApp worker sends a message</text>
+
+  <!-- lane labels -->
+  <text class="lane" x="40" y="40">① INSTANT — sent now</text>
+  <text class="lane" x="470" y="40">② QUEUED DRIP — throttled</text>
+
+  <!-- arrows -->
+  <path class="solid" d="M160,116 V160" marker-end="url(#ahA)"/>
+  <path class="solid" d="M160,220 V428 H345 V448" marker-end="url(#ahA)"/>
+  <path class="dash" d="M605,116 V160" marker-end="url(#ah)"/>
+  <path class="dash" d="M605,220 V258" marker-end="url(#ah)"/>
+  <path class="dash" d="M605,314 V324" marker-end="url(#ah)"/>
+  <path class="dash" d="M605,422 V436 H440 V448" marker-end="url(#ah)"/>
+  <path class="dash" d="M282,190 H468" marker-end="url(#ah)"/>
+  <path class="solid" d="M390,512 V536" marker-end="url(#ahA)"/>
+  <path class="solid" d="M390,588 V610" marker-end="url(#ahA)"/>
+  <path class="dot" d="M250,479 H222" marker-end="url(#ah)"/>
+  <text class="lbl" x="300" y="184">worker offline → queue</text>
+  <text class="lbl" x="120" y="474">logs result</text>
+
+  <rect class="box" x="40" y="58" width="240" height="56" rx="10"/>
+  <text class="t" x="56" y="84">Instant triggers</text>
+  <text class="s" x="56" y="102">blast · generate notice · cancel</text>
+
+  <rect class="box" x="470" y="58" width="270" height="56" rx="10"/>
+  <text class="t" x="486" y="84">Cron jobs / fallback</text>
+  <text class="s" x="486" y="102">fee reminders · monthly notice</text>
+
+  <rect class="box" x="40" y="162" width="240" height="58" rx="10"/>
+  <text class="t" x="56" y="188">Next.js app (Vercel)</text>
+  <text class="s" x="56" y="206">provider.send() → POST /send</text>
+
+  <rect class="box" x="470" y="162" width="270" height="58" rx="10"/>
+  <text class="t" x="486" y="188">message_queue table</text>
+  <text class="s" x="486" y="206">row status = queued</text>
+
+  <rect class="box" x="470" y="260" width="270" height="54" rx="10"/>
+  <text class="t" x="486" y="284">Worker polls /worker/next</text>
+  <text class="s" x="486" y="302">every 8–15 min, one at a time</text>
+
+  <rect class="gate" x="470" y="326" width="270" height="96" rx="10"/>
+  <text class="g" x="486" y="346" font-weight="700">Throttle gate (claimNextQueued)</text>
+  <text class="g" x="486" y="364">• worker paused?  → stop</text>
+  <text class="g" x="486" y="380">• window 9am–8pm only</text>
+  <text class="g" x="486" y="396">• ≤10 / day · ≥10-min gap</text>
+  <text class="g" x="486" y="412">• 30% random skip (anti-ban)</text>
+
+  <rect class="box" x="250" y="450" width="280" height="60" rx="10"/>
+  <text class="t" x="266" y="476">Worker VM · whatsapp-web.js</text>
+  <text class="s" x="266" y="494">dedicated number · client.sendMessage()</text>
+
+  <rect class="box" x="40" y="450" width="180" height="60" rx="10"/>
+  <text class="t" x="56" y="476">messages log</text>
+  <text class="s" x="56" y="494">audit trail</text>
+
+  <rect class="box" x="300" y="538" width="180" height="50" rx="10"/>
+  <text class="t" x="324" y="568">WhatsApp · Meta</text>
+
+  <rect class="box" x="260" y="612" width="260" height="48" rx="10"/>
+  <text class="t" x="276" y="641">Parent phone / Community group</text>
+
+  <!-- legend -->
+  <line x1="556" y1="648" x2="586" y2="648" class="solid"/>
+  <text class="lbl" x="592" y="651">instant</text>
+  <line x1="648" y1="648" x2="678" y2="648" class="dash"/>
+  <text class="lbl" x="684" y="651">queued drip</text>
+</svg>

@@ -3,6 +3,7 @@ import { PageHeader, Card, Section, Field, Input, Badge } from "@/components/ui"
 import { SubmitButton } from "@/components/submit-button";
 import { ROLE_LABEL } from "@/lib/constants";
 import { isWorkerPaused, isFeeRemindersPaused, getMonthlySchedule } from "@/lib/settings";
+import { WaLinkPanel } from "@/components/wa-link-panel";
 import { updateOwnProfile, toggleWorker, toggleFeeReminders, saveMonthlySchedule } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,10 @@ export default async function SettingsPage({
             </SubmitButton>
           </form>
         </div>
+      </Section>
+
+      <Section title="Link WhatsApp (scan QR)" description="Re-link the dedicated number after a logout — scan from here, no SSH needed." flush>
+        <WaLinkPanel />
       </Section>
 
       <Section title="Auto fee reminders">
