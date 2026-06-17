@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { getWhatsappProvider } from "@/lib/whatsapp";
+import { setCommunityIntro } from "@/lib/settings";
 import { env } from "@/lib/env";
 
 // No worker, no bot: the admin posts the notice into the community Announcements
@@ -64,4 +65,12 @@ export async function postCommunityMessage(formData: FormData) {
   await db.from("message_queue").insert({ kind: "community_custom", recipient_phone: env.waCommunityGroupId, body });
   revalidatePath("/admin/announce");
   redirect("/admin/announce?posted=queued");
+}
+
+// Save the free-text note prepended to the monthly Community notice (reports/fees).
+export async function saveCommunityIntro(formData: FormData) {
+  await requireRole("admin");
+  await setCommunityIntro(String(formData.get("intro") ?? "").trim());
+  revalidatePath("/admin/announce");
+  redirect("/admin/announce?intro=saved");
 }

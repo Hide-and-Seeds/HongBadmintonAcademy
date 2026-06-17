@@ -76,6 +76,12 @@ export async function getMonthlySchedule(): Promise<MonthlySchedule> {
 
 export const setMonthlySchedule = (s: MonthlySchedule) => setValue(MONTHLY_SCHEDULE, s);
 
+// Admin's free-text line prepended to the monthly Community notice (reports/fees),
+// so it goes out as one personalised post. Empty = just the auto summary.
+const COMMUNITY_INTRO = "community_notice_intro";
+export const getCommunityIntro = () => getValue<string>(COMMUNITY_INTRO, "");
+export const setCommunityIntro = (v: string) => setValue(COMMUNITY_INTRO, v);
+
 // Day-of-month in Malaysia time (1–31) — for cron gating against the schedule.
 export function mytDayOfMonth(): number {
   return Number(new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(8, 10));

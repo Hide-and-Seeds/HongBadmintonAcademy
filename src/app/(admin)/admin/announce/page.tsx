@@ -4,17 +4,19 @@ import { SubmitButton } from "@/components/submit-button";
 import { formatDateTime } from "@/lib/format";
 import { env } from "@/lib/env";
 import { AnnounceComposer } from "@/components/announce-composer";
-import { logAnnouncement, postCommunityMessage } from "./actions";
+import { getCommunityIntro } from "@/lib/settings";
+import { logAnnouncement, postCommunityMessage, saveCommunityIntro } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnnouncePage({
   searchParams,
 }: {
-  searchParams: Promise<{ posted?: string; error?: string }>;
+  searchParams: Promise<{ posted?: string; error?: string; intro?: string }>;
 }) {
-  const { posted, error } = await searchParams;
+  const { posted, error, intro: introSaved } = await searchParams;
   const botReady = !!env.waCommunityGroupId;
+  const intro = await getCommunityIntro();
   const supabase = await createClient();
   const { data: history } = await supabase
     .from("messages")
@@ -44,6 +46,24 @@ export default async function AnnouncePage({
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
       )}
+      {introSaved === "saved" && (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">Monthly note saved.</div>
+      )}
+
+      <Section
+        title="Monthly notice intro"
+        description="Prepended to the automatic monthly Growth-Reports/fees Community post, so it goes out as one personalised message. Leave blank for just the summary."
+      >
+        <form action={saveCommunityIntro} className="space-y-3">
+          <Textarea
+            name="intro"
+            rows={3}
+            defaultValue={intro}
+            placeholder="e.g. Salam & happy holidays! 🎉 No class 25 Dec–1 Jan. New term starts 2 Jan — see you then!"
+          />
+          <SubmitButton pendingText="Saving…">Save note</SubmitButton>
+        </form>
+      </Section>
 
       {botReady ? (
         <Section title="New announcement">

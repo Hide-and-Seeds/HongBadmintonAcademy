@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCurrency, formatDate, formatTime, monthLabel } from "@/lib/format";
 import { normalizePhoneMY } from "@/lib/wa";
-import { isWorkerPaused, isFeeRemindersPaused, getSendPolicy } from "@/lib/settings";
+import { isWorkerPaused, isFeeRemindersPaused, getSendPolicy, getCommunityIntro } from "@/lib/settings";
 import { getWhatsappProvider } from "@/lib/whatsapp";
 import { APP_NAME } from "@/lib/constants";
 import { env } from "@/lib/env";
@@ -208,6 +208,11 @@ export async function upsertCommunityMonthlyNotice(baseUrl: string, immediate = 
       `💳 This month's fees have been issued.\n` +
       `Parents — log in to view and pay your invoice:\n${baseUrl}/parent/invoices`;
   }
+
+  // Prepend the admin's free-text note (Announcements → Monthly notice intro) so
+  // the reports/fees notice goes out as one personalised Community post.
+  const intro = (await getCommunityIntro()).trim();
+  if (intro) body = `${intro}\n\n${body}`;
 
   const { data: existing } = await db
     .from("message_queue")
