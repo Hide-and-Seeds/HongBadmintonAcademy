@@ -1,16 +1,28 @@
 import webpush from "web-push";
 
-const PUBLIC = process.env.VAPID_PUBLIC_KEY ?? "";
-const PRIVATE = process.env.VAPID_PRIVATE_KEY ?? "";
-const SUBJECT = process.env.VAPID_SUBJECT ?? "mailto:admin@hongbadminton.example";
+const PUBLIC = (process.env.VAPID_PUBLIC_KEY ?? "").trim();
+const PRIVATE = (process.env.VAPID_PRIVATE_KEY ?? "").trim();
+const RAW_SUBJECT = (process.env.VAPID_SUBJECT ?? "").trim();
+const SUBJECT =
+  RAW_SUBJECT && (RAW_SUBJECT.startsWith("mailto:") || RAW_SUBJECT.startsWith("https://"))
+    ? RAW_SUBJECT
+    : "mailto:admin@hongbadminton.example";
 
 let configured = false;
-function ensure(): boolean {
-  if (configured) return true;
-  if (!PUBLIC || !PRIVATE) return false;
-  webpush.setVapidDetails(SUBJECT, PUBLIC, PRIVATE);
-  configured = true;
-  return true;
+let configError: string | null = null;
+function ensure(): { ok: boolean; error?: string } {
+  if (configured) return { ok: true };
+  if (configError) return { ok: false, error: configError };
+  if (!PUBLIC || !PRIVATE) return { ok: false, error: "VAPID env vars missing" };
+  try {
+    webpush.setVapidDetails(SUBJECT, PUBLIC, PRIVATE);
+    configured = true;
+    return { ok: true };
+  } catch (e: any) {
+    configError = `setVapidDetails: ${e?.message ?? String(e)}`;
+    console.error("[push] VAPID config failed", { subject: SUBJECT, pubLen: PUBLIC.length, privLen: PRIVATE.length, error: configError });
+    return { ok: false, error: configError };
+  }
 }
 
 export function getVapidPublicKey(): string {
@@ -39,7 +51,8 @@ export async function sendPush(
   sub: PushSubRow,
   payload: PushPayload,
 ): Promise<{ ok: boolean; gone?: boolean; error?: string }> {
-  if (!ensure()) return { ok: false, error: "VAPID not configured" };
+  const e0 = ensure();
+  if (!e0.ok) return { ok: false, error: e0.error ?? "VAPID not configured" };
   try {
     await webpush.sendNotification(
       {
@@ -53,6 +66,8 @@ export async function sendPush(
   } catch (e: any) {
     const status = e?.statusCode as number | undefined;
     if (status === 404 || status === 410) return { ok: false, gone: true };
-    return { ok: false, error: e?.message ?? String(e) };
+    const msg = e?.body ?? e?.message ?? String(e);
+    console.error("[push] sendNotification failed", { status, msg, endpoint: sub.endpoint.slice(0, 60) });
+    return { ok: false, error: `[${status ?? "?"}] ${msg}` };
   }
 }

@@ -60,42 +60,54 @@ export async function sendTestPushToSelf(): Promise<{
   failed: number;
   error?: string;
 }> {
-  if (!isPushConfigured()) {
-    return { ok: false, sent: 0, failed: 0, error: "VAPID env vars not set in Vercel" };
-  }
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, sent: 0, failed: 0, error: "not signed in" };
-
-  const { data: subs } = await supabase
-    .from("push_subscriptions")
-    .select("endpoint, p256dh, auth")
-    .eq("user_id", user.id);
-
-  if (!subs || subs.length === 0) {
-    return { ok: false, sent: 0, failed: 0, error: "no subscriptions — tap Enable first" };
-  }
-
-  let sent = 0;
-  let failed = 0;
-  const toDelete: string[] = [];
-  for (const s of subs) {
-    const r = await sendPush(s as any, {
-      title: "Hong Badminton Academy",
-      body: "Test push from your admin account. Notifications are working.",
-      url: "/admin",
-      tag: "hba-test",
-    });
-    if (r.ok) sent++;
-    else {
-      failed++;
-      if (r.gone) toDelete.push(s.endpoint);
+  try {
+    if (!isPushConfigured()) {
+      return { ok: false, sent: 0, failed: 0, error: "VAPID env vars not set in Vercel" };
     }
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { ok: false, sent: 0, failed: 0, error: "not signed in" };
+
+    const { data: subs, error: selErr } = await supabase
+      .from("push_subscriptions")
+      .select("endpoint, p256dh, auth")
+      .eq("user_id", user.id);
+
+    if (selErr) {
+      console.error("[push] select subs failed", selErr);
+      return { ok: false, sent: 0, failed: 0, error: `select: ${selErr.message}` };
+    }
+
+    if (!subs || subs.length === 0) {
+      return { ok: false, sent: 0, failed: 0, error: "no subscriptions — tap Enable first" };
+    }
+
+    let sent = 0;
+    let failed = 0;
+    let lastError: string | undefined;
+    const toDelete: string[] = [];
+    for (const s of subs) {
+      const r = await sendPush(s as any, {
+        title: "Hong Badminton Academy",
+        body: "Test push from your admin account. Notifications are working.",
+        url: "/admin",
+        tag: "hba-test",
+      });
+      if (r.ok) sent++;
+      else {
+        failed++;
+        lastError = r.error;
+        if (r.gone) toDelete.push(s.endpoint);
+      }
+    }
+    if (toDelete.length) {
+      await supabase.from("push_subscriptions").delete().in("endpoint", toDelete);
+    }
+    return { ok: sent > 0, sent, failed, error: sent > 0 ? undefined : lastError };
+  } catch (e: any) {
+    console.error("[push] sendTestPushToSelf threw", e);
+    return { ok: false, sent: 0, failed: 0, error: e?.message ?? String(e) };
   }
-  if (toDelete.length) {
-    await supabase.from("push_subscriptions").delete().in("endpoint", toDelete);
-  }
-  return { ok: sent > 0, sent, failed };
 }
