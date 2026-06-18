@@ -2,8 +2,11 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/components/ui";
+import { PAGE_SIZE } from "@/lib/constants";
 
-export const PAGE_SIZE = 25;
+// Re-export so existing importers of `@/components/paginator` keep working, but
+// the source of truth is the server-safe constants module.
+export { PAGE_SIZE };
 
 export function Paginator({
   page,

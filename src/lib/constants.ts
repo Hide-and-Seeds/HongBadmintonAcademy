@@ -1,6 +1,13 @@
 export const APP_NAME = "Hong Badminton Academy";
 export const APP_SHORT = "HBA";
 
+// Rows per page for the admin directory tables. Defined here (a server-safe
+// module) — NOT in the "use client" paginator — because server components
+// (StudentsList, PeopleList) read it for slicing/range. A const exported from a
+// "use client" file resolves to a client reference (undefined) on the server,
+// which silently makes `slice(0, NaN)` return zero rows.
+export const PAGE_SIZE = 25;
+
 export const ROLE_LABEL: Record<string, string> = {
   admin: "Administrator",
   coach: "Coach",
