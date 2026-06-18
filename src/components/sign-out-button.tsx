@@ -2,8 +2,13 @@
 
 import { createClient } from "@/lib/supabase/client";
 
-export function SignOutButton() {
+export function SignOutButton({ role }: { role?: string }) {
   async function signOut() {
+    if (role === "parent") {
+      // Parents use the custom cookie session, not Supabase auth.
+      window.location.assign("/api/parent-sign-out");
+      return;
+    }
     await createClient().auth.signOut();
     window.location.assign("/login");
   }

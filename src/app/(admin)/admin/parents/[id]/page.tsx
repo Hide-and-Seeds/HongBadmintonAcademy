@@ -2,10 +2,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, Badge, EmptyState, cn } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { PersonForm } from "../../_people/person-form";
-import { updatePerson, unlinkChild } from "../../_people/actions";
+import {
+  updatePerson,
+  unlinkChild,
+  generateParentLoginLink,
+  unlockParentPin,
+  clearParentPin,
+} from "../../_people/actions";
+import { LoginLinkPanel } from "./login-link-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +22,15 @@ export default async function EditParentPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    link?: string;
+    wa?: string;
+  }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, saved, link, wa } = await searchParams;
   const supabase = await createClient();
   const [{ data: person }, { data: children }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
@@ -37,9 +50,62 @@ export default async function EditParentPage({
     levelsByKid.set(e.student_id, arr);
   }
 
+  const pinSet = !!(person as any).pin_hash;
+  const pinLocked = !!(person as any).pin_locked_at;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Edit parent" description={person.full_name ?? undefined} />
+
+      {saved && (
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          {saved}
+        </p>
+      )}
+
+      <Section
+        title="Parent app sign-in"
+        description="One-tap login link (no email, no password). Send via WhatsApp."
+      >
+        <div className="space-y-4 p-5">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="font-medium text-slate-800">PIN:</span>
+            <Badge tone={pinLocked ? "red" : pinSet ? "green" : "slate"}>
+              {pinLocked ? "Locked" : pinSet ? "Set" : "Not set"}
+            </Badge>
+            {pinLocked && (
+              <span className="text-xs text-slate-500">
+                Locked after 5 wrong attempts — unlock or send a fresh link.
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <form action={generateParentLoginLink}>
+              <input type="hidden" name="parent_id" value={id} />
+              <SubmitButton pendingText="Generating…">Generate login link</SubmitButton>
+            </form>
+            {pinLocked && (
+              <form action={unlockParentPin}>
+                <input type="hidden" name="parent_id" value={id} />
+                <SubmitButton variant="secondary" pendingText="Unlocking…">
+                  Unlock PIN
+                </SubmitButton>
+              </form>
+            )}
+            {pinSet && (
+              <form action={clearParentPin}>
+                <input type="hidden" name="parent_id" value={id} />
+                <SubmitButton variant="secondary" pendingText="Clearing…">
+                  Reset PIN
+                </SubmitButton>
+              </form>
+            )}
+          </div>
+
+          {link && <LoginLinkPanel link={link} wa={wa ?? null} />}
+        </div>
+      </Section>
 
       <Section title={`Children (${children?.length ?? 0})`} flush>
         {children && children.length > 0 ? (

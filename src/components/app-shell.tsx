@@ -194,7 +194,7 @@ export function AppShell({
                 <div className="text-[11px] text-slate-400">{ROLE_LABEL[role] ?? role}</div>
               </div>
             </div>
-            <SignOutButton />
+            <SignOutButton role={role} />
           </div>
         </aside>
 

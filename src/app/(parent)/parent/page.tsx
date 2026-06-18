@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { requireParent } from "@/lib/parent-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   PageHeader, StatCard, Card, EmptyState, Badge,
 } from "@/components/ui";
@@ -18,8 +18,8 @@ const PARENT_ACTIONS = [
 ];
 
 export default async function ParentDashboard() {
-  const me = await requireRole("parent");
-  const supabase = await createClient();
+  const me = await requireParent();
+  const supabase = createAdminClient();
 
   const { data: children } = await supabase
     .from("students")
@@ -46,8 +46,17 @@ export default async function ParentDashboard() {
             .in("student_id", childIds)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
-      supabase.from("invoices").select("*", { count: "exact", head: true }).in("status", ["unpaid", "overdue"]),
-      supabase.from("scorecards").select("*", { count: "exact", head: true }),
+      supabase
+        .from("invoices")
+        .select("*", { count: "exact", head: true })
+        .eq("parent_id", me.id)
+        .in("status", ["unpaid", "overdue"]),
+      childIds.length
+        ? supabase
+            .from("scorecards")
+            .select("*", { count: "exact", head: true })
+            .in("student_id", childIds)
+        : Promise.resolve({ count: 0 }),
     ]);
 
   const classByChild = new Map<string, string>();

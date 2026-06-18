@@ -1,5 +1,5 @@
-import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { requireParent } from "@/lib/parent-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -20,13 +20,14 @@ export default async function ParentInvoicesPage({
 }: {
   searchParams: Promise<{ paid?: string; error?: string }>;
 }) {
-  await requireRole("parent");
+  const me = await requireParent();
   const { paid, error } = await searchParams;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: invoices } = await supabase
     .from("invoices")
     .select("*, students(full_name)")
+    .eq("parent_id", me.id)
     .order("created_at", { ascending: false });
 
   return (

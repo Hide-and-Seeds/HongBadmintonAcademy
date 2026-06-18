@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireParent } from "@/lib/parent-auth";
 import { AppShell } from "@/components/app-shell";
 import { PARENT_NAV } from "@/lib/constants";
 
@@ -7,7 +7,7 @@ export default async function ParentLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await requireRole("parent");
+  const profile = await requireParent();
   return (
     <AppShell
       groups={[{ group: "Parent", items: PARENT_NAV }]}

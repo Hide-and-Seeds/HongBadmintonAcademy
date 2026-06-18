@@ -100,12 +100,19 @@ export const stripeProvider: PaymentProvider = {
 
   async createCheckoutSession(input: CheckoutInput): Promise<CheckoutResult> {
     const stripe = getStripe();
+    // Proposal v7 §5.4: parents can select FPX (direct bank transfer), card,
+    // or supported e-wallets. For MYR we ask for all three explicitly; for any
+    // other currency, fall back to whatever the Stripe Dashboard has enabled.
+    const isMYR = input.currency.toLowerCase() === "myr";
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       client_reference_id: input.invoiceId,
       ...(input.customerId
         ? { customer: input.customerId }
         : { customer_email: input.customerEmail ?? undefined }),
+      ...(isMYR
+        ? { payment_method_types: ["card", "fpx", "grabpay"] as const }
+        : {}),
       line_items: [
         {
           quantity: 1,

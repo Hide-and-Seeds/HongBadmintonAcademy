@@ -3,8 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { profileSchema } from "@/lib/validation";
 import type { Role } from "@/lib/types";
+import { createLoginToken, adminUnlockPin, adminClearPin } from "@/lib/parent-auth";
+import { getBaseUrl } from "@/lib/url";
+import { waLink } from "@/lib/wa";
 
 function basePath(role: Role): string {
   return role === "coach" ? "/admin/coaches" : "/admin/parents";
@@ -84,6 +88,62 @@ export async function deletePeople(role: Role, formData: FormData) {
   // No bulk auth-delete API — remove each user; the profile row cascades.
   await Promise.all(ids.map((id) => db.auth.admin.deleteUser(id)));
   revalidatePath(basePath(role));
+}
+
+// Generate a one-time parent login link (proposal v7 §7.2). Token is valid for
+// 7 days and can be used once. Admin pastes the URL into their WhatsApp DM with
+// the parent. Returns the URL (and a wa.me prefill if the parent has a phone)
+// to the page via search-params so the admin can copy without re-running the
+// action.
+export async function generateParentLoginLink(formData: FormData) {
+  const parentId = String(formData.get("parent_id"));
+  if (!parentId) redirect("/admin/parents");
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const db = createAdminClient();
+  const { data: parent } = await db
+    .from("profiles")
+    .select("id, role, full_name, phone")
+    .eq("id", parentId)
+    .maybeSingle();
+  if (!parent || parent.role !== "parent") {
+    redirect(`/admin/parents/${parentId}?error=${encodeURIComponent("Not a parent profile")}`);
+  }
+
+  const token = await createLoginToken(parentId, user?.id ?? null);
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}/parent-login/t/${token}`;
+
+  const params = new URLSearchParams({ link: url });
+  if (parent.phone) {
+    const wa = waLink(
+      parent.phone,
+      `Hi ${parent.full_name ?? ""}, here is your Hong Badminton Academy login link — tap to sign in: ${url}`,
+    );
+    if (wa) params.set("wa", wa);
+  }
+  revalidatePath(`/admin/parents/${parentId}`);
+  redirect(`/admin/parents/${parentId}?${params.toString()}`);
+}
+
+// Admin unlock — clears the 5-attempt lockout.
+export async function unlockParentPin(formData: FormData) {
+  const parentId = String(formData.get("parent_id"));
+  if (!parentId) return;
+  await adminUnlockPin(parentId);
+  revalidatePath(`/admin/parents/${parentId}`);
+  redirect(`/admin/parents/${parentId}?saved=PIN%20unlocked`);
+}
+
+// Admin clear PIN — forces the parent to set a new one on their next login link.
+export async function clearParentPin(formData: FormData) {
+  const parentId = String(formData.get("parent_id"));
+  if (!parentId) return;
+  await adminClearPin(parentId);
+  revalidatePath(`/admin/parents/${parentId}`);
+  redirect(`/admin/parents/${parentId}?saved=PIN%20cleared`);
 }
 
 // Set a coach's per-lesson pay rate (drives the auto-calculated payroll). Stored

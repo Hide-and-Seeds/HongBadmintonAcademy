@@ -28,7 +28,11 @@ export const setWorkerPaused = (v: boolean) => setValue(WORKER_PAUSED, v);
 
 // Auto fee reminders only: paused = stop queuing new ones AND hold any already
 // queued (worker still sends community posts etc.).
-export const isFeeRemindersPaused = () => getValue(FEE_REMINDERS_PAUSED, false);
+//
+// Default = TRUE (parked) to match proposal v7 §6 Option A: WhatsApp Community
+// broadcasts + PWA self-service, no individual auto-DMs to parents. Admin can
+// resume from Settings if the academy wants Option C behaviour.
+export const isFeeRemindersPaused = () => getValue(FEE_REMINDERS_PAUSED, true);
 export const setFeeRemindersPaused = (v: boolean) => setValue(FEE_REMINDERS_PAUSED, v);
 
 // Admin-tunable send schedule (the worker reads this each poll). Hours are MYT,

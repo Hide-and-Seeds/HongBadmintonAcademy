@@ -1,23 +1,39 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { verifyParentCookieValue, PARENT_COOKIE_NAME } from "@/lib/parent-cookie-edge";
 
-const PROTECTED = ["/admin", "/coach", "/parent"];
+// Supabase-auth-gated: admin + coach. Custom parent-cookie-gated: /parent.
+const SUPABASE_PROTECTED = ["/admin", "/coach"];
+const PARENT_PROTECTED = "/parent";
 
 export async function middleware(request: NextRequest) {
-  const { response, user } = await updateSession(request);
   const path = request.nextUrl.pathname;
 
-  const isProtected = PROTECTED.some((p) => path === p || path.startsWith(p + "/"));
+  // Parent area is gated by the hba_parent cookie (Supabase auth not required).
+  const isParentArea = path === PARENT_PROTECTED || path.startsWith(PARENT_PROTECTED + "/");
+  if (isParentArea) {
+    const cookieValue = request.cookies.get(PARENT_COOKIE_NAME)?.value;
+    const pid = await verifyParentCookieValue(cookieValue);
+    if (!pid) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/parent-login";
+      if (path !== "/parent") url.searchParams.set("next", path);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
 
-  // Gate protected areas: send anonymous users to login.
-  if (isProtected && !user) {
+  // Admin / coach still flow through Supabase Auth.
+  const { response, user } = await updateSession(request);
+
+  const isSupabaseProtected = SUPABASE_PROTECTED.some((p) => path === p || path.startsWith(p + "/"));
+  if (isSupabaseProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", path);
     return NextResponse.redirect(url);
   }
 
-  // Authenticated user on /login → bounce to the role router at "/".
   if (path === "/login" && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/";

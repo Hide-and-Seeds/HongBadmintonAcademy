@@ -1,5 +1,5 @@
-import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { requireParent } from "@/lib/parent-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { monthLabel } from "@/lib/format";
 import { GROUP_LABEL, type GroupKey } from "@/lib/growth";
@@ -41,13 +41,24 @@ function GroupBlock({ group, dims }: { group: GroupKey; dims: { name: string; sc
 }
 
 export default async function ParentScorecardsPage() {
-  await requireRole("parent");
-  const supabase = await createClient();
+  const me = await requireParent();
+  const supabase = createAdminClient();
 
-  const { data: cards } = await supabase
-    .from("scorecards")
-    .select("*, students(full_name)")
-    .order("period_month", { ascending: false });
+  // Scope to this parent's children only — service-role bypasses RLS so we
+  // must filter explicitly.
+  const { data: kids } = await supabase
+    .from("students")
+    .select("id")
+    .eq("parent_id", me.id);
+  const kidIds = (kids ?? []).map((k: any) => k.id);
+
+  const { data: cards } = kidIds.length
+    ? await supabase
+        .from("scorecards")
+        .select("*, students(full_name)")
+        .in("student_id", kidIds)
+        .order("period_month", { ascending: false })
+    : { data: [] as any[] };
 
   return (
     <div>

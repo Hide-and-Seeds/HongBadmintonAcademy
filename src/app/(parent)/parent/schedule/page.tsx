@@ -1,5 +1,5 @@
-import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { requireParent } from "@/lib/parent-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Section, EmptyState, Badge, Table, Th, Td } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { MY_PUBLIC_HOLIDAYS } from "@/lib/holidays";
@@ -7,8 +7,8 @@ import { MY_PUBLIC_HOLIDAYS } from "@/lib/holidays";
 export const dynamic = "force-dynamic";
 
 export default async function ParentSchedulePage() {
-  const me = await requireRole("parent");
-  const supabase = await createClient();
+  const me = await requireParent();
+  const supabase = createAdminClient();
   const today = new Date().toLocaleDateString("en-CA");
 
   const { data: children } = await supabase

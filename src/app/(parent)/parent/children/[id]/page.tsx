@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { requireParent } from "@/lib/parent-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   PageHeader, StatCard, Section, Table, Th, Td, Badge, EmptyState, LinkButton,
 } from "@/components/ui";
@@ -32,14 +32,16 @@ export default async function ChildDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRole("parent");
+  const me = await requireParent();
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
+  // Service-role bypasses RLS; restrict to this parent's child explicitly.
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, status, dob")
+    .select("id, full_name, status, dob, parent_id")
     .eq("id", id)
+    .eq("parent_id", me.id)
     .maybeSingle();
   if (!student) notFound();
 
