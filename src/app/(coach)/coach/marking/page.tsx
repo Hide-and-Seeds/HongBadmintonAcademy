@@ -95,7 +95,7 @@ export default async function MarkingListPage() {
     <div className="space-y-5">
       <PageHeader
         title="Marking"
-        description={`Monthly growth assessment · ${monthLabel(start)}. Per-session marks live on the Attendance screen; this week's average shows as "wk".`}
+        description={`Monthly growth assessment · ${monthLabel(start)}. The "wk" number is this week's average of the 1–5 marks you give on Check-in.`}
       />
 
       {studentList.length === 0 ? (
@@ -114,7 +114,7 @@ export default async function MarkingListPage() {
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium text-slate-900">{s.full_name}</div>
                     {s.classes.length > 0 && (
-                      <div className="truncate text-xs text-slate-400">{s.classes.join(" · ")}</div>
+                      <div className="truncate text-xs text-slate-400" title={s.classes.join(", ")}>{s.classes.join(" · ")}</div>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">

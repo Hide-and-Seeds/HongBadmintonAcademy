@@ -51,7 +51,7 @@ export default async function CoachDashboard() {
     const [{ data: thisSess }, { count: lastCount }, { data: assess }] = await Promise.all([
       supabase.from("sessions").select("id").in("class_id", classIds).gte("session_date", mStart).lte("session_date", mEnd),
       supabase.from("sessions").select("*", { count: "exact", head: true }).in("class_id", classIds).gte("session_date", lmStart).lte("session_date", lmEnd),
-      supabase.from("assessments").select("overall_score").eq("coach_id", me.id).limit(10000),
+      supabase.from("assessments").select("overall_score").eq("coach_id", me.id).gte("assessed_on", mStart).lte("assessed_on", mEnd).limit(10000),
     ]);
     lessonsThis = (thisSess ?? []).length;
     lessonsLast = lastCount ?? 0;
@@ -103,16 +103,26 @@ export default async function CoachDashboard() {
 
       <h2 className="mb-3 mt-8 text-lg font-semibold text-slate-900">My performance</h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <StatCard label="Lessons this month" value={lessonsThis} sub={`${lessonsLast} last month`} tone="blue" />
+        <Link href="/coach/schedule" className="rounded-2xl transition-transform hover:-translate-y-0.5">
+          <StatCard label="Lessons this month" value={lessonsThis} sub={`${lessonsLast} last month · view schedule →`} tone="blue" />
+        </Link>
         <StatCard label="Attendance" value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub="your classes, this month" />
-        <StatCard label="Avg score given" value={avgGiven != null ? `${avgGiven}%` : "—"} sub="your assessments" />
+        <StatCard label="Avg report score" value={avgGiven != null ? `${avgGiven}%` : "—"} sub="your reports, this month" />
       </div>
 
       <div className="mt-8">
-        <Section title="Upcoming sessions" flush>
+        <Section
+          title="Upcoming sessions"
+          flush
+          action={
+            <Link href="/coach/schedule" className="text-sm font-medium text-emerald-700 hover:underline">
+              View all →
+            </Link>
+          }
+        >
           {sessions.length > 0 ? (
             <ul className="divide-y divide-slate-100">
-              {sessions.map((s) => {
+              {sessions.slice(0, 3).map((s) => {
                 const d = new Date(`${s.session_date}T00:00:00`);
                 const mon = d.toLocaleDateString("en-MY", { month: "short" });
                 const wd = d.toLocaleDateString("en-MY", { weekday: "short" });
