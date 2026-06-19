@@ -41,7 +41,7 @@ export default async function ChildDetailPage({
   // Service-role bypasses RLS; restrict to this parent's child explicitly.
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, status, dob, parent_id, rank")
+    .select("id, full_name, status, dob, parent_id, rank, created_at")
     .eq("id", id)
     .eq("parent_id", me.id)
     .maybeSingle();
@@ -142,6 +142,13 @@ export default async function ChildDetailPage({
         description={subtitle}
         action={<Badge tone={student.status === "active" ? "green" : "slate"}>{student.status}</Badge>}
       />
+
+      <div className="-mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-500">
+        {student.dob && (
+          <span><span className="text-slate-400">Birthday:</span> {formatDate(student.dob)}</span>
+        )}
+        <span><span className="text-slate-400">Member since:</span> {formatDate((student as any).created_at)}</span>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Attendance" value={rate != null ? `${rate}%` : "—"} sub={`${attended}/${total} sessions`} />
