@@ -18,7 +18,7 @@ export default async function CoachDashboard() {
   if (classIds.length) {
     const { data: s } = await supabase
       .from("sessions")
-      .select("id, session_date, start_time, end_time, location, status, classes(name)")
+      .select("id, class_id, session_date, start_time, end_time, location, status, classes(name)")
       .in("class_id", classIds)
       .gte("session_date", today)
       .order("session_date")
@@ -127,21 +127,23 @@ export default async function CoachDashboard() {
                 const mon = d.toLocaleDateString("en-MY", { month: "short" });
                 const wd = d.toLocaleDateString("en-MY", { weekday: "short" });
                 return (
-                  <li key={s.id} className="flex items-center gap-3.5 px-4 py-3.5">
-                    <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-emerald-50">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">{mon}</span>
-                      <span className="text-xl font-bold leading-none text-emerald-800">{d.getDate()}</span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-slate-900">{s.classes?.name ?? "Class"}</div>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
-                        <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{wd} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
-                        {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
+                  <li key={s.id}>
+                    <Link href={`/coach/classes/${s.class_id}`} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50">
+                      <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-emerald-50">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">{mon}</span>
+                        <span className="text-xl font-bold leading-none text-emerald-800">{d.getDate()}</span>
                       </div>
-                    </div>
-                    {s.status !== "scheduled" && (
-                      <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>
-                    )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-900">{s.classes?.name ?? "Class"}</div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
+                          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{wd} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
+                          {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
+                        </div>
+                      </div>
+                      {s.status !== "scheduled" && (
+                        <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>
+                      )}
+                    </Link>
                   </li>
                 );
               })}
