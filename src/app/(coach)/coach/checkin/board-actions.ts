@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRole } from "@/lib/auth";
+import { coachClassIds } from "../_data";
 import type { AttendanceStatus } from "@/lib/types";
 
 const STATUSES: AttendanceStatus[] = ["present", "late", "absent", "excused"];
@@ -80,4 +83,75 @@ export async function markAllPresentAction(input: {
   if (error) return { ok: false, count: 0, error: error.message };
   revalidatePath("/coach/checkin");
   return { ok: true, count: rows.length };
+}
+
+// ── Drop-ins ───────────────────────────────────────────────────────────────
+// Add a student who isn't on the roster to a session happening now (a make-up,
+// a sibling sitting in, a trial). Coach-gated, and the session must be one of
+// the coach's own classes. Uses the service-role client because the attendance
+// RLS only lets a coach write for students already enrolled in their classes —
+// a drop-in is by definition not yet enrolled — so we authorize in code instead.
+
+async function coachOwnsSession(meId: string, sessionId: string): Promise<boolean> {
+  const authed = await createClient();
+  const [classIds, { data: s }] = await Promise.all([
+    coachClassIds(authed, meId),
+    createAdminClient().from("sessions").select("class_id").eq("id", sessionId).maybeSingle(),
+  ]);
+  return !!s?.class_id && classIds.includes(s.class_id);
+}
+
+type AddableStudent = { id: string; full_name: string; photo_url: string | null };
+
+export async function searchAddableStudentsAction(input: {
+  session_id: string;
+  q: string;
+}): Promise<{ ok: boolean; students: AddableStudent[]; error?: string }> {
+  const q = (input?.q ?? "").trim();
+  if (!input?.session_id) return { ok: false, students: [], error: "missing" };
+  if (q.length < 1) return { ok: true, students: [] };
+
+  const me = await requireRole("coach");
+  if (!(await coachOwnsSession(me.id, input.session_id))) {
+    return { ok: false, students: [], error: "not your session" };
+  }
+
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("students")
+    .select("id, full_name, photo_url")
+    .eq("status", "active")
+    .ilike("full_name", `%${q}%`)
+    .order("full_name")
+    .limit(10);
+  if (error) return { ok: false, students: [], error: error.message };
+  return { ok: true, students: (data ?? []) as AddableStudent[] };
+}
+
+export async function addDropInAction(input: {
+  session_id: string;
+  student_id: string;
+}): Promise<{ ok: boolean; student?: AddableStudent; error?: string }> {
+  if (!input?.session_id || !input?.student_id) return { ok: false, error: "missing" };
+
+  const me = await requireRole("coach");
+  if (!(await coachOwnsSession(me.id, input.session_id))) {
+    return { ok: false, error: "not your session" };
+  }
+
+  const db = createAdminClient();
+  const { data: student, error: sErr } = await db
+    .from("students")
+    .select("id, full_name, photo_url")
+    .eq("id", input.student_id)
+    .maybeSingle();
+  if (sErr || !student) return { ok: false, error: "student not found" };
+
+  const { error } = await db.from("attendance").upsert(
+    { session_id: input.session_id, student_id: input.student_id, status: "present", flagged: false },
+    { onConflict: "session_id,student_id" },
+  );
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/coach/checkin");
+  return { ok: true, student: student as AddableStudent };
 }

@@ -57,7 +57,7 @@ export default async function CheckinPage() {
     <div className="space-y-6">
       <PageHeader
         title="Check-in"
-        description="Tap a name to mark present. Use ⋯ for late / absent or to rate."
+        description="Tap a name to mark present. Use ⋯ for late / absent or to rate, or + Add student for a drop-in."
       />
 
       {blocks.length === 0 ? (
