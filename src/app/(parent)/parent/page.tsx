@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Calendar, TrendingUp, CreditCard, Clock, MapPin, User } from "lucide-react";
+import { Calendar, TrendingUp, CreditCard, Clock, MapPin, User, Users } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -67,6 +67,24 @@ export default async function ParentDashboard() {
       classByChild.set(e.student_id, e.classes.name);
     }
     if (e.class_id && !classIds.includes(e.class_id)) classIds.push(e.class_id);
+  }
+
+  // class_id → coach name for the upcoming-session rows.
+  const classCoach = new Map<string, string>();
+  if (classIds.length) {
+    const [{ data: cls }, { data: ccs }] = await Promise.all([
+      supabase.from("classes").select("id, coach_id").in("id", classIds),
+      supabase.from("class_coaches").select("class_id, coach_id").in("class_id", classIds),
+    ]);
+    const ids = new Set<string>();
+    for (const c of (cls ?? []) as any[]) if (c.coach_id) ids.add(c.coach_id);
+    for (const c of (ccs ?? []) as any[]) if (c.coach_id) ids.add(c.coach_id);
+    const { data: cp } = ids.size
+      ? await supabase.from("profiles").select("id, full_name").in("id", [...ids])
+      : { data: [] as any[] };
+    const nameById = new Map((cp ?? []).map((p: any) => [p.id, p.full_name as string]));
+    for (const c of (cls ?? []) as any[]) if (c.coach_id) classCoach.set(c.id, nameById.get(c.coach_id) ?? "");
+    for (const c of (ccs ?? []) as any[]) if (!classCoach.has(c.class_id) && c.coach_id) classCoach.set(c.class_id, nameById.get(c.coach_id) ?? "");
   }
 
   const today = new Date().toLocaleDateString("en-CA");
@@ -165,10 +183,11 @@ export default async function ParentDashboard() {
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold text-slate-900">{clsName}</div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
-                      <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{wd} {formatTime(s.start_time)}</span>
+                      <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{wd} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
                       {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
+                      {classCoach.get(s.class_id) && <span className="inline-flex items-center gap-1"><User className="h-3.5 w-3.5" />Coach {classCoach.get(s.class_id)}</span>}
                       {childIds.length > 1 && names.length > 0 && (
-                        <span className="inline-flex items-center gap-1"><User className="h-3.5 w-3.5" />{names.join(", ")}</span>
+                        <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{names.join(", ")}</span>
                       )}
                     </div>
                   </div>
