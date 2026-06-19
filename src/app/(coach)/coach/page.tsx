@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { UserCheck, Calendar, Star, Banknote } from "lucide-react";
+import { UserCheck, Calendar, Star, Banknote, Clock, MapPin } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, EmptyState, Badge, ICON_TINT, cn } from "@/components/ui";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 import { coachClassIds } from "./_data";
 
 export const dynamic = "force-dynamic";
@@ -125,17 +125,29 @@ export default async function CoachDashboard() {
         <Section title="Upcoming sessions" flush>
           {sessions.length > 0 ? (
             <ul className="divide-y divide-slate-100">
-              {sessions.map((s) => (
-                <li key={s.id} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
-                    <div className="font-medium text-slate-900">{s.classes?.name ?? "Class"}</div>
-                    <div className="text-sm text-slate-500">
-                      {formatDate(s.session_date)} · {formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}
+              {sessions.map((s) => {
+                const d = new Date(`${s.session_date}T00:00:00`);
+                const mon = d.toLocaleDateString("en-MY", { month: "short" });
+                const wd = d.toLocaleDateString("en-MY", { weekday: "short" });
+                return (
+                  <li key={s.id} className="flex items-center gap-3.5 px-4 py-3.5">
+                    <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-emerald-50">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">{mon}</span>
+                      <span className="text-xl font-bold leading-none text-emerald-800">{d.getDate()}</span>
                     </div>
-                  </div>
-                  <Badge tone={s.status === "completed" ? "green" : "blue"}>{s.status}</Badge>
-                </li>
-              ))}
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-slate-900">{s.classes?.name ?? "Class"}</div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
+                        <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{wd} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
+                        {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
+                      </div>
+                    </div>
+                    {s.status !== "scheduled" && (
+                      <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <div className="p-5"><EmptyState message="No upcoming sessions scheduled." /></div>

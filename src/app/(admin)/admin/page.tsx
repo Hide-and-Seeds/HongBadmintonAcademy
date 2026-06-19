@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Calendar, TrendingUp, CreditCard, Users, Megaphone } from "lucide-react";
+import { Calendar, TrendingUp, CreditCard, Users, Megaphone, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, Badge, EmptyState, ICON_TINT, cn } from "@/components/ui";
 import { formatTime } from "@/lib/format";
@@ -84,19 +84,21 @@ export default async function AdminDashboard() {
       <div className="mt-8">
         <Section title="Today's sessions" flush>
           {todaySessions && todaySessions.length > 0 ? (
-            <ul className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100">
               {todaySessions.map((s: any) => (
-                <li key={s.id} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
-                    <div className="font-medium text-slate-900">{s.classes?.name ?? "Class"}</div>
-                    <div className="text-sm text-slate-500">
-                      {formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}
-                    </div>
+                <Link key={s.id} href={`/admin/attendance/${s.id}`} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50">
+                  <div className="flex h-12 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-blue-50">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="mt-0.5 text-[11px] font-semibold leading-none text-blue-700">{formatTime(s.start_time)}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-900">{s.classes?.name ?? "Class"}</div>
+                    <div className="text-sm text-slate-500">{formatTime(s.start_time)}–{formatTime(s.end_time)} · {s.location ?? "—"}</div>
                   </div>
                   <Badge tone={s.status === "completed" ? "green" : "blue"}>{s.status}</Badge>
-                </li>
+                </Link>
               ))}
-            </ul>
+            </div>
           ) : (
             <div className="p-5"><EmptyState message="No sessions scheduled today." /></div>
           )}
