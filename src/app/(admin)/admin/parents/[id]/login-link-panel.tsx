@@ -43,7 +43,7 @@ export function LoginLinkPanel({ link, wa }: { link: string; wa: string | null }
         )}
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        On tap, the parent is signed in for one year and prompted to set a 4-digit PIN.
+        On tap, the parent is signed in for one year — a passwordless fallback to email + password.
       </p>
     </div>
   );
