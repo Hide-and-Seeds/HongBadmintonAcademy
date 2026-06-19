@@ -6,9 +6,17 @@ import {
 } from "@/components/ui";
 import { formatCurrency, formatTime } from "@/lib/format";
 import { ParentSessionList, type SessionItem } from "@/components/parent-session-list";
+import { RANK_ORDER } from "@/lib/ranks";
 import type { FeeInterval } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+type GroupScores = { physical: number | null; technical: number | null; character: number | null };
+const GROWTH_GROUPS: { key: keyof GroupScores; label: string; bar: string; track: string }[] = [
+  { key: "physical", label: "Phys", bar: "bg-blue-500", track: "bg-blue-100" },
+  { key: "technical", label: "Tech", bar: "bg-amber-500", track: "bg-amber-100" },
+  { key: "character", label: "Char", bar: "bg-emerald-600", track: "bg-emerald-100" },
+];
 
 export default async function ParentDashboard() {
   const me = await requireParent();
@@ -22,8 +30,11 @@ export default async function ParentDashboard() {
 
   const childIds = (children ?? []).map((c) => c.id);
 
-  // Level (class) + package fees (fee plan & outstanding balance) per child.
-  const [{ data: enrollments }, { data: invoices }, { count: unpaid }, { count: scorecards }] =
+  const myt = new Date(Date.now() + 8 * 3600 * 1000);
+  const monthStartISO = new Date(Date.UTC(myt.getUTCFullYear(), myt.getUTCMonth(), 1)).toISOString();
+
+  // Class + fees + latest growth report + this-month promotions, per child.
+  const [{ data: enrollments }, { data: invoices }, { count: unpaid }, { data: scorecardRows }, { data: rankEvents }] =
     await Promise.all([
       childIds.length
         ? supabase
@@ -47,9 +58,17 @@ export default async function ParentDashboard() {
       childIds.length
         ? supabase
             .from("scorecards")
-            .select("*", { count: "exact", head: true })
+            .select("student_id, period_month, summary")
             .in("student_id", childIds)
-        : Promise.resolve({ count: 0 }),
+            .order("period_month", { ascending: false })
+        : Promise.resolve({ data: [] as any[] }),
+      childIds.length
+        ? supabase
+            .from("rank_events")
+            .select("student_id, from_rank, to_rank, created_at")
+            .in("student_id", childIds)
+            .gte("created_at", monthStartISO)
+        : Promise.resolve({ data: [] as any[] }),
     ]);
 
   const classByChild = new Map<string, string>();
@@ -130,6 +149,21 @@ export default async function ParentDashboard() {
   const totalOutstanding = [...feesByChild.values()].reduce((s, f) => s + f.outstanding, 0);
   const outCurrency = [...feesByChild.values()][0]?.currency ?? "MYR";
 
+  // Latest growth report per child (rows are newest-first) + who was promoted this month.
+  const growthByChild = new Map<string, { growthIndex: number | null; groups: GroupScores }>();
+  for (const sc of (scorecardRows ?? []) as any[]) {
+    if (growthByChild.has(sc.student_id)) continue;
+    const sum = sc.summary ?? {};
+    growthByChild.set(sc.student_id, {
+      growthIndex: sum.growth_index ?? null,
+      groups: (sum.groups ?? { physical: null, technical: null, character: null }) as GroupScores,
+    });
+  }
+  const promoted = new Set<string>();
+  for (const ev of (rankEvents ?? []) as any[]) {
+    if ((RANK_ORDER[ev.to_rank] ?? 0) > (RANK_ORDER[ev.from_rank] ?? 0)) promoted.add(ev.student_id);
+  }
+
   const homeSessions: SessionItem[] = (upcomingSessions ?? []).map((s: any) => {
     const d = new Date(`${s.session_date}T00:00:00`);
     return {
@@ -153,11 +187,12 @@ export default async function ParentDashboard() {
     <div>
       <PageHeader title={`Hello, ${me.full_name ?? "Parent"}`} />
 
-      {/* ─── Your children — performance first ───────────────────────────── */}
+      {/* ─── Your children — growth first ────────────────────────────────── */}
       {children && children.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
           {children.map((c) => {
             const clsName = classByChild.get(c.id);
+            const g = growthByChild.get(c.id);
             return (
               <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
                 <Card className="h-full p-5 transition-all hover:border-emerald-300 hover:shadow-md">
@@ -171,10 +206,47 @@ export default async function ParentDashboard() {
                         <div className="mt-1 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
                       </div>
                     </div>
-                    <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
+                      {promoted.has(c.id) && (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                          ↑ Promoted
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-sm font-medium text-emerald-700">
+                  {g ? (
+                    <div className="mt-4 border-t border-slate-100 pt-3">
+                      <div className="mb-2 flex items-baseline justify-between">
+                        <span className="text-xs font-medium text-slate-500">Growth index</span>
+                        <span className="text-sm font-bold text-emerald-700">
+                          {g.growthIndex ?? "—"}
+                          <span className="text-xs font-medium text-slate-400">/100</span>
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {GROWTH_GROUPS.map((grp) => {
+                          const v = g.groups?.[grp.key];
+                          return (
+                            <div key={grp.key} className="flex items-center gap-2">
+                              <span className="w-9 text-[11px] font-medium text-slate-500">{grp.label}</span>
+                              <div className={`h-1.5 flex-1 rounded-full ${grp.track}`}>
+                                <div className={`h-1.5 rounded-full ${grp.bar}`} style={{ width: `${Math.max(0, Math.min(100, v ?? 0))}%` }} />
+                              </div>
+                              <span className="w-7 text-right text-[11px] font-medium text-slate-700">{v ?? "—"}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-400">
+                      No growth report yet
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center justify-between text-sm font-medium text-emerald-700">
                     <span>View growth report</span>
                     <span aria-hidden>→</span>
                   </div>
@@ -226,7 +298,7 @@ export default async function ParentDashboard() {
           </Link>
         ) : (
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">
-            You&apos;re all paid up — thank you! 🙌
+            You&apos;re all paid up — thank you!
           </div>
         )}
       </div>
