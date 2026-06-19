@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, Table, Th, Td, EmptyState, LinkButton, Badge, cn } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
@@ -154,7 +155,9 @@ export default async function AnalyticsPage({
             <tbody>
               {a.coachPerformance.map((c) => (
                 <tr key={c.name} className="hover:bg-slate-50">
-                  <Td className="font-medium text-slate-900">{c.name}</Td>
+                  <Td className="font-medium">
+                    <Link href={`/admin/coaches/${c.id}`} className="text-slate-900 hover:text-green-700 hover:underline">{c.name}</Link>
+                  </Td>
                   <Td className="text-right tabular-nums">{c.students}</Td>
                   <Td className="text-right tabular-nums">{c.attendancePct != null ? `${c.attendancePct}%` : "—"}</Td>
                   <Td className="text-right tabular-nums">{c.avgSkill != null ? `${c.avgSkill}%` : "—"}</Td>
@@ -174,7 +177,9 @@ export default async function AnalyticsPage({
               <tbody>
                 {a.classOccupancy.map((c) => (
                   <tr key={c.name} className="hover:bg-slate-50">
-                    <Td className="font-medium text-slate-900">{c.name}</Td>
+                    <Td className="font-medium">
+                      <Link href={`/admin/classes/${c.id}`} className="text-slate-900 hover:text-green-700 hover:underline">{c.name}</Link>
+                    </Td>
                     <Td className="text-right tabular-nums text-slate-500">{c.enrolled}/{c.capacity}</Td>
                     <Td className="text-right">
                       <span className={cn("font-semibold tabular-nums", c.pct >= 90 ? "text-red-600" : c.pct >= 60 ? "text-green-600" : "text-amber-600")}>{c.pct}%</span>
@@ -232,7 +237,9 @@ export default async function AnalyticsPage({
                 {a.topStudents.map((s, i) => (
                   <tr key={i} className="hover:bg-slate-50">
                     <Td className="text-slate-400">{i + 1}</Td>
-                    <Td className="font-medium text-slate-900">{s.name}</Td>
+                    <Td className="font-medium">
+                      <Link href={`/admin/students/${s.id}`} className="text-slate-900 hover:text-green-700 hover:underline">{s.name}</Link>
+                    </Td>
                     <Td className="text-right"><Badge tone="green">{s.points}</Badge></Td>
                   </tr>
                 ))}

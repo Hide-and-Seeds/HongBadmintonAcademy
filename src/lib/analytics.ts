@@ -16,7 +16,7 @@ export interface Analytics {
   skillsBreakdown: { name: string; pct: number }[];
   invoiceStatus: Record<string, number>;
   messageStatus: Record<string, number>;
-  topStudents: { name: string; points: number }[];
+  topStudents: { id: string; name: string; points: number }[];
   rewardPeriod: string;
   newStudentsThisMonth: number;
   inactiveStudents: number;
@@ -26,8 +26,8 @@ export interface Analytics {
   rankDistribution: Record<string, number>;
   collection: { billed: number; collected: number; rate: number | null };
   retention: { rate: number | null; avgAttendancePct: number | null; inactive30: number };
-  coachPerformance: { name: string; students: number; attendancePct: number | null; avgSkill: number | null }[];
-  classOccupancy: { name: string; enrolled: number; capacity: number; pct: number }[];
+  coachPerformance: { id: string; name: string; students: number; attendancePct: number | null; avgSkill: number | null }[];
+  classOccupancy: { id: string; name: string; enrolled: number; capacity: number; pct: number }[];
   avgOccupancyPct: number | null;
   feeAging: { d0: number; d30: number; d60: number; d90: number };
 }
@@ -81,7 +81,7 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     supabase.from("attendance").select("student_id, status, sessions(session_date, class_id)").limit(20000),
     supabase.from("assessments").select("id, coach_id, student_id, overall_score").gte("assessed_on", ymd(mStart)).lt("assessed_on", ymd(mEnd)).limit(10000),
     supabase.from("assessments").select("overall_score").gte("assessed_on", ymd(prevStart)).lt("assessed_on", ymd(mStart)).limit(10000),
-    supabase.from("reward_ledger").select("points, students(full_name)").gte("awarded_at", monthStartISO).lt("awarded_at", mEnd.toISOString()).limit(10000),
+    supabase.from("reward_ledger").select("points, student_id, students(full_name)").gte("awarded_at", monthStartISO).lt("awarded_at", mEnd.toISOString()).limit(10000),
     supabase.from("messages").select("status").limit(10000),
     supabase.from("enrollments").select("student_id, class_id, classes(name, level, capacity)").eq("active", true).limit(10000),
     supabase.from("students").select("id, rank").eq("status", "active").limit(10000),
@@ -209,6 +209,7 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     for (const cid of ids) { const t = coachAtt.get(cid); if (t) { att += t.att; total += t.total; } }
     const sk = skillByCoach.get(co.id) ?? [];
     return {
+      id: co.id,
       name: co.full_name ?? "Coach",
       students,
       attendancePct: total ? Math.round((att / total) * 100) : null,
@@ -237,7 +238,7 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     .map((c: any) => {
       const enrolled = enrollCountByClass.get(c.id) ?? 0;
       const capacity = Number(c.capacity);
-      return { name: c.name, enrolled, capacity, pct: Math.round((enrolled / capacity) * 100) };
+      return { id: c.id, name: c.name, enrolled, capacity, pct: Math.round((enrolled / capacity) * 100) };
     })
     .sort((a: any, b: any) => b.pct - a.pct);
   const avgOccupancyPct = classOccupancy.length
@@ -251,12 +252,16 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     .slice(0, 8);
 
   // ── Rewards (this month) ──────────────────────────────────────────────────
-  const pointsByStudent = new Map<string, number>();
+  const pointsByStudent = new Map<string, { name: string; points: number }>();
   for (const r of ledger ?? []) {
+    const sid = (r as any).student_id;
+    if (!sid) continue;
     const name = (r as any).students?.full_name ?? "—";
-    pointsByStudent.set(name, (pointsByStudent.get(name) ?? 0) + Number(r.points));
+    const e = pointsByStudent.get(sid) ?? { name, points: 0 };
+    e.points += Number(r.points);
+    pointsByStudent.set(sid, e);
   }
-  const topStudents = [...pointsByStudent.entries()].map(([name, points]) => ({ name, points })).sort((a, b) => b.points - a.points).slice(0, 5);
+  const topStudents = [...pointsByStudent.entries()].map(([id, v]) => ({ id, name: v.name, points: v.points })).sort((a, b) => b.points - a.points).slice(0, 5);
 
   // ── Messages, collection, trends, churn ───────────────────────────────────
   const messageStatus: Record<string, number> = {};
