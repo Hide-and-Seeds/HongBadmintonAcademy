@@ -119,10 +119,7 @@ export default async function ParentDashboard() {
 
   return (
     <div>
-      <PageHeader
-        title={`Hello, ${me.full_name ?? "Parent"}`}
-        description="Your children's level, progress and package fees at a glance."
-      />
+      <PageHeader title={`Hello, ${me.full_name ?? "Parent"}`} />
 
       <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {PARENT_ACTIONS.map((q) => (
@@ -134,10 +131,7 @@ export default async function ParentDashboard() {
             <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", ICON_TINT[q.tone])}>
               <q.Icon className="h-5 w-5" />
             </span>
-            <div className="min-w-0">
-              <div className="font-semibold leading-tight text-slate-900">{q.title}</div>
-              <div className="truncate text-xs text-slate-500">{q.sub}</div>
-            </div>
+            <div className="min-w-0 font-semibold leading-tight text-slate-900">{q.title}</div>
           </Link>
         ))}
       </div>
@@ -206,45 +200,26 @@ export default async function ParentDashboard() {
                     <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
                   </div>
 
-                  <div className="mt-5 grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-                      <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                        Package
-                      </div>
-                      <div className="mt-1 text-lg font-bold text-green-700">
-                        {plan ? (
-                          <>
-                            {formatCurrency(Number(plan.amount), plan.currency)}
-                            <span className="text-xs font-medium text-slate-400">
-                              {INTERVAL_SUFFIX[plan.interval as FeeInterval]}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </div>
-                      <div className="mt-0.5 truncate text-xs text-slate-500" title={plan?.name ?? ""}>
-                        {plan?.name ?? "No package assigned"}
-                      </div>
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                    <div className="text-sm">
+                      {plan ? (
+                        <span className="font-semibold text-slate-900">
+                          {formatCurrency(Number(plan.amount), plan.currency)}
+                          <span className="text-xs font-medium text-slate-400">{INTERVAL_SUFFIX[plan.interval as FeeInterval]}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">No package</span>
+                      )}
                     </div>
-
-                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-                      <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                        Outstanding
-                      </div>
-                      <div className={`mt-1 text-lg font-bold ${outstanding > 0 ? "text-red-600" : "text-green-700"}`}>
-                        {outstanding > 0 ? formatCurrency(outstanding, currency) : "Paid up"}
-                      </div>
-                      <div className="mt-0.5 text-xs text-slate-500">
-                        {fees?.unpaidCount
-                          ? `${fees.unpaidCount} invoice${fees.unpaidCount > 1 ? "s" : ""} due`
-                          : "All settled"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 text-sm font-medium text-slate-500 group-hover:text-emerald-700">
-                    View progress &amp; payments →
+                    {outstanding > 0 ? (
+                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+                        {formatCurrency(outstanding, currency)} due
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                        Paid up
+                      </span>
+                    )}
                   </div>
                 </Card>
               </Link>

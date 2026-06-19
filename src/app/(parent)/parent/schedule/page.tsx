@@ -1,6 +1,6 @@
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { PageHeader, Section, EmptyState, Badge, Table, Th, Td } from "@/components/ui";
+import { PageHeader, Section, EmptyState, Badge } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export default async function ParentSchedulePage() {
   if (!childIds.length) {
     return (
       <div>
-        <PageHeader title="Schedule" description="Upcoming sessions for your children." />
+        <PageHeader title="Schedule" />
         <EmptyState message="No children linked to your account." />
       </div>
     );
@@ -76,7 +76,7 @@ export default async function ParentSchedulePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Schedule" description="Upcoming sessions for your children." />
+      <PageHeader title="Schedule" />
 
       {upcomingHols.length > 0 && (
         <Section title="School holidays — no class" flush>
@@ -95,30 +95,24 @@ export default async function ParentSchedulePage() {
 
       {(sessions ?? []).length ? (
         <Section title="Upcoming sessions" flush>
-          <Table>
-            <thead>
-              <tr><Th>Date</Th><Th>Time</Th><Th>Class</Th><Th>Who</Th><Th>Status</Th></tr>
-            </thead>
-            <tbody>
-              {(sessions ?? []).map((s: any) => {
-                const names = classToChildren.get(s.class_id) ?? [];
-                const clsName = classNames.get(s.class_id) ?? "—";
-                return (
-                  <tr key={s.id} className="hover:bg-slate-50">
-                    <Td label="Date" className="font-medium text-slate-900">{formatDate(s.session_date)}</Td>
-                    <Td label="Time">{formatTime(s.start_time)}–{formatTime(s.end_time)}{s.location ? ` · ${s.location}` : ""}</Td>
-                    <Td label="Class" className="text-slate-700">{clsName}</Td>
-                    <Td label="Who" className="text-slate-500">{names.join(", ") || "—"}</Td>
-                    <Td label="Status">
-                      <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>
-                        {s.status}
-                      </Badge>
-                    </Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </Table>
+          <ul className="divide-y divide-slate-100">
+            {(sessions ?? []).map((s: any) => {
+              const names = classToChildren.get(s.class_id) ?? [];
+              const clsName = classNames.get(s.class_id) ?? "—";
+              const sub = [clsName, s.location, childIds.length > 1 ? names.join(", ") : null].filter(Boolean).join(" · ");
+              return (
+                <li key={s.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-900">{formatDate(s.session_date)} · {formatTime(s.start_time)}</div>
+                    <div className="truncate text-sm text-slate-500">{sub}</div>
+                  </div>
+                  {s.status !== "scheduled" && (
+                    <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </Section>
       ) : (
         <EmptyState message="No upcoming sessions scheduled." />
