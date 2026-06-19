@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, TrendingUp, Calendar, CreditCard, Clock, MapPin, ChevronRight } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Avatar, Card, StatCard, Badge, cn } from "@/components/ui";
+import { Avatar, Card, Badge, cn } from "@/components/ui";
 import { RankLadder } from "@/components/rank-ladder";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
@@ -104,14 +104,15 @@ export default async function ChildDetailPage({
         <div className="flex items-center gap-3">
           <Avatar name={student.full_name} src={(student as any).photo_url} size={52} />
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-bold text-slate-900">{student.full_name}</div>
-            <div className="text-sm text-slate-500">{subtitle}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-lg font-bold text-slate-900">{student.full_name}</span>
+              {currentRank && (
+                <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold", rankBadgeClass(currentRank))}>{currentRank}</span>
+              )}
+              {student.status !== "active" && <Badge tone="slate">{student.status}</Badge>}
+            </div>
+            <div className="mt-0.5 text-sm text-slate-500">{subtitle}</div>
           </div>
-          {currentRank ? (
-            <span className={cn("inline-flex shrink-0 items-center rounded-md px-2.5 py-1 text-xs font-semibold", rankBadgeClass(currentRank))}>{currentRank}</span>
-          ) : (
-            <Badge tone={student.status === "active" ? "green" : "slate"}>{student.status}</Badge>
-          )}
         </div>
         <div className="mt-2 text-xs text-slate-400">
           {student.dob ? `Born ${formatDate(student.dob)} · ` : ""}Member since {formatDate((student as any).created_at)}
@@ -123,13 +124,18 @@ export default async function ChildDetailPage({
 
       {/* ── 3 quick stats ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Attendance" value={rate != null ? `${rate}%` : "—"} />
-        {growthIndex != null ? (
-          <StatCard label="Growth index" value={growthIndex} tone="green" />
-        ) : (
-          <StatCard label="Avg skill" value={avgScore != null ? `${avgScore}%` : "—"} tone="green" />
-        )}
-        <StatCard label="Reward points" value={points} />
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+          <div className="text-2xl font-bold text-slate-900">{rate != null ? `${rate}%` : "—"}</div>
+          <div className="mt-1 text-xs text-slate-500">Attendance</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+          <div className="text-2xl font-bold text-green-600">{growthIndex != null ? growthIndex : avgScore != null ? `${avgScore}%` : "—"}</div>
+          <div className="mt-1 text-xs text-slate-500">{growthIndex != null ? "Growth index" : "Avg skill"}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+          <div className="text-2xl font-bold text-slate-900">{points}</div>
+          <div className="mt-1 text-xs text-slate-500">Reward points</div>
+        </div>
       </div>
 
       {/* ── Fees ─────────────────────────────────────────────────────────── */}
