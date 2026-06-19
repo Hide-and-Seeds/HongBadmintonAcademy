@@ -48,49 +48,52 @@ export default async function AnalyticsPage({
         }
       />
 
-      {/* Headline KPIs */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
-        <StatCard label="Revenue (month)" value={formatCurrency(a.revenueThisMonth, a.currency)} tone="green" />
-        <StatCard
-          label="Collection rate"
-          value={a.collection.rate != null ? `${a.collection.rate}%` : "—"}
-          sub={`${formatCurrency(a.collection.collected, a.currency)} / ${formatCurrency(a.collection.billed, a.currency)}`}
-          tone={a.collection.rate == null ? "slate" : a.collection.rate >= 80 ? "green" : a.collection.rate >= 50 ? "amber" : "red"}
-        />
-        <StatCard label="Active students" value={a.counts.students} />
-        <StatCard label="Attendance rate" value={a.attendanceRate != null ? `${a.attendanceRate}%` : "—"} tone="blue" />
-        <StatCard
-          label="Retention (30d)"
-          value={a.retention.rate != null ? `${a.retention.rate}%` : "—"}
-          sub="attended in last 30 days"
-          tone={a.retention.rate == null ? "slate" : a.retention.rate >= 80 ? "green" : a.retention.rate >= 60 ? "amber" : "red"}
-        />
-        <StatCard
-          label="Avg skill"
-          value={a.avgScore != null ? `${a.avgScore}%` : "—"}
-          sub={
-            a.avgScore != null
-              ? `≈ ${(a.avgScore / 10).toFixed(1)}/10${a.skillImprovement != null ? ` · ${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} vs last mo` : ""}`
-              : "no assessments"
-          }
-          tone={a.skillImprovement != null ? (a.skillImprovement >= 0 ? "green" : "red") : "slate"}
-        />
+      {/* Financial */}
+      <div>
+        <h2 className="mb-3 text-base font-semibold text-slate-900">Financial</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <StatCard label="Revenue (month)" value={formatCurrency(a.revenueThisMonth, a.currency)} tone="green" />
+          <StatCard
+            label="Collection rate"
+            value={a.collection.rate != null ? `${a.collection.rate}%` : "—"}
+            sub={`${formatCurrency(a.collection.collected, a.currency)} / ${formatCurrency(a.collection.billed, a.currency)}`}
+            tone={a.collection.rate == null ? "slate" : a.collection.rate >= 80 ? "green" : a.collection.rate >= 50 ? "amber" : "red"}
+          />
+          <StatCard label="Outstanding fees" value={formatCurrency(a.outstanding, a.currency)} tone={a.outstanding > 0 ? "red" : "slate"} />
+        </div>
       </div>
 
-      {/* Secondary KPIs */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
-        <StatCard label="Outstanding fees" value={formatCurrency(a.outstanding, a.currency)} tone={a.outstanding > 0 ? "red" : "slate"} />
-        <StatCard label="New this month" value={a.newStudentsThisMonth} tone={a.newStudentsThisMonth ? "green" : "slate"} />
-        <StatCard label="Inactive students" value={a.inactiveStudents} tone={a.inactiveStudents ? "amber" : "slate"} />
-        <StatCard label="Avg attendance/student" value={a.retention.avgAttendancePct != null ? `${a.retention.avgAttendancePct}%` : "—"} />
-        <StatCard label="No-show >30 days" value={a.retention.inactive30} tone={a.retention.inactive30 ? "red" : "green"} />
-        <StatCard label="Class occupancy" value={a.avgOccupancyPct != null ? `${a.avgOccupancyPct}%` : "—"} sub="avg of capacity" tone="blue" />
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard label="Coaches" value={a.counts.coaches} />
-        <StatCard label="Parents" value={a.counts.parents} />
-        <StatCard label="Active classes" value={a.counts.classes} />
+      {/* People & activity */}
+      <div>
+        <h2 className="mb-3 text-base font-semibold text-slate-900">People &amp; activity</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Active students" value={a.counts.students} />
+          <StatCard label="Attendance rate" value={a.attendanceRate != null ? `${a.attendanceRate}%` : "—"} tone="blue" />
+          <StatCard
+            label="Retention (30d)"
+            value={a.retention.rate != null ? `${a.retention.rate}%` : "—"}
+            sub="attended in last 30 days"
+            tone={a.retention.rate == null ? "slate" : a.retention.rate >= 80 ? "green" : a.retention.rate >= 60 ? "amber" : "red"}
+          />
+          <StatCard
+            label="Avg skill"
+            value={a.avgScore != null ? `${a.avgScore}%` : "—"}
+            sub={
+              a.avgScore != null
+                ? `≈ ${(a.avgScore / 10).toFixed(1)}/10${a.skillImprovement != null ? ` · ${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} vs last mo` : ""}`
+                : "no assessments"
+            }
+            tone={a.skillImprovement != null ? (a.skillImprovement >= 0 ? "green" : "red") : "slate"}
+          />
+          <StatCard label="New this month" value={a.newStudentsThisMonth} tone={a.newStudentsThisMonth ? "green" : "slate"} />
+          <StatCard label="Inactive students" value={a.inactiveStudents} tone={a.inactiveStudents ? "amber" : "slate"} />
+          <StatCard label="No-show >30 days" value={a.retention.inactive30} tone={a.retention.inactive30 ? "red" : "green"} />
+          <StatCard label="Avg attendance/student" value={a.retention.avgAttendancePct != null ? `${a.retention.avgAttendancePct}%` : "—"} />
+          <StatCard label="Class occupancy" value={a.avgOccupancyPct != null ? `${a.avgOccupancyPct}%` : "—"} sub="avg of capacity" tone="blue" />
+          <StatCard label="Coaches" value={a.counts.coaches} />
+          <StatCard label="Parents" value={a.counts.parents} />
+          <StatCard label="Active classes" value={a.counts.classes} />
+        </div>
       </div>
 
       {/* Skills + rank */}
