@@ -1,6 +1,7 @@
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Section, EmptyState, Badge } from "@/components/ui";
+import { Clock, MapPin, User } from "lucide-react";
 import { formatDate, formatTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -99,12 +100,24 @@ export default async function ParentSchedulePage() {
             {(sessions ?? []).map((s: any) => {
               const names = classToChildren.get(s.class_id) ?? [];
               const clsName = classNames.get(s.class_id) ?? "—";
-              const sub = [clsName, s.location, childIds.length > 1 ? names.join(", ") : null].filter(Boolean).join(" · ");
+              const d = new Date(`${s.session_date}T00:00:00`);
+              const mon = d.toLocaleDateString("en-MY", { month: "short" });
+              const wd = d.toLocaleDateString("en-MY", { weekday: "short" });
               return (
-                <li key={s.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                  <div className="min-w-0">
-                    <div className="font-medium text-slate-900">{formatDate(s.session_date)} · {formatTime(s.start_time)}</div>
-                    <div className="truncate text-sm text-slate-500">{sub}</div>
+                <li key={s.id} className="flex items-center gap-3.5 px-4 py-3.5">
+                  <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-emerald-50">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">{mon}</span>
+                    <span className="text-xl font-bold leading-none text-emerald-800">{d.getDate()}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-900">{clsName}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
+                      <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{wd} {formatTime(s.start_time)}</span>
+                      {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
+                      {childIds.length > 1 && names.length > 0 && (
+                        <span className="inline-flex items-center gap-1"><User className="h-3.5 w-3.5" />{names.join(", ")}</span>
+                      )}
+                    </div>
                   </div>
                   {s.status !== "scheduled" && (
                     <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>

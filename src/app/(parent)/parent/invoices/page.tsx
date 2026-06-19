@@ -1,6 +1,7 @@
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { PageHeader, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
+import { Banknote } from "lucide-react";
+import { PageHeader, Badge, EmptyState } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { env } from "@/lib/env";
@@ -32,23 +33,26 @@ export default async function ParentInvoicesPage({
 
   return (
     <div>
-      <PageHeader title="Fees & Payments" description="Pay online, or send your receipt on WhatsApp for cash/transfer." />
+      <PageHeader title="Fees & Payments" />
 
-      <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-        💵 Paid by cash or bank transfer?{" "}
-        {env.academyWhatsapp ? (
-          <a
-            href={waLink(env.academyWhatsapp, "Hi, here is my payment receipt for invoice ") ?? "#"}
-            target="_blank"
-            rel="noopener"
-            className="font-medium text-green-700 hover:underline"
-          >
-            Send your receipt on WhatsApp
-          </a>
-        ) : (
-          <span className="font-medium text-slate-700">Send your payment receipt to us on WhatsApp</span>
-        )}{" "}
-        and we&apos;ll mark it paid.
+      <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+        <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+        <p>
+          Paid by cash or transfer?{" "}
+          {env.academyWhatsapp ? (
+            <a
+              href={waLink(env.academyWhatsapp, "Hi, here is my payment receipt for invoice ") ?? "#"}
+              target="_blank"
+              rel="noopener"
+              className="font-medium text-green-700 hover:underline"
+            >
+              Send your receipt on WhatsApp
+            </a>
+          ) : (
+            <span className="font-medium text-slate-700">Send your receipt on WhatsApp</span>
+          )}{" "}
+          and we&apos;ll mark it paid.
+        </p>
       </div>
 
       {paid && (
@@ -61,36 +65,27 @@ export default async function ParentInvoicesPage({
       )}
 
       {invoices && invoices.length > 0 ? (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Invoice</Th><Th>Student</Th><Th>Description</Th><Th>Amount</Th>
-              <Th>Due</Th><Th>Status</Th><Th className="text-right">Action</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((i: any) => (
-              <tr key={i.id} className="hover:bg-slate-50">
-                <Td className="font-mono text-xs text-slate-500">{i.invoice_no ?? "—"}</Td>
-                <Td>{i.students?.full_name ?? "—"}</Td>
-                <Td className="text-slate-500">{i.description ?? "—"}</Td>
-                <Td className="font-medium text-slate-900">{formatCurrency(Number(i.amount), i.currency)}</Td>
-                <Td className="text-slate-500">{formatDate(i.due_date)}</Td>
-                <Td><Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge></Td>
-                <Td className="text-right">
-                  {i.status !== "paid" ? (
-                    <form action={payInvoice}>
-                      <input type="hidden" name="id" value={i.id} />
-                      <SubmitButton pendingText="Redirecting…" className="!px-3 !py-1.5">Pay now</SubmitButton>
-                    </form>
-                  ) : (
-                    <span className="text-xs font-medium text-green-600">Paid</span>
-                  )}
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {invoices.map((i: any) => (
+            <li key={i.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
+              <div className="min-w-0">
+                <div className="font-semibold text-slate-900">{formatCurrency(Number(i.amount), i.currency)}</div>
+                <div className="truncate text-sm text-slate-500">
+                  {i.description || i.students?.full_name || "Fee"} · due {formatDate(i.due_date)}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge>
+                {i.status !== "paid" && i.status !== "canceled" && i.status !== "refunded" && (
+                  <form action={payInvoice}>
+                    <input type="hidden" name="id" value={i.id} />
+                    <SubmitButton pendingText="…" className="!px-3 !py-1.5">Pay</SubmitButton>
+                  </form>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
       ) : (
         <EmptyState message="No invoices yet." />
       )}
