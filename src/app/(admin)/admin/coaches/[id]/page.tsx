@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Section, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { PageHeader, Section, StatCard, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { formatCurrency } from "@/lib/format";
 import { PersonForm } from "../../_people/person-form";
 import { updatePerson } from "../../_people/actions";
 
@@ -33,6 +34,30 @@ export default async function EditCoachPage({
   }
   const classes = [...classMap.values()].sort((a, b) => a.name.localeCompare(b.name));
 
+  // This-month performance (MYT): lessons, attendance %, pay, active students.
+  const classIds = [...classMap.keys()];
+  const now = new Date(Date.now() + 8 * 3600 * 1000);
+  const mStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const mEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+  const [{ data: payRow }, { data: mSess }, { data: enr }] = await Promise.all([
+    supabase.from("coach_pay").select("pay_per_lesson").eq("coach_id", id).maybeSingle(),
+    classIds.length
+      ? supabase.from("sessions").select("id").in("class_id", classIds).gte("session_date", mStart).lte("session_date", mEnd)
+      : Promise.resolve({ data: [] as any[] }),
+    classIds.length
+      ? supabase.from("enrollments").select("student_id").in("class_id", classIds).eq("active", true)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const rate = Number(payRow?.pay_per_lesson ?? 0);
+  const lessons = (mSess ?? []).length;
+  const mSessIds = (mSess ?? []).map((s: any) => s.id);
+  const { data: att } = mSessIds.length
+    ? await supabase.from("attendance").select("status").in("session_id", mSessIds)
+    : { data: [] as any[] };
+  const came = (att ?? []).filter((a: any) => a.status === "present" || a.status === "late").length;
+  const attPct = att && att.length ? Math.round((came / att.length) * 100) : null;
+  const students = new Set((enr ?? []).map((e: any) => e.student_id)).size;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -40,6 +65,13 @@ export default async function EditCoachPage({
         description={person.full_name ?? undefined}
         action={<LinkButton href="/admin/coaches/summary" variant="ghost">Pay & attendance →</LinkButton>}
       />
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Lessons" value={lessons} sub="this month" />
+        <StatCard label="Attendance" value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub="this month" />
+        <StatCard label="Pay" value={formatCurrency(lessons * rate)} tone="green" sub="this month" />
+        <StatCard label="Students" value={students} sub="active" />
+      </div>
 
       <Section title={`Classes (${classes.length})`} flush>
         {classes.length > 0 ? (
