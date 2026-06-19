@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Calendar, TrendingUp, CreditCard } from "lucide-react";
+import { Calendar, TrendingUp, CreditCard, Clock, MapPin, User } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   PageHeader, StatCard, Card, EmptyState, Badge, Avatar, ICON_TINT, cn,
 } from "@/components/ui";
-import { formatCurrency, formatDate, formatTime } from "@/lib/format";
+import { formatCurrency, formatTime } from "@/lib/format";
 import type { FeeInterval } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -153,17 +153,24 @@ export default async function ParentDashboard() {
             {(upcomingSessions as any[]).map((s) => {
               const names = classToChild.get(s.class_id) ?? [];
               const clsName = classNameMap.get(s.class_id) ?? "—";
+              const d = new Date(`${s.session_date}T00:00:00`);
+              const mon = d.toLocaleDateString("en-MY", { month: "short" });
+              const wd = d.toLocaleDateString("en-MY", { weekday: "short" });
               return (
-                <div key={s.id} className="flex items-center justify-between px-5 py-4">
-                  <div>
+                <div key={s.id} className="flex items-center gap-3.5 px-4 py-3.5">
+                  <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-emerald-50">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">{mon}</span>
+                    <span className="text-xl font-bold leading-none text-emerald-800">{d.getDate()}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
                     <div className="font-semibold text-slate-900">{clsName}</div>
-                    <div className="text-sm text-slate-500">
-                      {formatDate(s.session_date)} · {formatTime(s.start_time)}–{formatTime(s.end_time)}
-                      {s.location ? ` · ${s.location}` : ""}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
+                      <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{wd} {formatTime(s.start_time)}</span>
+                      {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
+                      {childIds.length > 1 && names.length > 0 && (
+                        <span className="inline-flex items-center gap-1"><User className="h-3.5 w-3.5" />{names.join(", ")}</span>
+                      )}
                     </div>
-                    {names.length > 0 && (
-                      <div className="mt-0.5 text-xs text-slate-400">{names.join(", ")}</div>
-                    )}
                   </div>
                 </div>
               );
