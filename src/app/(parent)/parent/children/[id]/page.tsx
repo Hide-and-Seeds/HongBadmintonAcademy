@@ -31,7 +31,7 @@ export default async function ChildDetailPage({
   // Service-role bypasses RLS; restrict to this parent's child explicitly.
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, status, dob, parent_id, rank, created_at, photo_url")
+    .select("id, full_name, status, dob, parent_id, rank, created_at, photo_url, fee_plans(name, amount, currency, interval)")
     .eq("id", id)
     .eq("parent_id", me.id)
     .maybeSingle();
@@ -84,6 +84,7 @@ export default async function ChildDetailPage({
   const unpaid = (invoices ?? []).filter((i: any) => i.status === "unpaid" || i.status === "overdue");
   const outstanding = unpaid.reduce((s: number, i: any) => s + Number(i.amount), 0);
   const currency = (invoices ?? [])[0]?.currency ?? "MYR";
+  const plan = (student as any).fee_plans ?? null;
 
   const subtitle = [age != null ? `${age} yrs` : null, cls?.name ?? null].filter(Boolean).join(" · ") || "No class enrolment yet";
 
@@ -151,6 +152,15 @@ export default async function ChildDetailPage({
         </Link>
       ) : (
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700">All fees paid — thank you!</div>
+      )}
+
+      {plan && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+          <span className="text-slate-500">Plan</span>
+          <span className="font-medium text-slate-900">
+            {plan.name} · {formatCurrency(Number(plan.amount), plan.currency)}{plan.interval === "monthly" ? "/mo" : ""}
+          </span>
+        </div>
       )}
 
       {/* ── Next session ─────────────────────────────────────────────────── */}

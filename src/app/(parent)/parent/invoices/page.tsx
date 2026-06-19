@@ -31,9 +31,26 @@ export default async function ParentInvoicesPage({
     .eq("parent_id", me.id)
     .order("created_at", { ascending: false });
 
+  const { data: kids } = await supabase
+    .from("students")
+    .select("full_name, fee_plans(name, amount, currency, interval)")
+    .eq("parent_id", me.id)
+    .order("full_name");
+
   return (
     <div>
       <PageHeader title="Fees & Payments" />
+
+      {kids && kids.some((k: any) => k.fee_plans) && (
+        <div className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {kids.filter((k: any) => k.fee_plans).map((k: any, i: number) => (
+            <div key={i} className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-sm first:border-t-0">
+              <span className="font-medium text-slate-900">{k.full_name}</span>
+              <span className="text-slate-600">{k.fee_plans.name} · {formatCurrency(Number(k.fee_plans.amount), k.fee_plans.currency)}{k.fee_plans.interval === "monthly" ? "/mo" : ""}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
         <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
