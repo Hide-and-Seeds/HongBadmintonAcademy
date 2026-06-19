@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Hand, ClipboardList, Tablet } from "lucide-react";
+import { Hand, ClipboardList, Tablet, ScanLine, ChevronDown } from "lucide-react";
 import { Avatar, cn } from "@/components/ui";
 import { formatTime } from "@/lib/format";
 import { CheckinBoard, type Block } from "./checkin-board";
@@ -22,8 +22,9 @@ function lateOrPresent(session: Block["session"]): "present" | "late" {
 // One Check-in page, two modes: the coach board (NFC + manual marking) and a
 // court-side Kiosk where students tap their own name. Replaces the separate
 // Kiosk route.
-export function CheckinSwitcher({ blocks }: { blocks: Block[] }) {
+export function CheckinSwitcher({ blocks, nfc }: { blocks: Block[]; nfc?: ReactNode }) {
   const [mode, setMode] = useState<"board" | "kiosk">("board");
+  const [showNfc, setShowNfc] = useState(false);
   return (
     <div className="space-y-4">
       <div className="inline-flex rounded-lg border border-slate-300 bg-white p-0.5 text-sm">
@@ -44,7 +45,22 @@ export function CheckinSwitcher({ blocks }: { blocks: Block[] }) {
       </div>
 
       {mode === "board" ? (
-        <CheckinBoard initialBlocks={blocks} />
+        <div className="space-y-4">
+          {nfc && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowNfc((v) => !v)}
+                className="flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4 text-green-600" /> Scan NFC cards</span>
+                <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", showNfc && "rotate-180")} />
+              </button>
+              {showNfc && <div className="mt-3">{nfc}</div>}
+            </div>
+          )}
+          <CheckinBoard initialBlocks={blocks} />
+        </div>
       ) : (
         <KioskMode blocks={blocks} />
       )}

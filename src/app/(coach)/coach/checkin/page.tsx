@@ -57,15 +57,13 @@ export default async function CheckinPage() {
     <div className="space-y-6">
       <PageHeader
         title="Check-in"
-        description="Coach board (NFC + manual) or Kiosk mode where students tap their own name. Late taps auto-flag after the grace window."
+        description="Tap a name to mark present. Use ⋯ for late / absent or to rate."
       />
-
-      <NfcScanner action={scanTap} />
 
       {blocks.length === 0 ? (
         <EmptyState message="No sessions scheduled today." />
       ) : (
-        <CheckinSwitcher blocks={blocks} />
+        <CheckinSwitcher blocks={blocks} nfc={<NfcScanner action={scanTap} />} />
       )}
     </div>
   );

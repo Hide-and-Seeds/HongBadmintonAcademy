@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Badge, Section, cn } from "@/components/ui";
-import { formatTime, formatDateTime } from "@/lib/format";
+import { Avatar, Badge, Section, cn } from "@/components/ui";
+import { Check, MoreHorizontal } from "lucide-react";
+import { formatTime } from "@/lib/format";
 import type { AttendanceStatus } from "@/lib/types";
 import { setAttendanceAction, setPerfAction, markAllPresentAction } from "./board-actions";
 
@@ -25,13 +26,6 @@ export interface Block {
   };
   roster: Roster[];
 }
-
-const TONE: Record<AttendanceStatus, "green" | "yellow" | "red" | "slate"> = {
-  present: "green",
-  late: "yellow",
-  absent: "red",
-  excused: "slate",
-};
 
 const MARKS: { status: AttendanceStatus; label: string; on: string }[] = [
   { status: "present", label: "Present", on: "bg-green-600 text-white" },
@@ -155,74 +149,92 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                 const isExpanded = !!expanded[key];
                 const isBusy = !!busy[key];
                 return (
-                  <li key={r.student.id} className="px-5 py-2.5">
-                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-sm">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate font-medium text-slate-700">
-                          {r.student.full_name}
-                        </span>
-                        {cur ? (
-                          <Badge tone={TONE[cur]}>{cur}</Badge>
-                        ) : (
-                          <span className="text-xs text-slate-400">unmarked</span>
-                        )}
-                        {r.att?.tap_in_at && (
-                          <span className="text-xs text-slate-400">
-                            {formatDateTime(r.att.tap_in_at)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1">
-                        {MARKS.map((m) => (
-                          <button
-                            key={m.status}
-                            type="button"
-                            onClick={() => setStatus(session.id, r.student.id, m.status)}
-                            disabled={isBusy}
-                            className={cn(
-                              "rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors",
-                              cur === m.status
-                                ? `${m.on} ring-transparent`
-                                : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50",
-                              isBusy && "opacity-60",
-                            )}
-                          >
-                            {m.label}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => toggleExpand(key)}
-                          className="ml-1 rounded-md px-2 py-1 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
-                          aria-expanded={isExpanded}
+                  <li key={r.student.id} className="px-4 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={r.student.full_name} src={r.student.photo_url} size={36} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium text-slate-900">{r.student.full_name}</div>
+                        <div
+                          className={cn(
+                            "text-xs font-medium",
+                            cur === "present" ? "text-green-600"
+                              : cur === "late" ? "text-amber-600"
+                              : cur === "absent" ? "text-red-600"
+                              : cur === "excused" ? "text-slate-500"
+                              : "text-slate-400",
+                          )}
                         >
-                          {r.mark ? `★ ${r.mark}/5` : "Rate"} {isExpanded ? "▴" : "▾"}
-                        </button>
+                          {cur === "present" ? "Present"
+                            : cur === "late" ? "Late"
+                            : cur === "absent" ? "Absent"
+                            : cur === "excused" ? "Excused"
+                            : "Tap to mark present"}
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setStatus(session.id, r.student.id, "present")}
+                        disabled={isBusy}
+                        aria-label="Mark present"
+                        className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                          cur === "present"
+                            ? "border-green-600 bg-green-600 text-white"
+                            : "border-slate-300 text-transparent hover:border-green-400 hover:text-green-300",
+                          isBusy && "opacity-60",
+                        )}
+                      >
+                        <Check className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(key)}
+                        aria-expanded={isExpanded}
+                        aria-label="More options"
+                        className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                          isExpanded ? "border-green-300 bg-green-50 text-green-600" : "border-slate-200 text-slate-400 hover:bg-slate-50",
+                          Boolean(r.mark) && !isExpanded && "text-amber-500",
+                        )}
+                      >
+                        <MoreHorizontal className="h-5 w-5" />
+                      </button>
                     </div>
                     {isExpanded && (
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-dashed border-slate-100 pt-2">
-                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                          Perf
-                        </span>
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => setPerf(session.id, r.student.id, n)}
-                            className={cn(
-                              "flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ring-1 ring-inset transition-colors",
-                              r.mark === n
-                                ? "bg-green-600 text-white ring-transparent"
-                                : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50",
-                            )}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                        <span className="ml-1 text-xs text-slate-400">
-                          1 = needs work · 5 = excellent
-                        </span>
+                      <div className="mt-2.5 space-y-2.5 border-t border-dashed border-slate-100 pl-12 pt-2.5">
+                        <div className="flex flex-wrap gap-1.5">
+                          {MARKS.map((m) => (
+                            <button
+                              key={m.status}
+                              type="button"
+                              onClick={() => setStatus(session.id, r.student.id, m.status)}
+                              disabled={isBusy}
+                              className={cn(
+                                "rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors",
+                                cur === m.status ? `${m.on} ring-transparent` : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50",
+                              )}
+                            >
+                              {m.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Rate</span>
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => setPerf(session.id, r.student.id, n)}
+                              className={cn(
+                                "flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ring-1 ring-inset transition-colors",
+                                r.mark === n ? "bg-green-600 text-white ring-transparent" : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50",
+                              )}
+                            >
+                              {n}
+                            </button>
+                          ))}
+                          <span className="ml-1 text-xs text-slate-400">1 = needs work · 5 = excellent</span>
+                        </div>
                       </div>
                     )}
                   </li>
