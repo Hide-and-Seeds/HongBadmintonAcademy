@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, Button, LinkButton, cn } from "@/components/ui";
@@ -100,7 +101,7 @@ export default async function RosterPage({
             >
               <div className="min-w-0 sm:flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate font-medium text-slate-900">{r.student.full_name}</span>
+                  <Link href={`/admin/students/${r.student.id}`} className="truncate font-medium text-slate-900 hover:text-green-700 hover:underline">{r.student.full_name}</Link>
                   {cur ? (
                     <Badge tone={TONE[cur]}>{cur}{r.att.flagged ? " ⚑" : ""}</Badge>
                   ) : (

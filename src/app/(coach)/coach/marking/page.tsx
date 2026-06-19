@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, Badge, EmptyState, LinkButton } from "@/components/ui";
@@ -112,7 +113,7 @@ export default async function MarkingListPage() {
                     {initials(s.full_name)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-slate-900">{s.full_name}</div>
+                    <Link href={`/coach/marking/${s.id}`} className="block truncate font-medium text-slate-900 hover:text-green-700 hover:underline">{s.full_name}</Link>
                     {s.classes.length > 0 && (
                       <div className="truncate text-xs text-slate-400" title={s.classes.join(", ")}>{s.classes.join(" · ")}</div>
                     )}

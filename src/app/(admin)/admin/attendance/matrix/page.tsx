@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, EmptyState, cn } from "@/components/ui";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
@@ -138,7 +139,7 @@ export default async function MatrixPage({
               {rows.map((r) => (
                 <tr key={r.student.id} className="hover:bg-slate-50">
                   <td className="sticky left-0 z-10 border-b border-slate-100 bg-white px-3 py-2 font-medium text-slate-900">
-                    {r.student.full_name}
+                    <Link href={`/admin/students/${r.student.id}`} className="hover:text-green-700 hover:underline">{r.student.full_name}</Link>
                   </td>
                   <td className="border-b border-slate-100 px-2 py-2 text-center">
                     {r.rank ? (

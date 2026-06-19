@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { cn } from "@/components/ui";
 import { rankBadgeClass, RANK_ORDER as CLASS_RANK_ORDER } from "@/lib/ranks";
@@ -80,7 +81,9 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
           {sorted.map((r, i) => (
             <tr key={r.id} className="hover:bg-slate-50">
               <td className="border-b border-slate-100 px-3 py-2.5 text-center text-slate-400">{i < 3 ? MEDAL[i] : i + 1}</td>
-              <td className="border-b border-slate-100 px-3 py-2.5 font-medium text-slate-900">{r.name}</td>
+              <td className="border-b border-slate-100 px-3 py-2.5 font-medium text-slate-900">
+                <Link href={`/admin/students/${r.id}`} className="hover:text-green-700 hover:underline">{r.name}</Link>
+              </td>
               <td className="border-b border-slate-100 px-3 py-2.5 text-center">
                 {r.classRank ? (
                   <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(r.classRank))}>{r.classRank}</span>
