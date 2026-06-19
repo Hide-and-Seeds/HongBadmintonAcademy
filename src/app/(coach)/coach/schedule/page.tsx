@@ -1,6 +1,8 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, EmptyState } from "@/components/ui";
+import { PageHeader, EmptyState, Badge, cn } from "@/components/ui";
+import { Clock, MapPin } from "lucide-react";
+import { formatTime } from "@/lib/format";
 import { MonthCalendar } from "@/components/month-calendar";
 import { loadHolidayMap } from "@/lib/holidays-server";
 import { coachClassIds } from "../_data";
@@ -46,22 +48,59 @@ export default async function CoachSchedulePage({
       {classIds.length === 0 ? (
         <EmptyState message="You're not assigned to any classes yet." />
       ) : (
-        <MonthCalendar
-          monthStr={monthStr}
-          basePath="/coach/schedule"
-          interactive={false}
-          holidays={holidays}
-          sessions={(sessions ?? []).map((s: any) => ({
-            id: s.id,
-            session_date: s.session_date,
-            start_time: s.start_time,
-            end_time: s.end_time,
-            location: s.location,
-            status: s.status,
-            className: s.classes?.name ?? null,
-            classRank: s.classes?.level ?? null,
-          }))}
-        />
+        <>
+          {/* Phone: a readable list — the month grid is too cramped on a narrow screen. */}
+          <div className="md:hidden">
+            {(sessions ?? []).length ? (
+              <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {(sessions ?? []).map((s: any) => {
+                  const d = new Date(`${s.session_date}T00:00:00`);
+                  const upcoming = s.session_date >= todayMYT();
+                  return (
+                    <li key={s.id} className="flex items-center gap-3.5 px-4 py-3.5">
+                      <div className={cn("flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl", upcoming ? "bg-emerald-50" : "bg-slate-100")}>
+                        <span className={cn("text-[10px] font-semibold uppercase tracking-wide", upcoming ? "text-emerald-600" : "text-slate-500")}>{d.toLocaleDateString("en-MY", { month: "short" })}</span>
+                        <span className={cn("text-xl font-bold leading-none", upcoming ? "text-emerald-800" : "text-slate-700")}>{d.getDate()}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-900">{s.classes?.name ?? "Class"}</div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
+                          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{d.toLocaleDateString("en-MY", { weekday: "short" })} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
+                          {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
+                        </div>
+                      </div>
+                      {s.status !== "scheduled" && (
+                        <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <EmptyState message="No sessions this month." />
+            )}
+          </div>
+
+          {/* Desktop: the month calendar. */}
+          <div className="hidden md:block">
+            <MonthCalendar
+              monthStr={monthStr}
+              basePath="/coach/schedule"
+              interactive={false}
+              holidays={holidays}
+              sessions={(sessions ?? []).map((s: any) => ({
+                id: s.id,
+                session_date: s.session_date,
+                start_time: s.start_time,
+                end_time: s.end_time,
+                location: s.location,
+                status: s.status,
+                className: s.classes?.name ?? null,
+                classRank: s.classes?.level ?? null,
+              }))}
+            />
+          </div>
+        </>
       )}
     </div>
   );
