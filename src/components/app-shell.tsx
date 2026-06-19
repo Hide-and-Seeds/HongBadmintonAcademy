@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Feather, Calendar, CreditCard, TrendingUp, UserCheck, ClipboardList, Banknote, Tablet, LayoutGrid } from "lucide-react";
+import { Home, Feather, Calendar, CalendarDays, CalendarOff, CreditCard, TrendingUp, UserCheck, ClipboardList, ClipboardCheck, Banknote, Tablet, LayoutGrid, Users, GraduationCap, Trophy, Award, Megaphone, MessageCircle, Tag, BarChart3, FileText, Settings } from "lucide-react";
 import { Avatar, cn } from "@/components/ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { APP_SHORT, ROLE_LABEL, type NavItem } from "@/lib/constants";
@@ -20,14 +20,30 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-// Mobile bottom-tab icon + short label, derived from the nav href/label.
-function tabIcon(href: string) {
-  if (href.includes("schedule")) return Calendar;
-  if (href.includes("scorecard")) return TrendingUp;
+// Resolve a lucide icon from a nav href — used by both the sidebar items and
+// the mobile bottom tabs.
+function navIcon(href: string) {
+  if (href.includes("attendance")) return ClipboardCheck;
+  if (href.includes("sessions")) return CalendarDays;
+  if (href.includes("people")) return Users;
+  if (href.includes("classes")) return GraduationCap;
+  if (href.includes("coaches")) return Users;
+  if (href.includes("leaderboard")) return Trophy;
+  if (href.includes("marking")) return ClipboardList;
+  if (href.includes("rewards")) return Award;
+  if (href.includes("collections")) return Banknote;
   if (href.includes("invoice")) return CreditCard;
+  if (href.includes("scorecard")) return TrendingUp;
+  if (href.includes("announce")) return Megaphone;
+  if (href.includes("messages")) return MessageCircle;
+  if (href.includes("fee-plans")) return Tag;
+  if (href.includes("analytics")) return BarChart3;
+  if (href.includes("reports")) return FileText;
+  if (href.includes("holidays")) return CalendarOff;
+  if (href.includes("settings")) return Settings;
   if (href.includes("kiosk")) return Tablet;
   if (href.includes("checkin")) return UserCheck;
-  if (href.includes("marking")) return ClipboardList;
+  if (href.includes("schedule")) return Calendar;
   if (href.includes("payroll")) return Banknote;
   return LayoutGrid;
 }
@@ -96,22 +112,23 @@ export function AppShell({
               <div className={cn("space-y-0.5", collapsible ? "mb-1 mt-1" : "mt-2")}>
                 {g.items.map((item) => {
                   const active = isActive(pathname, item.href);
+                  const Icon = navIcon(item.href);
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setOpen(false)}
                       className={cn(
-                        "group flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                        "group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
                         active
                           ? "bg-green-50 font-semibold text-green-700"
                           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                       )}
                     >
-                      <span
+                      <Icon
                         className={cn(
-                          "h-1.5 w-1.5 shrink-0 rounded-full transition-colors",
-                          active ? "bg-green-600" : "bg-slate-300 group-hover:bg-slate-400",
+                          "h-4 w-4 shrink-0 transition-colors",
+                          active ? "text-green-600" : "text-slate-400 group-hover:text-slate-500",
                         )}
                       />
                       {item.label}
@@ -139,7 +156,7 @@ export function AppShell({
           ...groups
             .flatMap((g) => g.items)
             .slice(0, 4)
-            .map((it) => ({ href: it.href, short: shortLabel(it.label), Icon: tabIcon(it.href) })),
+            .map((it) => ({ href: it.href, short: shortLabel(it.label), Icon: navIcon(it.href) })),
         ];
 
   // Dashboard is pinned above the section groups so it's always one tap away
