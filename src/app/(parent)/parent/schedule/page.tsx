@@ -2,7 +2,6 @@ import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Section, EmptyState, Badge, Table, Th, Td } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
-import { MY_PUBLIC_HOLIDAYS } from "@/lib/holidays";
 
 export const dynamic = "force-dynamic";
 
@@ -65,55 +64,36 @@ export default async function ParentSchedulePage() {
     if (e.class_id && e.classes?.name) classNames.set(e.class_id, e.classes.name);
   }
 
-  // Group sessions under one date heading so the same date isn't repeated row
-  // after row — parents scan by day, not by class.
-  const byDate = new Map<string, any[]>();
-  for (const s of (sessions ?? []) as any[]) {
-    const list = byDate.get(s.session_date) ?? [];
-    list.push(s);
-    byDate.set(s.session_date, list);
-  }
-  const dates = [...byDate.keys()];
-
-  // Upcoming holidays (no class) — public + the academy's school holidays.
-  const [{ data: schoolHols }, { data: dbPub }] = await Promise.all([
-    supabase.from("school_holidays").select("name, start_date, end_date").gte("end_date", today).order("start_date").limit(20),
-    supabase.from("public_holidays").select("holiday_date, name").gte("holiday_date", today).order("holiday_date").limit(50),
-  ]);
-  // Public holidays = built-in merged with imported (imported wins on a date).
-  const pubByDate = new Map<string, string>();
-  for (const h of MY_PUBLIC_HOLIDAYS) if (h.date >= today) pubByDate.set(h.date, h.name);
-  for (const r of (dbPub ?? []) as any[]) pubByDate.set(r.holiday_date, r.name);
-  const upcomingHols = [
-    ...[...pubByDate].map(([date, name]) => ({ name, start: date, end: date, kind: "Public" })),
-    ...(schoolHols ?? []).map((h: any) => ({ name: h.name, start: h.start_date, end: h.end_date, kind: "School" })),
-  ]
-    .sort((a, b) => a.start.localeCompare(b.start))
-    .slice(0, 6);
+  // Upcoming school holidays only (academy closures — no class). Public
+  // holidays are deliberately left off the parent schedule.
+  const { data: schoolHols } = await supabase
+    .from("school_holidays")
+    .select("name, start_date, end_date")
+    .gte("end_date", today)
+    .order("start_date")
+    .limit(6);
+  const upcomingHols = (schoolHols ?? []).map((h: any) => ({ name: h.name, start: h.start_date, end: h.end_date }));
 
   return (
     <div className="space-y-6">
       <PageHeader title="Schedule" description="Upcoming sessions for your children." />
 
       {upcomingHols.length > 0 && (
-        <Section title="Holidays — no class" flush>
+        <Section title="School holidays — no class" flush>
           <ul className="divide-y divide-slate-100">
             {upcomingHols.map((h, i) => (
-              <li key={i} className="flex items-center justify-between gap-3 px-5 py-3">
-                <div>
-                  <div className="font-medium text-slate-900">{h.name}</div>
-                  <div className="text-sm text-slate-500">
-                    {h.start === h.end ? formatDate(h.start) : `${formatDate(h.start)} – ${formatDate(h.end)}`}
-                  </div>
+              <li key={i} className="px-5 py-3">
+                <div className="font-medium text-slate-900">{h.name}</div>
+                <div className="text-sm text-slate-500">
+                  {h.start === h.end ? formatDate(h.start) : `${formatDate(h.start)} – ${formatDate(h.end)}`}
                 </div>
-                <Badge tone={h.kind === "School" ? "yellow" : "slate"}>{h.kind}</Badge>
               </li>
             ))}
           </ul>
         </Section>
       )}
 
-      {dates.length ? (
+      {(sessions ?? []).length ? (
         <Section title="Upcoming sessions" flush>
           <Table>
             <thead>
