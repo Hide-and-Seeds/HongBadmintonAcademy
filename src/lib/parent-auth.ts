@@ -111,7 +111,7 @@ export async function getParentProfile(): Promise<Profile | null> {
 
 export async function requireParent(): Promise<Profile> {
   const p = await getParentProfile();
-  if (!p) redirect("/parent-login");
+  if (!p) redirect("/login");
   return p;
 }
 

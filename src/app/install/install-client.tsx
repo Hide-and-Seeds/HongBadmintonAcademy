@@ -111,6 +111,13 @@ export function InstallClient() {
         </p>
       </div>
 
+      <a
+        href="/login"
+        className="inline-flex w-full max-w-xs items-center justify-center rounded-xl border border-green-600 bg-white px-6 py-3 text-base font-semibold text-green-700 shadow-sm transition-colors hover:bg-green-50"
+      >
+        Skip — open the website →
+      </a>
+
       {platform.kind === "loading" && (
         <div className="text-sm text-slate-400">Detecting your device…</div>
       )}
@@ -190,9 +197,6 @@ export function InstallClient() {
         </div>
       )}
 
-      <a href="/login" className="text-xs text-slate-400 hover:text-slate-600">
-        Skip — just sign in
-      </a>
     </main>
   );
 }

@@ -4,47 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { setParentSessionCookie } from "@/lib/parent-auth";
+import { homeForRole } from "@/lib/auth";
 import { getBaseUrl } from "@/lib/url";
-
-function loginError(next: string | null, message: string): never {
-  const params = new URLSearchParams({ error: message });
-  if (next) params.set("next", next);
-  redirect(`/parent-login?${params.toString()}`);
-}
-
-// Email + password sign-in. Parents authenticate against Supabase Auth (where
-// admin created them with an email + password), but the parent app itself runs
-// on our own 1-year signed cookie — so once the password checks out we drop the
-// Supabase session and issue the hba_parent cookie. (Admin & coach keep the
-// Supabase session; parents never use it.)
-export async function signInWithEmail(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
-  const next = (formData.get("next") as string) || null;
-  if (!email || !password) loginError(next, "Enter your email and password.");
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  const user = data?.user;
-  if (error || !user) loginError(next, "Wrong email or password.");
-
-  const db = createAdminClient();
-  const { data: prof } = await db
-    .from("profiles")
-    .select("id, role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  // We don't keep the Supabase session for parents.
-  await supabase.auth.signOut({ scope: "local" });
-
-  if (!prof || prof.role !== "parent") {
-    loginError(next, "This login is for parents. Staff should use the staff login.");
-  }
-
-  await setParentSessionCookie(prof.id);
-  redirect(next || "/parent");
-}
 
 // Forgot password → Supabase sends a reset email. We always report success so
 // the form never reveals whether an email is registered.
@@ -58,9 +19,9 @@ export async function requestPasswordReset(formData: FormData) {
   redirect("/parent-login/forgot?sent=1");
 }
 
-// Set a new password from the reset link. Supabase appends ?code=… to the
-// redirect; we exchange it for a recovery session, set the password, then issue
-// our own cookie and drop the Supabase session.
+// Set a new password from the reset link, then sign the user in by role
+// (parents on the app cookie, staff on the Supabase session). Works for any
+// account, so it doubles as staff password recovery.
 export async function setNewPassword(formData: FormData) {
   const code = String(formData.get("code") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -88,13 +49,17 @@ export async function setNewPassword(formData: FormData) {
   if (upErr) back(upErr.message);
 
   const db = createAdminClient();
-  const { data: prof } = await db.from("profiles").select("id, role").eq("id", user.id).maybeSingle();
+  const { data: prof } = await db.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const role = prof?.role as "admin" | "coach" | "parent" | undefined;
 
-  await supabase.auth.signOut({ scope: "local" });
-
-  if (!prof || prof.role !== "parent") {
-    redirect(`/parent-login?error=${encodeURIComponent("This account is not a parent account.")}`);
+  if (role === "parent") {
+    await supabase.auth.signOut({ scope: "local" });
+    await setParentSessionCookie(user.id);
+    redirect("/parent");
   }
-  await setParentSessionCookie(prof.id);
-  redirect("/parent");
+  if (role === "admin" || role === "coach") {
+    redirect(homeForRole(role));
+  }
+  await supabase.auth.signOut({ scope: "local" });
+  redirect(`/login?error=${encodeURIComponent("This account has no access yet. Contact the academy.")}`);
 }

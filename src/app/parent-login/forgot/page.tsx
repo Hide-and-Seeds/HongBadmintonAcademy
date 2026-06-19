@@ -45,7 +45,7 @@ export default async function ParentForgotPasswordPage({
         </form>
       )}
 
-      <a href="/parent-login" className="text-center text-xs font-medium text-slate-500 hover:text-slate-700">
+      <a href="/login" className="text-center text-xs font-medium text-slate-500 hover:text-slate-700">
         ← Back to sign in
       </a>
     </main>

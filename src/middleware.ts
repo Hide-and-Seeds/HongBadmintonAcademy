@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
     const pid = await verifyParentCookieValue(cookieValue);
     if (!pid) {
       const url = request.nextUrl.clone();
-      url.pathname = "/parent-login";
+      url.pathname = "/login";
       if (path !== "/parent") url.searchParams.set("next", path);
       return NextResponse.redirect(url);
     }

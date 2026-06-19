@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
         : result.reason === "used"
         ? "This login link has already been used. Sign in with your email + password, or ask the academy for a new link."
         : "Login link is invalid. Please contact the academy.";
-    return NextResponse.redirect(`${origin}/parent-login?error=${encodeURIComponent(reason)}`);
+    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(reason)}`);
   }
 
   await setParentSessionCookie(result.profileId);
