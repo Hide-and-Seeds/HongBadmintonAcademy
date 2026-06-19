@@ -3,7 +3,7 @@ import { Clock, MapPin, User, Users } from "lucide-react";
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  PageHeader, StatCard, Card, EmptyState, Badge, Avatar,
+  PageHeader, Card, EmptyState, Badge, Avatar,
 } from "@/components/ui";
 import { formatCurrency, formatTime } from "@/lib/format";
 import type { FeeInterval } from "@/lib/types";
@@ -129,13 +129,33 @@ export default async function ParentDashboard() {
     feesByChild.set(inv.student_id, cur);
   }
 
+  const totalOutstanding = [...feesByChild.values()].reduce((s, f) => s + f.outstanding, 0);
+  const outCurrency = [...feesByChild.values()][0]?.currency ?? "MYR";
+
   return (
     <div>
       <PageHeader title={`Hello, ${me.full_name ?? "Parent"}`} />
 
-      <div className="grid grid-cols-2 gap-4">
-        <StatCard label="Unpaid invoices" value={unpaid ?? 0} tone={unpaid ? "red" : "green"} />
-      </div>
+      {unpaid && unpaid > 0 ? (
+        <Link
+          href="/parent/invoices"
+          className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 transition-colors hover:bg-red-100/70"
+        >
+          <div className="min-w-0">
+            <div className="text-lg font-bold text-red-700">{formatCurrency(totalOutstanding, outCurrency)}</div>
+            <div className="text-xs font-medium text-red-600">
+              {unpaid} unpaid invoice{unpaid > 1 ? "s" : ""} · tap to pay
+            </div>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">
+            Pay now →
+          </span>
+        </Link>
+      ) : (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700">
+          All fees paid — thank you!
+        </div>
+      )}
 
       {/* ─── Upcoming sessions ──────────────────────────────────────────── */}
       <div className="mt-8">
