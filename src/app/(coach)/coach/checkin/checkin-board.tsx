@@ -27,8 +27,9 @@ export interface Block {
   roster: Roster[];
 }
 
+// Present is the one-tap green check on every row; the expanded panel only
+// carries the exceptions so there are fewer buttons to scan.
 const MARKS: { status: AttendanceStatus; label: string; on: string }[] = [
-  { status: "present", label: "Present", on: "bg-green-600 text-white" },
   { status: "late", label: "Late", on: "bg-amber-500 text-white" },
   { status: "absent", label: "Absent", on: "bg-red-600 text-white" },
   { status: "excused", label: "Excused", on: "bg-slate-600 text-white" },

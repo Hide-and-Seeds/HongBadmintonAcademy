@@ -2,14 +2,14 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
-  PageHeader, Section, Field, Input, Textarea, Button, LinkButton, Select,
+  PageHeader, Section, Field, Input, Textarea, Button, LinkButton,
   Table, Th, Td, EmptyState, Badge, cn,
 } from "@/components/ui";
 import { formatDate, formatDateTime, monthLabel } from "@/lib/format";
 import { GROUP_LABEL, type GroupKey } from "@/lib/growth";
-import { CLASS_RANKS, studentRank, rankBadgeClass } from "@/lib/ranks";
+import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { RatingButtons } from "@/components/rating-buttons";
-import { createAssessment, addNote, setStudentRank } from "../actions";
+import { createAssessment, addNote } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -100,9 +100,8 @@ export default async function MarkStudentPage({
         )}
       </div>
 
-      {/* Rank — coaches assign it once (after assessing); after that it's locked
-          to coaches and only an admin can change/promote it. */}
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      {/* Rank is admin-only — coaches see it here but can't set or change it. */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-slate-700">Rank:</span>
           {effRank ? (
@@ -111,22 +110,7 @@ export default async function MarkStudentPage({
             <span className="text-sm text-slate-400">none</span>
           )}
         </div>
-        {(student as any).rank ? (
-          <span className="text-xs text-slate-400">Rank set — ask an admin to change or promote.</span>
-        ) : (
-          <form action={setStudentRank} className="flex items-end gap-2">
-            <input type="hidden" name="student_id" value={student.id} />
-            <Field label="Assign rank (after assessment)">
-              <Select name="rank" defaultValue="" className="h-9 w-44">
-                <option value="" disabled>— pick a rank —</option>
-                {CLASS_RANKS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </Select>
-            </Field>
-            <Button type="submit">Save rank</Button>
-          </form>
-        )}
+        <span className="text-xs text-slate-400">Set by an admin.</span>
       </div>
 
       {saved && (
