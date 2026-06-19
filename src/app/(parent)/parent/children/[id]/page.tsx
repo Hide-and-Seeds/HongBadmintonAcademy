@@ -41,7 +41,7 @@ export default async function ChildDetailPage({
   // Service-role bypasses RLS; restrict to this parent's child explicitly.
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, status, dob, parent_id, rank, created_at")
+    .select("id, full_name, status, dob, parent_id, rank, created_at, photo_url")
     .eq("id", id)
     .eq("parent_id", me.id)
     .maybeSingle();
@@ -164,7 +164,7 @@ export default async function ChildDetailPage({
       {/* ─── Rank & progress ────────────────────────────────────────────── */}
       <Section title="Rank & progress">
         <div className="mb-6 flex items-center gap-3">
-          <Avatar name={student.full_name} size={48} />
+          <Avatar name={student.full_name} src={(student as any).photo_url} size={48} />
           <div>
             <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Current rank</div>
             <span className={cn("mt-0.5 inline-block rounded-md px-2 py-0.5 text-sm font-semibold", rankBadgeClass(currentRank))}>

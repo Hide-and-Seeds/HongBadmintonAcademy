@@ -8,6 +8,7 @@ import { studentSchema } from "@/lib/validation";
 import { CLASS_RANKS, RANK_ORDER, studentRank, nextRank } from "@/lib/ranks";
 import { sendRankUpNotice } from "@/lib/reminders";
 import { recordRankChange } from "@/lib/rank-history";
+import { uploadStudentPhoto } from "@/lib/storage";
 
 const order = (r: string | null) => (r ? RANK_ORDER[r] ?? 0 : 0);
 
@@ -72,8 +73,14 @@ export async function createStudent(formData: FormData) {
   if (!parsed.success) err("/admin/students/new", parsed.error.issues[0].message);
 
   const supabase = await createClient();
-  const { error } = await supabase.from("students").insert(parsed.data);
+  const { data: created, error } = await supabase.from("students").insert(parsed.data).select("id").single();
   if (error) err("/admin/students/new", error.message);
+
+  const photo = formData.get("photo");
+  if (created && photo instanceof File && photo.size > 0) {
+    const url = await uploadStudentPhoto(created.id, photo);
+    if (url) await supabase.from("students").update({ photo_url: url }).eq("id", created.id);
+  }
 
   revalidatePath("/admin/students");
   redirect("/admin/students");
@@ -86,7 +93,13 @@ export async function updateStudent(formData: FormData) {
   if (!parsed.success) err(`/admin/students/${id}`, parsed.error.issues[0].message);
 
   const supabase = await createClient();
-  const { error } = await supabase.from("students").update(parsed.data).eq("id", id);
+  const update: Record<string, unknown> = { ...parsed.data };
+  const photo = formData.get("photo");
+  if (photo instanceof File && photo.size > 0) {
+    const url = await uploadStudentPhoto(id, photo);
+    if (url) update.photo_url = url;
+  }
+  const { error } = await supabase.from("students").update(update).eq("id", id);
   if (error) err(`/admin/students/${id}`, error.message);
 
   revalidatePath("/admin/students");

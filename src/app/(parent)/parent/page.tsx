@@ -24,7 +24,7 @@ export default async function ParentDashboard() {
 
   const { data: children } = await supabase
     .from("students")
-    .select("id, full_name, status")
+    .select("id, full_name, status, photo_url")
     .eq("parent_id", me.id)
     .order("full_name");
 
@@ -196,7 +196,7 @@ export default async function ParentDashboard() {
                 <Card className="h-full p-5 transition-all hover:border-emerald-300 hover:shadow-md">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <Avatar name={c.full_name} size={44} />
+                      <Avatar name={c.full_name} src={(c as any).photo_url} size={44} />
                       <div>
                         <div className="text-base font-semibold text-slate-900 group-hover:text-emerald-700">
                           {c.full_name}

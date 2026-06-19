@@ -94,7 +94,7 @@ export async function StudentsList({
           <div key={s.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
             <div className="flex items-center justify-between gap-2">
               <Link href={`/admin/students/${s.id}`} className="flex min-w-0 items-center gap-2.5">
-                <Avatar name={s.full_name} size={36} className="flex-shrink-0" />
+                <Avatar name={s.full_name} src={s.photo_url} size={36} className="flex-shrink-0" />
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-slate-900">{s.full_name}</span>
                   <span className="block truncate text-xs text-slate-500">
@@ -156,7 +156,7 @@ export async function StudentsList({
                   <Td><BulkCheckbox id={s.id} /></Td>
                   <Td>
                     <Link href={`/admin/students/${s.id}`} className="group flex items-center gap-3">
-                      <Avatar name={s.full_name} size={32} />
+                      <Avatar name={s.full_name} src={s.photo_url} size={32} />
                       <span className="font-medium text-slate-900 group-hover:text-green-700">{s.full_name}</span>
                     </Link>
                   </Td>

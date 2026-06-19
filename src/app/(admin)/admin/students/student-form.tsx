@@ -1,6 +1,7 @@
 import { Card, Field, Input, Select, Textarea, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { NfcTagInput } from "@/components/nfc-tag-input";
+import { AvatarUpload } from "@/components/avatar-upload";
 import { formatCurrency } from "@/lib/format";
 import type { Student } from "@/lib/types";
 
@@ -27,6 +28,10 @@ export function StudentForm({
 
         <Field label="Full name" required>
           <Input name="full_name" defaultValue={student?.full_name ?? ""} required />
+        </Field>
+
+        <Field label="Photo" hint="JPG, PNG or WebP. Shows on the kiosk, rosters and the parent app.">
+          <AvatarUpload name="photo" currentUrl={student?.photo_url} label={student?.full_name ?? ""} />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">

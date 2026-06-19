@@ -29,7 +29,7 @@ export default async function KioskPage() {
     const [{ data: enr }, { data: att }] = await Promise.all([
       supabase
         .from("enrollments")
-        .select("students(id, full_name)")
+        .select("students(id, full_name, photo_url)")
         .eq("class_id", s.class_id)
         .eq("active", true),
       supabase

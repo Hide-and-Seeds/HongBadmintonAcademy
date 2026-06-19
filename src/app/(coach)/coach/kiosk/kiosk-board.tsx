@@ -8,7 +8,7 @@ import { formatTime } from "@/lib/format";
 import { setAttendanceAction } from "../checkin/board-actions";
 
 interface Roster {
-  student: { id: string; full_name: string };
+  student: { id: string; full_name: string; photo_url: string | null };
   att: { status: string; tap_in_at: string | null } | null;
 }
 export interface KioskBlock {
@@ -92,7 +92,7 @@ export function KioskBoard({ initialBlocks }: { initialBlocks: KioskBlock[] }) {
                   busy && "opacity-60",
                 )}
               >
-                <Avatar name={r.student.full_name} size={56} className={checked ? "ring-2 ring-green-200" : ""} />
+                <Avatar name={r.student.full_name} src={r.student.photo_url} size={56} className={checked ? "ring-2 ring-green-200" : ""} />
                 <span className="text-sm font-semibold text-slate-900">{r.student.full_name}</span>
                 {checked ? (
                   <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
