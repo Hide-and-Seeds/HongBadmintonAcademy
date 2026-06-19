@@ -41,6 +41,10 @@ export default async function ParentLoginPage({
           WhatsApp the academy and admin will send you a fresh login link.
         </span>
       </div>
+
+      <a href="/login" className="text-center text-xs font-medium text-slate-500 hover:text-slate-700">
+        Coach or admin? Staff login →
+      </a>
     </main>
   );
 }

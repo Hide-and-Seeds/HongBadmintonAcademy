@@ -80,6 +80,10 @@ export default function LoginForm() {
       <p className="mt-6 text-center text-xs text-slate-400">
         Demo: admin@hba.test / coach1@hba.test / parent1@hba.test — Password123!
       </p>
+      <p className="mt-3 text-center text-xs text-slate-400">
+        Parent?{" "}
+        <a href="/parent-login" className="font-medium text-green-700 hover:underline">Log in with your PIN →</a>
+      </p>
     </Card>
   );
 }
