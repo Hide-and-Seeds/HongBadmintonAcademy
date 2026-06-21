@@ -1,4 +1,5 @@
 import webpush from "web-push";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const PUBLIC = (process.env.VAPID_PUBLIC_KEY ?? "").trim();
 const PRIVATE = (process.env.VAPID_PRIVATE_KEY ?? "").trim();
@@ -69,5 +70,42 @@ export async function sendPush(
     const msg = e?.body ?? e?.message ?? String(e);
     console.error("[push] sendNotification failed", { status, msg, endpoint: sub.endpoint.slice(0, 60) });
     return { ok: false, error: `[${status ?? "?"}] ${msg}` };
+  }
+}
+
+// Fan a push out to EVERY subscription of the given profile ids. Uses the
+// service-role client so it works for parents too (who have no Supabase
+// session). Prunes dead (404/410) subscriptions. Never throws into callers —
+// notifications are best-effort and must not break the action that triggered them.
+export async function pushToUsers(
+  userIds: Array<string | null | undefined>,
+  payload: PushPayload,
+): Promise<{ sent: number; failed: number }> {
+  const ids = [...new Set(userIds.filter((x): x is string => !!x))];
+  if (!ids.length || !isPushConfigured()) return { sent: 0, failed: 0 };
+  try {
+    const db = createAdminClient();
+    const { data: subs } = await db
+      .from("push_subscriptions")
+      .select("endpoint, p256dh, auth")
+      .in("user_id", ids);
+    if (!subs?.length) return { sent: 0, failed: 0 };
+
+    let sent = 0;
+    let failed = 0;
+    const gone: string[] = [];
+    for (const s of subs as PushSubRow[]) {
+      const r = await sendPush(s, payload);
+      if (r.ok) sent++;
+      else {
+        failed++;
+        if (r.gone) gone.push(s.endpoint);
+      }
+    }
+    if (gone.length) await db.from("push_subscriptions").delete().in("endpoint", gone);
+    return { sent, failed };
+  } catch (e) {
+    console.error("[push] pushToUsers failed", e);
+    return { sent: 0, failed: 0 };
   }
 }

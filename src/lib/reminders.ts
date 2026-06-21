@@ -6,6 +6,7 @@ import { isWorkerPaused, isFeeRemindersPaused, getSendPolicy, getCommunityIntro 
 import { getWhatsappProvider } from "@/lib/whatsapp";
 import { APP_NAME } from "@/lib/constants";
 import { env } from "@/lib/env";
+import { pushToUsers } from "@/lib/push";
 
 // Anti-ban knobs the app enforces (worker just polls + obeys). Window, daily cap
 // and min-gap are admin-tunable via Settings → getSendPolicy(); randomSkipChance
@@ -83,8 +84,12 @@ export async function enqueueDueReminders(baseUrl: string) {
   if (error) throw new Error(error.message);
 
   const rows: Array<Record<string, unknown>> = [];
+  // Parents to push (best-effort) — only at exact milestones so the daily cron
+  // can't spam: due-today once, then each overdue milestone once.
+  const pushParents = new Set<string>();
   for (const inv of invoices ?? []) {
     const parent = (inv as any).parent;
+    if (inv.due_date === today && inv.parent_id) pushParents.add(inv.parent_id);
     const phone = normalizePhoneMY(parent?.phone);
     if (!phone) continue;
     const kind = inv.due_date === today ? "due_day" : "before_due";
@@ -121,9 +126,10 @@ export async function enqueueDueReminders(baseUrl: string) {
 
   for (const inv of overdue ?? []) {
     const parent = (inv as any).parent;
+    const daysLate = daysBetween(inv.due_date, today);
+    if ((OVERDUE_NUDGES as readonly number[]).includes(daysLate) && inv.parent_id) pushParents.add(inv.parent_id);
     const phone = normalizePhoneMY(parent?.phone);
     if (!phone) continue;
-    const daysLate = daysBetween(inv.due_date, today);
     // Largest milestone reached so far — avoids firing every earlier milestone
     // at once for an invoice that was already late when first scanned.
     const milestone = [...OVERDUE_NUDGES].reverse().find((t) => daysLate >= t);
@@ -149,6 +155,16 @@ export async function enqueueDueReminders(baseUrl: string) {
   }
 
   const scanned = (invoices?.length ?? 0) + (overdue?.length ?? 0);
+
+  if (pushParents.size) {
+    await pushToUsers([...pushParents], {
+      title: "Fee reminder",
+      body: "You have an outstanding invoice — tap to view & pay.",
+      url: "/parent/invoices",
+      tag: "fees",
+    });
+  }
+
   if (rows.length === 0) return { scanned, enqueued: 0 };
   const { error: upErr } = await db
     .from("message_queue")
@@ -481,6 +497,15 @@ export async function sendRankUpNotice(studentId: string, newRank: string | null
     .eq("id", studentId)
     .maybeSingle();
   const parent = (s as any)?.parent;
+
+  // Best-effort push to the parent (fires even if they have no WhatsApp phone).
+  await pushToUsers([parent?.id], {
+    title: "🎉 Rank up!",
+    body: `${(s as any)?.full_name ?? "Your child"} has been promoted to ${newRank} rank.`,
+    url: "/parent",
+    tag: "rank",
+  });
+
   const phone = normalizePhoneMY(parent?.phone);
   if (!phone) return false;
 
