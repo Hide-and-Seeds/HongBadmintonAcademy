@@ -73,13 +73,25 @@ export default async function ParentDashboard() {
     if (e.class_id && !classIds.includes(e.class_id)) classIds.push(e.class_id);
   }
 
-  // class_id → coach name for the upcoming-session rows.
+  // classes, co-coaches and upcoming sessions all key off classIds — fetch them
+  // in one round, then resolve coach names (the only dependent follow-up).
+  const today = new Date().toLocaleDateString("en-CA");
   const classCoach = new Map<string, string>();
+  let upcomingSessions: any[] = [];
   if (classIds.length) {
-    const [{ data: cls }, { data: ccs }] = await Promise.all([
+    const [{ data: cls }, { data: ccs }, { data: sess }] = await Promise.all([
       supabase.from("classes").select("id, coach_id").in("id", classIds),
       supabase.from("class_coaches").select("class_id, coach_id").in("class_id", classIds),
+      supabase
+        .from("sessions")
+        .select("id, session_date, start_time, end_time, location, status, class_id")
+        .in("class_id", classIds)
+        .gte("session_date", today)
+        .order("session_date")
+        .order("start_time")
+        .limit(3),
     ]);
+    upcomingSessions = sess ?? [];
     const ids = new Set<string>();
     for (const c of (cls ?? []) as any[]) if (c.coach_id) ids.add(c.coach_id);
     for (const c of (ccs ?? []) as any[]) if (c.coach_id) ids.add(c.coach_id);
@@ -90,18 +102,6 @@ export default async function ParentDashboard() {
     for (const c of (cls ?? []) as any[]) if (c.coach_id) classCoach.set(c.id, nameById.get(c.coach_id) ?? "");
     for (const c of (ccs ?? []) as any[]) if (!classCoach.has(c.class_id) && c.coach_id) classCoach.set(c.class_id, nameById.get(c.coach_id) ?? "");
   }
-
-  const today = new Date().toLocaleDateString("en-CA");
-  const { data: upcomingSessions } = classIds.length
-    ? await supabase
-        .from("sessions")
-        .select("id, session_date, start_time, end_time, location, status, class_id")
-        .in("class_id", classIds)
-        .gte("session_date", today)
-        .order("session_date")
-        .order("start_time")
-        .limit(3)
-    : { data: [] as any[] };
 
   // class_id → child name(s)
   const classToChild = new Map<string, string[]>();
