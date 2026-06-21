@@ -14,6 +14,7 @@ export default async function AdminLayout({
       groups={ADMIN_NAV}
       role={profile.role}
       name={profile.full_name ?? profile.email ?? "Admin"}
+      accountHref="/admin/account"
     >
       <CommandPalette />
       {children}
