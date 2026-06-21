@@ -13,6 +13,7 @@ export default async function CoachLayout({
       groups={[{ group: "Coach", items: COACH_NAV }]}
       role={profile.role}
       name={profile.full_name ?? profile.email ?? "Coach"}
+      accountHref="/coach/account"
     >
       {children}
     </AppShell>
