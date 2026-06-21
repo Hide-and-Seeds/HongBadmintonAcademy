@@ -1,7 +1,7 @@
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Banknote } from "lucide-react";
-import { PageHeader, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Badge, EmptyState, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { env } from "@/lib/env";
@@ -15,6 +15,7 @@ const TONE: Record<InvoiceStatus, "green" | "yellow" | "red" | "slate"> = {
   draft: "slate", unpaid: "yellow", paid: "green", overdue: "red",
   canceled: "slate", refunded: "slate",
 };
+const PAYABLE = new Set(["unpaid", "overdue"]);
 
 export default async function ParentInvoicesPage({
   searchParams,
@@ -25,21 +26,36 @@ export default async function ParentInvoicesPage({
   const { paid, error } = await searchParams;
   const supabase = createAdminClient();
 
-  const { data: invoices } = await supabase
-    .from("invoices")
-    .select("*, students(full_name)")
-    .eq("parent_id", me.id)
-    .order("created_at", { ascending: false });
+  const [{ data: invoices }, { data: kids }] = await Promise.all([
+    supabase
+      .from("invoices")
+      .select("*, students(full_name)")
+      .eq("parent_id", me.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("students")
+      .select("full_name, fee_plans(amount, currency, interval)")
+      .eq("parent_id", me.id)
+      .order("full_name"),
+  ]);
 
-  const { data: kids } = await supabase
-    .from("students")
-    .select("full_name, fee_plans(name, amount, currency, interval)")
-    .eq("parent_id", me.id)
-    .order("full_name");
+  // Each child's recurring plan, shown next to their name (no separate box).
+  const planByChild = new Map<string, string>();
+  for (const k of (kids ?? []) as any[]) {
+    if (k.fee_plans) {
+      planByChild.set(
+        k.full_name,
+        `${formatCurrency(Number(k.fee_plans.amount), k.fee_plans.currency)}${k.fee_plans.interval === "monthly" ? "/mo" : ""}`,
+      );
+    }
+  }
 
-  // Group invoices under each child so a parent isn't cross-referencing names.
+  // Only what's owed up front; paid/past invoices fold into a collapsible.
+  const payable = (invoices ?? []).filter((i: any) => PAYABLE.has(i.status));
+  const history = (invoices ?? []).filter((i: any) => !PAYABLE.has(i.status));
+
   const byChild = new Map<string, any[]>();
-  for (const inv of (invoices ?? []) as any[]) {
+  for (const inv of payable as any[]) {
     const name = inv.students?.full_name ?? "Other";
     const arr = byChild.get(name) ?? [];
     arr.push(inv);
@@ -50,37 +66,6 @@ export default async function ParentInvoicesPage({
   return (
     <div>
       <PageHeader title="Fees & Payments" />
-
-      {kids && kids.some((k: any) => k.fee_plans) && (
-        <div className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {kids.filter((k: any) => k.fee_plans).map((k: any, i: number) => (
-            <div key={i} className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-sm first:border-t-0">
-              <span className="font-medium text-slate-900">{k.full_name}</span>
-              <span className="text-slate-600">{k.fee_plans.name} · {formatCurrency(Number(k.fee_plans.amount), k.fee_plans.currency)}{k.fee_plans.interval === "monthly" ? "/mo" : ""}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-        <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-        <p>
-          Paid by cash or transfer?{" "}
-          {env.academyWhatsapp ? (
-            <a
-              href={waLink(env.academyWhatsapp, "Hi, here is my payment receipt for invoice ") ?? "#"}
-              target="_blank"
-              rel="noopener"
-              className="font-medium text-green-700 hover:underline"
-            >
-              Send your receipt on WhatsApp
-            </a>
-          ) : (
-            <span className="font-medium text-slate-700">Send your receipt on WhatsApp</span>
-          )}{" "}
-          and we&apos;ll mark it paid.
-        </p>
-      </div>
 
       {paid && (
         <p className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
@@ -95,24 +80,33 @@ export default async function ParentInvoicesPage({
         <div className="space-y-5">
           {invoiceGroups.map(([name, list]) => (
             <div key={name}>
-              <h2 className="mb-2 text-sm font-semibold text-slate-700">{name}</h2>
+              <h2 className="mb-2 flex items-baseline gap-2 text-sm font-semibold text-slate-700">
+                {name}
+                {planByChild.get(name) && (
+                  <span className="text-xs font-normal text-slate-400">· {planByChild.get(name)}</span>
+                )}
+              </h2>
               <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
                 {list.map((i: any) => (
-                  <li key={i.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
+                  <li
+                    key={i.id}
+                    className={cn(
+                      "flex items-center justify-between gap-3 px-4 py-3.5",
+                      i.status === "overdue" && "bg-amber-50",
+                    )}
+                  >
                     <div className="min-w-0">
                       <div className="font-semibold text-slate-900">{formatCurrency(Number(i.amount), i.currency)}</div>
                       <div className="truncate text-sm text-slate-500">
-                        {i.description || "Fee"} · due {formatDate(i.due_date)}
+                        {i.description || "Fee"}{i.due_date ? ` · due ${formatDate(i.due_date)}` : ""}
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge>
-                      {i.status !== "paid" && i.status !== "canceled" && i.status !== "refunded" && (
-                        <form action={payInvoice}>
-                          <input type="hidden" name="id" value={i.id} />
-                          <SubmitButton pendingText="…" className="!px-3 !py-1.5">Pay</SubmitButton>
-                        </form>
-                      )}
+                      <form action={payInvoice}>
+                        <input type="hidden" name="id" value={i.id} />
+                        <SubmitButton pendingText="…" className="!px-3 !py-1.5">Pay</SubmitButton>
+                      </form>
                     </div>
                   </li>
                 ))}
@@ -121,7 +115,52 @@ export default async function ParentInvoicesPage({
           ))}
         </div>
       ) : (
-        <EmptyState message="No invoices yet." />
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">
+          {history.length > 0 ? "You're all paid up — thank you!" : "No invoices yet."}
+        </div>
+      )}
+
+      {invoiceGroups.length > 0 && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+          <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+          <p>
+            Paid by cash or transfer?{" "}
+            {env.academyWhatsapp ? (
+              <a
+                href={waLink(env.academyWhatsapp, "Hi, here is my payment receipt for invoice ") ?? "#"}
+                target="_blank"
+                rel="noopener"
+                className="font-medium text-green-700 hover:underline"
+              >
+                Send your receipt on WhatsApp
+              </a>
+            ) : (
+              <span className="font-medium text-slate-700">Send your receipt on WhatsApp</span>
+            )}{" "}
+            — we&apos;ll mark it paid.
+          </p>
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <details className="group mt-6">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700">
+            <span className="transition-transform group-open:rotate-90">▸</span> Paid &amp; past invoices ({history.length})
+          </summary>
+          <ul className="mt-3 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            {history.map((i: any) => (
+              <li key={i.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-700">{formatCurrency(Number(i.amount), i.currency)}</div>
+                  <div className="truncate text-xs text-slate-400">
+                    {i.students?.full_name ?? "Fee"}{i.due_date ? ` · ${formatDate(i.due_date)}` : ""}
+                  </div>
+                </div>
+                <Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );

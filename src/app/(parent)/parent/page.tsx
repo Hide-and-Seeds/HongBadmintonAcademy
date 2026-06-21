@@ -11,13 +11,6 @@ import type { FeeInterval } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-type GroupScores = { physical: number | null; technical: number | null; character: number | null };
-const GROWTH_GROUPS: { key: keyof GroupScores; label: string; bar: string; track: string }[] = [
-  { key: "physical", label: "Phys", bar: "bg-blue-500", track: "bg-blue-100" },
-  { key: "technical", label: "Tech", bar: "bg-amber-500", track: "bg-amber-100" },
-  { key: "character", label: "Char", bar: "bg-emerald-600", track: "bg-emerald-100" },
-];
-
 export default async function ParentDashboard() {
   const me = await requireParent();
   const supabase = createAdminClient();
@@ -150,14 +143,10 @@ export default async function ParentDashboard() {
   const outCurrency = [...feesByChild.values()][0]?.currency ?? "MYR";
 
   // Latest growth report per child (rows are newest-first) + who was promoted this month.
-  const growthByChild = new Map<string, { growthIndex: number | null; groups: GroupScores }>();
+  const growthByChild = new Map<string, number | null>();
   for (const sc of (scorecardRows ?? []) as any[]) {
     if (growthByChild.has(sc.student_id)) continue;
-    const sum = sc.summary ?? {};
-    growthByChild.set(sc.student_id, {
-      growthIndex: sum.growth_index ?? null,
-      groups: (sum.groups ?? { physical: null, technical: null, character: null }) as GroupScores,
-    });
+    growthByChild.set(sc.student_id, sc.summary?.growth_index ?? null);
   }
   const promoted = new Set<string>();
   for (const ev of (rankEvents ?? []) as any[]) {
@@ -192,7 +181,8 @@ export default async function ParentDashboard() {
         <div className="grid gap-4 md:grid-cols-2">
           {children.map((c) => {
             const clsName = classByChild.get(c.id);
-            const g = growthByChild.get(c.id);
+            const gi = growthByChild.get(c.id);
+            const hasReport = growthByChild.has(c.id);
             return (
               <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
                 <Card className="h-full p-5 transition-all hover:border-emerald-300 hover:shadow-md">
@@ -216,39 +206,16 @@ export default async function ParentDashboard() {
                     </div>
                   </div>
 
-                  {g ? (
-                    <div className="mt-4 border-t border-slate-100 pt-3">
-                      <div className="mb-2 flex items-baseline justify-between">
-                        <span className="text-xs font-medium text-slate-500">Growth index</span>
-                        <span className="text-sm font-bold text-emerald-700">
-                          {g.growthIndex ?? "—"}
-                          <span className="text-xs font-medium text-slate-400">/100</span>
-                        </span>
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                    {hasReport ? (
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-2xl font-bold text-emerald-700">{gi ?? "—"}</span>
+                        <span className="text-xs font-medium text-slate-400">/100 growth index</span>
                       </div>
-                      <div className="space-y-1.5">
-                        {GROWTH_GROUPS.map((grp) => {
-                          const v = g.groups?.[grp.key];
-                          return (
-                            <div key={grp.key} className="flex items-center gap-2">
-                              <span className="w-9 text-[11px] font-medium text-slate-500">{grp.label}</span>
-                              <div className={`h-1.5 flex-1 rounded-full ${grp.track}`}>
-                                <div className={`h-1.5 rounded-full ${grp.bar}`} style={{ width: `${Math.max(0, Math.min(100, v ?? 0))}%` }} />
-                              </div>
-                              <span className="w-7 text-right text-[11px] font-medium text-slate-700">{v ?? "—"}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-400">
-                      No growth report yet
-                    </div>
-                  )}
-
-                  <div className="mt-3 flex items-center justify-between text-sm font-medium text-emerald-700">
-                    <span>View growth report</span>
-                    <span aria-hidden>→</span>
+                    ) : (
+                      <span className="text-xs text-slate-400">No growth report yet</span>
+                    )}
+                    <span className="text-sm font-medium text-emerald-700">Report →</span>
                   </div>
                 </Card>
               </Link>
