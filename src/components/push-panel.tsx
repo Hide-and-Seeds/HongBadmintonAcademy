@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui";
-import {
-  savePushSubscription,
-  removePushSubscription,
-  sendTestPushToSelf,
-} from "@/app/(admin)/admin/settings/push-actions";
+
+type SaveInput = { endpoint: string; p256dh: string; auth: string; user_agent?: string };
+export interface PushActions {
+  save: (input: SaveInput) => Promise<{ ok: boolean; error?: string }>;
+  remove: (endpoint: string) => Promise<{ ok: boolean; error?: string }>;
+  test: () => Promise<{ ok: boolean; sent: number; failed: number; error?: string }>;
+}
 
 function urlBase64ToBuffer(base64: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -24,7 +26,14 @@ type Status =
   | { kind: "subscribed"; endpoint: string }
   | { kind: "denied" };
 
-export function PushPanel({ vapidPublicKey }: { vapidPublicKey: string }) {
+export function PushPanel({
+  vapidPublicKey,
+  save,
+  remove,
+  test,
+}: {
+  vapidPublicKey: string;
+} & PushActions) {
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -74,7 +83,7 @@ export function PushPanel({ vapidPublicKey }: { vapidPublicKey: string }) {
           applicationServerKey: urlBase64ToBuffer(vapidPublicKey),
         }));
       const json = sub.toJSON();
-      const r = await savePushSubscription({
+      const r = await save({
         endpoint: sub.endpoint,
         p256dh: (json.keys as any)?.p256dh ?? "",
         auth: (json.keys as any)?.auth ?? "",
@@ -101,7 +110,7 @@ export function PushPanel({ vapidPublicKey }: { vapidPublicKey: string }) {
       const sub = await reg?.pushManager.getSubscription();
       const endpoint = sub?.endpoint;
       if (sub) await sub.unsubscribe();
-      if (endpoint) await removePushSubscription(endpoint);
+      if (endpoint) await remove(endpoint);
       setStatus({ kind: "idle", permission: Notification.permission });
       setMsg({ kind: "ok", text: "Disabled on this device." });
     } catch (e: any) {
@@ -115,7 +124,7 @@ export function PushPanel({ vapidPublicKey }: { vapidPublicKey: string }) {
     setBusy(true);
     setMsg(null);
     try {
-      const r = await sendTestPushToSelf();
+      const r = await test();
       if (r.ok)
         setMsg({
           kind: "ok",

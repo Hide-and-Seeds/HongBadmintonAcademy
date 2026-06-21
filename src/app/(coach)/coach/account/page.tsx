@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/auth";
 import { PageHeader, Card, Field, Input, Button } from "@/components/ui";
 import { changeCoachPassword, updateCoachContact } from "./actions";
+import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
+import { PushPanel } from "@/components/push-panel";
+import { saveCoachPush, removeCoachPush, sendTestCoachPush } from "./push-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +63,21 @@ export default async function CoachAccountPage({
           <Button type="submit">Update password</Button>
         </form>
       </Card>
+
+      {isPushConfigured() && (
+        <Card className="max-w-md overflow-hidden p-0">
+          <div className="border-b border-slate-100 p-6 pb-4">
+            <h2 className="text-base font-semibold text-slate-900">Notifications</h2>
+            <p className="mt-1 text-sm text-slate-500">Get notified on this device.</p>
+          </div>
+          <PushPanel
+            vapidPublicKey={getVapidPublicKey()}
+            save={saveCoachPush}
+            remove={removeCoachPush}
+            test={sendTestCoachPush}
+          />
+        </Card>
+      )}
     </div>
   );
 }

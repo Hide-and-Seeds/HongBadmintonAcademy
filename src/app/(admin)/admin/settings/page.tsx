@@ -6,6 +6,7 @@ import { WaLinkPanel } from "@/components/wa-link-panel";
 import { PushPanel } from "@/components/push-panel";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
 import { toggleWorker, toggleFeeReminders, saveMonthlySchedule } from "./actions";
+import { savePushSubscription, removePushSubscription, sendTestPushToSelf } from "./push-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,12 @@ export default async function SettingsPage({
 
       <Section title="Push notifications (test)" description="Web Push via PWA. Subscribe this device, then fire a test push to your own subscriptions." flush>
         {isPushConfigured() ? (
-          <PushPanel vapidPublicKey={getVapidPublicKey()} />
+          <PushPanel
+            vapidPublicKey={getVapidPublicKey()}
+            save={savePushSubscription}
+            remove={removePushSubscription}
+            test={sendTestPushToSelf}
+          />
         ) : (
           <div className="p-5 text-sm text-amber-700">
             Set <code className="rounded bg-amber-50 px-1.5 py-0.5">VAPID_PUBLIC_KEY</code>,{" "}
