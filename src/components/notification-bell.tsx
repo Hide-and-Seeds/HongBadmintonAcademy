@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { cn } from "@/components/ui";
@@ -19,6 +19,8 @@ function ago(iso: string): string {
   return `${d}d`;
 }
 
+type Pos = { top: number; left: number; width: number };
+
 export function NotificationBell({
   items,
   unread,
@@ -29,8 +31,11 @@ export function NotificationBell({
   muted: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<Pos | null>(null);
   const [, start] = useTransition();
   const router = useRouter();
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const run = (fn: () => Promise<void>) =>
     start(async () => {
@@ -38,15 +43,47 @@ export function NotificationBell({
       router.refresh();
     });
 
+  // Anchor the panel to the button with fixed positioning so it can't be clipped
+  // by the sidebar's overflow or run off the screen edge. Right-aligns to the
+  // bell, then clamps into the viewport.
+  const place = () => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const width = Math.min(320, window.innerWidth - 16);
+    const left = Math.max(8, Math.min(r.right - width, window.innerWidth - 8 - width));
+    setPos({ top: r.bottom + 8, left, width });
+  };
+
   const toggle = () => {
     const next = !open;
+    if (next) {
+      place();
+      if (unread > 0) run(() => markAllReadAction()); // mark seen on open
+    }
     setOpen(next);
-    if (next && unread > 0) run(() => markAllReadAction()); // seen on open
   };
+
+  // While open: reposition on resize, and close on outside scroll (but not when
+  // scrolling inside the panel's own list).
+  useEffect(() => {
+    if (!open) return;
+    const onResize = () => place();
+    const onScroll = (e: Event) => {
+      if (panelRef.current && e.target instanceof Node && panelRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [open]);
 
   return (
     <div className="relative">
       <button
+        ref={btnRef}
         type="button"
         onClick={toggle}
         aria-label="Notifications"
@@ -60,10 +97,14 @@ export function NotificationBell({
         )}
       </button>
 
-      {open && (
+      {open && pos && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-50 mt-2 w-80 max-w-[90vw] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+          <div
+            ref={panelRef}
+            style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width }}
+            className="z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
+          >
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
               <span className="text-sm font-semibold text-slate-800">Notifications</span>
               <button
