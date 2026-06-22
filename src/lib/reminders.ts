@@ -323,51 +323,74 @@ export async function recordQueueResult(
   }
 }
 
-// When a session is canceled, post ONE notice to the parent Community group
-// instead of DMing every enrolled parent — far lower ban risk. Time-sensitive,
+// When a session is canceled: PUSH the affected class's parents directly (fast,
+// opt-in, no ban risk) AND post ONE notice to the Community group (reaches
+// everyone, incl. non-push parents) — no per-parent WhatsApp DMs. Time-sensitive,
 // so it's sent immediately (queued as a fallback if the worker is offline).
-// Privacy-safe: class + date only, no child names. Returns 1 if a notice went
-// out, else 0. Service-role client (RLS-bypassing).
+// Privacy-safe: class + date only, no child names. Service-role (RLS-bypassing).
 export async function enqueueSessionCancelNotice(sessionId: string): Promise<number> {
-  const groupId = env.waCommunityGroupId;
-  if (!groupId) return 0;
   const db = createAdminClient();
 
   const { data: s } = await db
     .from("sessions")
-    .select("id, session_date, start_time, end_time, classes(name)")
+    .select("id, class_id, session_date, start_time, end_time, classes(name)")
     .eq("id", sessionId)
     .maybeSingle();
   if (!s) return 0;
 
   const className = (s as any).classes?.name ?? "class";
   const when = `${formatDate((s as any).session_date)} (${formatTime((s as any).start_time)}–${formatTime((s as any).end_time)})`;
-  const body =
-    `🏸 ${APP_NAME}\n` +
-    `The ${className} session on ${when} has been CANCELLED. ` +
-    `Sorry for the inconvenience — see you at the next session!`;
 
-  const result = await getWhatsappProvider().send({ to: groupId, text: body });
-  if (result.status === "sent") {
-    await db.from("messages").insert({
-      type: "custom",
-      recipient_phone: "community",
-      body,
-      provider: "wwebjs",
-      status: "sent",
-      sent_at: new Date().toISOString(),
-      provider_message_id: result.providerMessageId ?? null,
+  // 1) Direct push to the class's parents.
+  const { data: enr } = await db
+    .from("enrollments")
+    .select("students(parent_id)")
+    .eq("class_id", (s as any).class_id)
+    .eq("active", true);
+  const parentIds = [...new Set((enr ?? []).map((e: any) => e.students?.parent_id).filter(Boolean))];
+  if (parentIds.length) {
+    await pushToUsers(parentIds, {
+      title: "Session cancelled",
+      body: `The ${className} session on ${when} is cancelled.`,
+      url: "/parent/schedule",
+      tag: "session-cancel",
     });
-    return 1;
   }
-  // Worker offline → queue the group post (delivered when it reconnects).
-  await db.from("message_queue").insert({ kind: "session_canceled", recipient_phone: groupId, body });
-  return 1;
+
+  // 2) One post to the Community group.
+  const groupId = env.waCommunityGroupId;
+  if (groupId) {
+    const body =
+      `🏸 ${APP_NAME}\n` +
+      `The ${className} session on ${when} has been CANCELLED. ` +
+      `Sorry for the inconvenience — see you at the next session!`;
+    const result = await getWhatsappProvider().send({ to: groupId, text: body });
+    if (result.status === "sent") {
+      await db.from("messages").insert({
+        type: "custom",
+        recipient_phone: "community",
+        body,
+        provider: "wwebjs",
+        status: "sent",
+        sent_at: new Date().toISOString(),
+        provider_message_id: result.providerMessageId ?? null,
+      });
+    } else {
+      // Worker offline → queue the group post (delivered when it reconnects).
+      await db.from("message_queue").insert({ kind: "session_canceled", recipient_phone: groupId, body });
+    }
+  }
+
+  return parentIds.length || groupId ? 1 : 0;
 }
 
-// Congratulate a parent when their child is promoted to a higher rank. Positive,
-// personalized, low-volume → low ban risk. Sent immediately (one DM), queued as
-// a fallback if the worker is offline. Caller decides it's a genuine rank-UP.
+// Toggle: also send the rank-up congrats over WhatsApp. OFF (2026-06-22, boss) —
+// push only. Flip to true to re-enable the WhatsApp DM (it's the safest WhatsApp:
+// rare, positive, 1:1).
+const RANK_UP_WHATSAPP: boolean = false;
+
+// Congratulate a parent when their child is promoted to a higher rank — always
+// via push; WhatsApp only if RANK_UP_WHATSAPP. Caller decides it's a genuine rank-UP.
 export async function sendRankUpNotice(studentId: string, newRank: string | null): Promise<boolean> {
   if (!newRank) return false;
   const db = createAdminClient();
@@ -385,6 +408,9 @@ export async function sendRankUpNotice(studentId: string, newRank: string | null
     url: "/parent",
     tag: "rank",
   });
+
+  // Rank-up is push-only now — flip RANK_UP_WHATSAPP above to re-enable WhatsApp.
+  if (!RANK_UP_WHATSAPP) return true;
 
   const phone = normalizePhoneMY(parent?.phone);
   if (!phone) return false;
