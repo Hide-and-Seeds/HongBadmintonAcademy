@@ -10,6 +10,10 @@ export interface TapInput {
   readerId?: string | null;
   classId?: string | null;
   sessionId?: string | null;
+  // When set (coach phone-reader), the resolved session's class must be in this
+  // list — a coach may only tap students in their own classes. Null = no limit
+  // (trusted hardware bridge / admin).
+  restrictClassIds?: string[] | null;
 }
 
 export interface TapResult {
@@ -96,6 +100,13 @@ export async function ingestTap(input: TapInput): Promise<TapResult> {
   if (!session) {
     await logEvent({ student_id: student.id, processed: false, error: "No session today" });
     return { ok: false, status: 404, error: "No session found for today", student: student.full_name };
+  }
+
+  // Authorization for the coach phone-reader: the session must belong to one of
+  // the coach's own classes. Bypassed for trusted callers (restrictClassIds null).
+  if (input.restrictClassIds && !input.restrictClassIds.includes(session.class_id)) {
+    await logEvent({ student_id: student.id, session_id: session.id, processed: false, error: "Not your class" });
+    return { ok: false, status: 403, error: "Not your class", student: student.full_name };
   }
 
   // 3. Record tap-in / tap-out.

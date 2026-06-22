@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getProfile } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { ingestTap } from "@/lib/nfc";
 
 // Record a tap scanned by a coach's phone (Web NFC) or typed manually. Runs the
@@ -18,7 +19,23 @@ export async function scanTap(
   const tag = uid?.trim();
   if (!tag) return { ok: false, error: "No tag UID" };
 
-  const r = await ingestTap({ tagUid: tag, readerId: "phone" });
+  // Coaches may only tap students in their own classes; admins tap anyone.
+  let restrictClassIds: string[] | null = null;
+  if (profile.role === "coach") {
+    const sb = await createClient(); // RLS scopes these to the coach
+    const [{ data: owned }, { data: assigned }] = await Promise.all([
+      sb.from("classes").select("id"),
+      sb.from("class_coaches").select("class_id"),
+    ]);
+    restrictClassIds = [
+      ...new Set([
+        ...((owned ?? []) as { id: string }[]).map((c) => c.id),
+        ...((assigned ?? []) as { class_id: string }[]).map((c) => c.class_id),
+      ]),
+    ];
+  }
+
+  const r = await ingestTap({ tagUid: tag, readerId: "phone", restrictClassIds });
   revalidatePath("/coach/attendance");
   return { ok: r.ok, action: r.action, student: r.student, error: r.error };
 }

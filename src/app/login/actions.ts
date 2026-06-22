@@ -12,7 +12,9 @@ import { homeForRole } from "@/lib/auth";
 export async function signIn(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  const next = (formData.get("next") as string) || "";
+  const rawNext = (formData.get("next") as string) || "";
+  // Only allow internal redirects — block open-redirect to other origins.
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "";
 
   function fail(msg: string): never {
     const p = new URLSearchParams({ error: msg });

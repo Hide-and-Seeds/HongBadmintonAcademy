@@ -4,7 +4,7 @@ import { generateInvoicesCore } from "@/lib/billing";
 import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
 import { getMonthlySchedule, mytDayOfMonth } from "@/lib/settings";
 import { getBaseUrl } from "@/lib/url";
-import { env } from "@/lib/env";
+import { isAuthorizedCron } from "@/lib/cron";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -14,10 +14,7 @@ export const maxDuration = 60;
 // active student on a monthly plan, then posts the combined Community notice.
 // Service-role client, CRON_SECRET-gated.
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  const secret = req.nextUrl.searchParams.get("secret");
-  const ok = auth === `Bearer ${env.cronSecret}` || secret === env.cronSecret;
-  if (!env.cronSecret || !ok) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRole } from "@/lib/auth";
 import { invoiceSchema } from "@/lib/validation";
 import { generateInvoicesCore } from "@/lib/billing";
 import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
@@ -15,6 +16,7 @@ function err(path: string, message: string): never {
 }
 
 export async function createInvoice(formData: FormData) {
+  await requireRole("admin");
   const parsed = invoiceSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) err("/admin/invoices/new", parsed.error.issues[0].message);
   const supabase = await createClient();
@@ -44,6 +46,7 @@ export async function createInvoice(formData: FormData) {
 // for all students on a monthly plan now, instead of waiting for the cron. Same
 // idempotent core, so clicking twice won't double-bill.
 export async function generateMonthlyInvoices() {
+  await requireRole("admin");
   // Honour the admin-set due day (Settings → Monthly schedule) so the manual
   // button and the daily cron raise identical due dates.
   const schedule = await getMonthlySchedule();
@@ -55,6 +58,7 @@ export async function generateMonthlyInvoices() {
 }
 
 export async function markPaid(formData: FormData) {
+  await requireRole("admin");
   const id = String(formData.get("id"));
   const supabase = await createClient();
 
@@ -83,6 +87,7 @@ export async function markPaid(formData: FormData) {
 }
 
 export async function deleteInvoice(formData: FormData) {
+  await requireRole("admin");
   const id = String(formData.get("id"));
   const supabase = await createClient();
   await supabase.from("invoices").delete().eq("id", id);
@@ -91,6 +96,7 @@ export async function deleteInvoice(formData: FormData) {
 
 // WhatsApp click-to-chat: the admin opened wa.me with the reminder; log it.
 export async function logReminderSend(formData: FormData) {
+  await requireRole("admin");
   const invoice_id = String(formData.get("invoice_id"));
   const recipient_phone = String(formData.get("recipient_phone") ?? "");
   const recipient_profile_id = (formData.get("recipient_profile_id") as string) || null;

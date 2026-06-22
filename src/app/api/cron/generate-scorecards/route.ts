@@ -5,7 +5,7 @@ import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
 import { pushToUsers } from "@/lib/push";
 import { getMonthlySchedule, mytDayOfMonth } from "@/lib/settings";
 import { getBaseUrl } from "@/lib/url";
-import { env } from "@/lib/env";
+import { isAuthorizedCron } from "@/lib/cron";
 
 export const runtime = "nodejs";
 // Loops all active students and renders a PDF each — give it room past the
@@ -18,10 +18,7 @@ export const maxDuration = 60;
 // PDF per active student, then upserts the monthly Community notice (so reports
 // are announced even if the report day differs from the billing day).
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  const secret = req.nextUrl.searchParams.get("secret");
-  const ok = auth === `Bearer ${env.cronSecret}` || secret === env.cronSecret;
-  if (!env.cronSecret || !ok) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -15,6 +15,8 @@ export const env = {
   whatsappToken: process.env.WHATSAPP_API_TOKEN ?? "",
   whatsappPhoneId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? "",
   whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN ?? "",
+  // Meta App Secret — when set, /api/webhooks/whatsapp verifies X-Hub-Signature-256.
+  whatsappAppSecret: process.env.WHATSAPP_APP_SECRET ?? "",
   whatsappApiVersion: process.env.WHATSAPP_API_VERSION ?? "v21.0",
 
   // whatsapp-web.js worker (see /wa-worker). When both are set, sends route to

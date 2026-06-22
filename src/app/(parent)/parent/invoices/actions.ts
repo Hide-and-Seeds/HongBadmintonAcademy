@@ -23,6 +23,7 @@ export async function payInvoice(formData: FormData) {
     .from("invoices")
     .select("id, amount, currency, description, status, parent_id, students(full_name)")
     .eq("id", id)
+    .eq("parent_id", me.id)
     .maybeSingle();
 
   if (!inv) redirect(`/parent/invoices?error=${encodeURIComponent("Invoice not found.")}`);

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 import { profileSchema } from "@/lib/validation";
 import type { Role } from "@/lib/types";
 import { createLoginToken } from "@/lib/parent-auth";
@@ -20,6 +21,7 @@ function err(path: string, message: string): never {
 // Detach a student from a parent (Directory → edit parent). Leaves the student
 // in place, just clears their parent_id. Service-role (admin-gated route).
 export async function unlinkChild(formData: FormData) {
+  await requireRole("admin");
   const studentId = String(formData.get("student_id"));
   const parentId = String(formData.get("parent_id"));
   const db = createAdminClient();
@@ -31,6 +33,7 @@ export async function unlinkChild(formData: FormData) {
 // Create a coach/parent = create the auth user (service role). The
 // on_auth_user_created trigger then inserts the matching profile row.
 export async function createPerson(role: Role, formData: FormData) {
+  await requireRole("admin");
   const base = basePath(role);
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) err(`${base}/new`, parsed.error.issues[0].message);
@@ -51,6 +54,7 @@ export async function createPerson(role: Role, formData: FormData) {
 }
 
 export async function updatePerson(role: Role, formData: FormData) {
+  await requireRole("admin");
   const base = basePath(role);
   const id = String(formData.get("id"));
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
@@ -75,6 +79,7 @@ export async function updatePerson(role: Role, formData: FormData) {
 }
 
 export async function deletePerson(role: Role, formData: FormData) {
+  await requireRole("admin");
   const id = String(formData.get("id"));
   const db = createAdminClient();
   await db.auth.admin.deleteUser(id); // cascades to profile
@@ -82,6 +87,7 @@ export async function deletePerson(role: Role, formData: FormData) {
 }
 
 export async function deletePeople(role: Role, formData: FormData) {
+  await requireRole("admin");
   const ids = formData.getAll("ids").map(String);
   if (!ids.length) return;
   const db = createAdminClient();
@@ -96,11 +102,9 @@ export async function deletePeople(role: Role, formData: FormData) {
 // to the page via search-params so the admin can copy without re-running the
 // action.
 export async function generateParentLoginLink(formData: FormData) {
+  const me = await requireRole("admin");
   const parentId = String(formData.get("parent_id"));
   if (!parentId) redirect("/admin/parents");
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
   const db = createAdminClient();
   const { data: parent } = await db
@@ -112,7 +116,7 @@ export async function generateParentLoginLink(formData: FormData) {
     redirect(`/admin/parents/${parentId}?error=${encodeURIComponent("Not a parent profile")}`);
   }
 
-  const token = await createLoginToken(parentId, user?.id ?? null);
+  const token = await createLoginToken(parentId, me.id);
   const baseUrl = await getBaseUrl();
   const url = `${baseUrl}/parent-login/t/${token}`;
 
@@ -132,6 +136,7 @@ export async function generateParentLoginLink(formData: FormData) {
 // that lands on /parent-login/reset. Needs the parent to have an email on file
 // and Supabase SMTP configured to actually deliver.
 export async function sendParentPasswordReset(formData: FormData) {
+  await requireRole("admin");
   const parentId = String(formData.get("parent_id"));
   if (!parentId) redirect("/admin/parents");
 
@@ -164,6 +169,7 @@ export async function sendParentPasswordReset(formData: FormData) {
 // in the admin-only coach_pay table, not on profiles, so coaches can't read it.
 // Service-role client bypasses RLS.
 export async function setCoachRate(formData: FormData) {
+  await requireRole("admin");
   const id = String(formData.get("id"));
   const rate = Number(formData.get("rate"));
   if (!id || !Number.isFinite(rate) || rate < 0) return;

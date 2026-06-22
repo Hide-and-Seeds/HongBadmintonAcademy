@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 
@@ -18,9 +19,24 @@ export async function GET(req: NextRequest) {
 
 // Delivery-status callbacks → update the message log.
 export async function POST(req: NextRequest) {
+  const raw = await req.text();
+
+  // Verify Meta's payload signature when the App Secret is configured. Ack-and-
+  // ignore on mismatch so we never write message rows from a forged callback.
+  if (env.whatsappAppSecret) {
+    const given = req.headers.get("x-hub-signature-256") ?? "";
+    const expected =
+      "sha256=" + createHmac("sha256", env.whatsappAppSecret).update(raw).digest("hex");
+    const a = Buffer.from(given);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      return NextResponse.json({ ok: true });
+    }
+  }
+
   let body: any;
   try {
-    body = await req.json();
+    body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ ok: true });
   }

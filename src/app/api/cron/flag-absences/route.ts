@@ -1,16 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { env } from "@/lib/env";
+import { isAuthorizedCron } from "@/lib/cron";
 
 export const runtime = "nodejs";
 
 // Scheduled sweep (Vercel Cron): finalises finished sessions — marks late
 // tap-ins and inserts absent rows for no-shows. See vercel.json.
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  const secret = req.nextUrl.searchParams.get("secret");
-  const ok = auth === `Bearer ${env.cronSecret}` || secret === env.cronSecret;
-  if (!env.cronSecret || !ok) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

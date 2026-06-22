@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runDatabaseBackup, pruneHistory } from "@/lib/backup";
-import { env } from "@/lib/env";
+import { isAuthorizedCron } from "@/lib/cron";
 
 export const runtime = "nodejs";
 // Reads every table into one JSON file — give it room past the short serverless
@@ -13,10 +13,7 @@ export const maxDuration = 60;
 // service-role client (no user session). Secured by CRON_SECRET, which Vercel
 // sends as a Bearer header on scheduled invocations.
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  const secret = req.nextUrl.searchParams.get("secret");
-  const ok = auth === `Bearer ${env.cronSecret}` || secret === env.cronSecret;
-  if (!env.cronSecret || !ok) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

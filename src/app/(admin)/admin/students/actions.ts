@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRole } from "@/lib/auth";
 import { studentSchema } from "@/lib/validation";
 import { CLASS_RANKS, RANK_ORDER, studentRank, nextRank } from "@/lib/ranks";
 import { sendRankUpNotice } from "@/lib/reminders";
@@ -24,6 +25,7 @@ function revalidateRank(id: string) {
 
 // Admin: set a student's rank directly (empty → revert to class-derived).
 export async function setStudentRank(formData: FormData) {
+  await requireRole("admin");
   const id = String(formData.get("id"));
   const raw = String(formData.get("rank") ?? "").trim();
   const rank = (CLASS_RANKS as readonly string[]).includes(raw) ? raw : null;
@@ -50,6 +52,7 @@ export async function setStudentRank(formData: FormData) {
 
 // Admin: bump a student one tier above their current effective rank.
 export async function promoteStudent(formData: FormData) {
+  await requireRole("admin");
   const id = String(formData.get("id"));
   const supabase = await createClient();
   const [{ data: s }, { data: enr }] = await Promise.all([
@@ -68,6 +71,7 @@ export async function promoteStudent(formData: FormData) {
 }
 
 export async function createStudent(formData: FormData) {
+  await requireRole("admin");
   const raw = Object.fromEntries(formData);
   const parsed = studentSchema.safeParse(raw);
   if (!parsed.success) err("/admin/students/new", parsed.error.issues[0].message);
@@ -87,6 +91,7 @@ export async function createStudent(formData: FormData) {
 }
 
 export async function updateStudent(formData: FormData) {
+  await requireRole("admin");
   const id = String(formData.get("id"));
   const raw = Object.fromEntries(formData);
   const parsed = studentSchema.safeParse(raw);
@@ -107,6 +112,7 @@ export async function updateStudent(formData: FormData) {
 }
 
 export async function deleteStudent(formData: FormData) {
+  await requireRole("admin");
   const id = String(formData.get("id"));
   const supabase = await createClient();
   await supabase.from("students").delete().eq("id", id);
@@ -114,6 +120,7 @@ export async function deleteStudent(formData: FormData) {
 }
 
 export async function deleteStudents(formData: FormData) {
+  await requireRole("admin");
   const ids = formData.getAll("ids").map(String);
   if (!ids.length) return;
   const supabase = await createClient();
@@ -123,6 +130,7 @@ export async function deleteStudents(formData: FormData) {
 
 // Reward system: award points to a student (optionally tied to a rule).
 export async function awardReward(formData: FormData) {
+  await requireRole("admin");
   const student_id = String(formData.get("student_id"));
   const points = Number(formData.get("points"));
   const rule_id = (formData.get("rule_id") as string) || null;

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRole } from "@/lib/auth";
 import { generateScorecardsCore } from "@/lib/scorecards";
 import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
 import { getBaseUrl } from "@/lib/url";
@@ -13,6 +14,7 @@ import { getBaseUrl } from "@/lib/url";
 // The same core runs headless from /api/cron/generate-scorecards each month.
 // Redirects back with a summary so the button gives visible feedback.
 export async function generateScorecards() {
+  await requireRole("admin");
   const supabase = await createClient();
   const admin = createAdminClient();
   const { generated } = await generateScorecardsCore(supabase, admin);
@@ -25,6 +27,7 @@ export async function generateScorecards() {
 // WhatsApp click-to-chat: the admin opened wa.me with the message; record it in
 // the log and mark the report sent. (No API/verification needed.)
 export async function logScorecardSend(formData: FormData) {
+  await requireRole("admin");
   const scorecard_id = String(formData.get("scorecard_id"));
   const recipient_phone = String(formData.get("recipient_phone") ?? "");
   const recipient_profile_id = (formData.get("recipient_profile_id") as string) || null;
