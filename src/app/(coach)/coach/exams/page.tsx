@@ -77,7 +77,7 @@ export default async function CoachExamsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Level exams"
-        description="Promotion exams run every 4 months — April, August, December. Grade a student on the 100-point rubric; ≥70 promotes them to the next level."
+        description="Promotion exams run quarterly — January, April, July, October. Grade a student on the 100-point rubric; ≥70 promotes them to the next level."
       />
 
       <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border p-3 text-sm shadow-sm ${examMonth ? "border-green-300 bg-green-50" : "border-slate-200 bg-white"}`}>

@@ -4,8 +4,8 @@
 // Mirrors the boss-approved HBA_TRAINING_SYSTEM_v2 document.
 
 // ─── Exam cycle ─────────────────────────────────────────────────────────────
-// Exams run 3×/year, every 4 months: April, August, December.
-export const EXAM_MONTHS = [4, 8, 12] as const; // 1-based months
+// Exams run 4×/year, quarterly: January, April, July, October (HBA v2 brief).
+export const EXAM_MONTHS = [1, 4, 7, 10] as const; // 1-based months
 const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 // Malaysia is UTC+8 (no DST) — derive the wall-clock "now" the rest of the app uses.
@@ -24,7 +24,7 @@ export function nextExamWindow(from: Date = mytNow()): { label: string; date: st
   for (const em of EXAM_MONTHS) {
     if (em >= m) return { label: `${MONTH_ABBR[em - 1]} ${y}`, date: `${y}-${String(em).padStart(2, "0")}-01` };
   }
-  // Past December — first window of next year.
+  // Past the last window — first window of next year.
   const em = EXAM_MONTHS[0];
   return { label: `${MONTH_ABBR[em - 1]} ${y + 1}`, date: `${y + 1}-${String(em).padStart(2, "0")}-01` };
 }

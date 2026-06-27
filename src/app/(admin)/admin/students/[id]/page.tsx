@@ -124,7 +124,7 @@ export default async function StudentProfilePage({
             L{curLevel} · {curLevelName}
           </span>
           <span className="text-xs text-slate-400">
-            Set by promotion exams (Apr / Aug / Dec) or the button here.
+            Set by promotion exams (Jan / Apr / Jul / Oct) or the button here.
           </span>
           <form action={promoteStudent}>
             <input type="hidden" name="id" value={id} />

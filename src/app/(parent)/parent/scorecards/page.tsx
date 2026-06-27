@@ -61,7 +61,7 @@ export default async function ParentProgressPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Progress Card" description="Your child's promotion-exam results. Exams run every 4 months — April, August, December." />
+      <PageHeader title="Progress Card" description="Your child's promotion-exam results. Exams run quarterly — January, April, July, October." />
 
       {!kids || kids.length === 0 ? (
         <EmptyState message="No children linked to your account yet. Contact the academy." />
@@ -151,7 +151,7 @@ export default async function ParentProgressPage() {
                 </>
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                  No exam taken yet. Promotion exams run every 4 months — April, August, December.
+                  No exam taken yet. Promotion exams run quarterly — January, April, July, October.
                 </div>
               )}
             </Card>

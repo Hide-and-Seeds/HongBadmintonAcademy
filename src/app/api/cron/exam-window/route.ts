@@ -9,7 +9,7 @@ import { examWindowLabel, isExamMonth } from "@/lib/training";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Scheduled on the 1st of each exam month (April / August / December — see
+// Scheduled on the 1st of each exam month (January / April / July / October — see
 // vercel.json). Opens the promotion-exam window: nudges every coach to grade
 // their students and tells admins the window is live. Idempotent enough — the
 // schedule fires once per window; we still guard on isExamMonth.
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   await notifyAdmins({
     type: "exam",
     title: "Exam window open",
-    body: `${label} — coaches can now grade promotion exams (April / August / December cycle).`,
+    body: `${label} — coaches can now grade promotion exams (January / April / July / October cycle).`,
     url: "/admin/exams",
   });
 

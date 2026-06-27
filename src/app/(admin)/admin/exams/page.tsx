@@ -46,14 +46,14 @@ export default async function AdminExamsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Level exams"
-        description="Promotion-exam results across the academy. Exams run every 4 months — April, August, December."
+        description="Promotion-exam results across the academy. Exams run quarterly — January, April, July, October."
         action={<LinkButton href="/admin/training" variant="secondary">Syllabus</LinkButton>}
       />
 
       <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border p-3 text-sm shadow-sm ${examMonth ? "border-green-300 bg-green-50" : "border-slate-200 bg-white"}`}>
         <span className="font-medium text-slate-800">{examMonth ? "🏸 Exam window is open" : "Next exam window"}</span>
         <span className={examMonth ? "text-green-700" : "text-slate-500"}>{win.label}</span>
-        <span className="text-slate-400">· Cycle: April / August / December</span>
+        <span className="text-slate-400">· Cycle: January / April / July / October</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

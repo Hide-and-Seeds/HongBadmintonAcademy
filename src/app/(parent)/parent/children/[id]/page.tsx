@@ -173,7 +173,7 @@ export default async function ChildDetailPage({
           </div>
         ) : (
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
-            No promotion exam yet. Exams run every 4 months — April, August, December.
+            No promotion exam yet. Exams run quarterly — January, April, July, October.
           </div>
         )}
       </Card>

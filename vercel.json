@@ -20,7 +20,7 @@
     },
     {
       "path": "/api/cron/exam-window",
-      "schedule": "0 1 1 4,8,12 *"
+      "schedule": "0 1 1 1,4,7,10 *"
     }
   ]
 }
