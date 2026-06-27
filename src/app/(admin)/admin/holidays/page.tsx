@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, Field, Input, Button, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { formatDate } from "@/lib/format";
-import { MY_PUBLIC_HOLIDAYS } from "@/lib/holidays";
 import { addSchoolHoliday, deleteSchoolHoliday, importPublicHolidays, clearImportedHolidays, removeHolidaySessions } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -19,14 +18,11 @@ export default async function HolidaysPage({
     supabase.from("public_holidays").select("*").order("holiday_date", { ascending: true }),
   ]);
 
-  const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
-  const upcomingPublic = MY_PUBLIC_HOLIDAYS.filter((h) => h.date >= today).slice(0, 8);
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Holidays"
-        description="School holidays block classes (skipped when generating sessions) and show on the schedule. Malaysian public holidays are built in."
+        description="School holidays block classes (skipped when generating sessions) and show on the schedule. Malaysian federal public holidays are built in automatically — no need to add them."
       />
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -127,19 +123,6 @@ export default async function HolidaysPage({
         </Section>
       )}
 
-      <Section title="Malaysian public holidays (built-in)" description="National defaults. Shown on the schedule; edit in src/lib/holidays.ts or override via import above." flush>
-        <Table>
-          <thead><tr><Th>Date</Th><Th>Holiday</Th></tr></thead>
-          <tbody>
-            {(upcomingPublic.length ? upcomingPublic : MY_PUBLIC_HOLIDAYS.slice(0, 8)).map((h) => (
-              <tr key={h.date} className="hover:bg-slate-50">
-                <Td className="text-slate-600">{formatDate(h.date)}</Td>
-                <Td><Badge tone="slate">{h.name}</Badge></Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </Section>
     </div>
   );
 }

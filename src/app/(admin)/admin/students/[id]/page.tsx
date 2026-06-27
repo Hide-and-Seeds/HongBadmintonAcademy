@@ -6,9 +6,10 @@ import {
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/format";
-import { CLASS_RANKS, studentRank, rankBadgeClass } from "@/lib/ranks";
+import { studentRank, rankBadgeClass } from "@/lib/ranks";
+import { levelName, levelBadgeClass, levelToRank } from "@/lib/training";
 import type { AttendanceStatus, InvoiceStatus } from "@/lib/types";
-import { awardReward, setStudentRank, promoteStudent } from "../actions";
+import { awardReward, promoteStudent } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +86,7 @@ export default async function StudentProfilePage({
   const classNames = (enrollments ?? []).map((e: any) => e.classes?.name).filter(Boolean).join(", ");
   const levels = (enrollments ?? []).map((e: any) => e.classes?.level ?? null);
   const effRank = studentRank(student.rank, levels);
-  const rankSource = student.rank ? "coach-assigned" : effRank ? "inherited from class" : "not set";
+  const curLevel: number = Number((student as any).level ?? 1);
 
   return (
     <div className="space-y-6">
@@ -116,32 +117,25 @@ export default async function StudentProfilePage({
         <StatCard label="NFC tag" value={student.nfc_tag_uid ? "✓" : "—"} sub={student.nfc_tag_uid ?? "unbound"} />
       </div>
 
-      {/* Class rank — coach-assigned, falls back to the class's rank */}
-      <Section title="Class rank">
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="flex items-center gap-2">
-            {effRank ? (
-              <span className={cn("inline-flex rounded-full px-3 py-1 text-sm font-semibold", rankBadgeClass(effRank))}>{effRank}</span>
-            ) : (
-              <span className="text-sm text-slate-400">No rank yet</span>
-            )}
-            <span className="text-xs text-slate-400">({rankSource})</span>
-          </div>
-          <form action={setStudentRank} className="flex items-end gap-2">
-            <input type="hidden" name="id" value={id} />
-            <Field label="Set rank">
-              <Select name="rank" defaultValue={student.rank ?? ""} className="h-9 w-44">
-                <option value="">— inherit from class —</option>
-                {CLASS_RANKS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </Select>
-            </Field>
-            <SubmitButton variant="secondary" pendingText="Saving…">Save</SubmitButton>
-          </form>
+      {/* Training level + coarse rank (read-only). Promotion is one-way: this
+       *  button bumps the level by +1 (max 6) and lifts the coarse rank if the
+       *  new level crosses a tier. Coaches normally promote via /coach/exams. */}
+      <Section title="Training level">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className={cn("inline-flex rounded-full px-3 py-1 text-sm font-semibold", levelBadgeClass(curLevel))}>
+            L{curLevel} · {levelName(curLevel)}
+          </span>
+          <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", rankBadgeClass(effRank))}>
+            {effRank ?? "—"}
+          </span>
+          <span className="text-xs text-slate-400">
+            Coarse rank derives from level ({levelToRank(curLevel) ?? "—"}); admin override is layered on top.
+          </span>
           <form action={promoteStudent}>
             <input type="hidden" name="id" value={id} />
-            <SubmitButton pendingText="Promoting…">⬆ Promote</SubmitButton>
+            <SubmitButton pendingText="Promoting…" {...(curLevel >= 6 ? { disabled: true } : {})}>
+              ⬆ Promote to L{Math.min(6, curLevel + 1)}
+            </SubmitButton>
           </form>
         </div>
       </Section>

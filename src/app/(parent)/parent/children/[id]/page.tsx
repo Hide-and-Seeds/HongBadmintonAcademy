@@ -7,7 +7,7 @@ import { Avatar, Card, Badge, cn } from "@/components/ui";
 import { LevelLadder } from "@/components/level-ladder";
 import { studentRank, rankBadgeClass, bestRank } from "@/lib/ranks";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
-import { levelInfo, levelToRank, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
+import { levelInfo, levelName, levelToRank, levelBadgeClass, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
 
 export const dynamic = "force-dynamic";
 
@@ -128,7 +128,10 @@ export default async function ChildDetailPage({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-lg font-bold text-slate-900">{student.full_name}</span>
-              {currentRank && (
+              <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold", levelBadgeClass(level))}>
+                L{level} · {levelName(level)}
+              </span>
+              {currentRank && currentRank !== levelToRank(level) && (
                 <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold", rankBadgeClass(currentRank))}>{currentRank}</span>
               )}
               {student.status !== "active" && <Badge tone="slate">{student.status}</Badge>}

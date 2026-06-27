@@ -47,7 +47,7 @@ export interface TrainingLevel {
 
 export const TRAINING_LEVELS: TrainingLevel[] = [
   {
-    level: 1, name: "Starter", objective: "喜欢羽球 + 基本协调",
+    level: 1, name: "Starter", objective: "Love the game + basic coordination",
     groups: [
       { label: "Technical", items: ["Lobbing (straight)", "Lift (straight / cross)", "High serve"] },
       { label: "Footwork", items: ["Front & back movement", "Four corner (front & back)"] },
@@ -56,7 +56,7 @@ export const TRAINING_LEVELS: TrainingLevel[] = [
     ],
   },
   {
-    level: 2, name: "Beginner", objective: "建立稳定基本技术",
+    level: 2, name: "Beginner", objective: "Build steady fundamental technique",
     groups: [
       { label: "Technical", items: ["Drop (straight / cross)", "Net shot (straight / cross)", "Low serve"] },
       { label: "Footwork", items: ["Six corner movement"] },
@@ -65,7 +65,7 @@ export const TRAINING_LEVELS: TrainingLevel[] = [
     ],
   },
   {
-    level: 3, name: "Intermediate", objective: "开始比赛能力",
+    level: 3, name: "Intermediate", objective: "Match-ready ability",
     groups: [
       { label: "Technical", items: ["Smash", "Tap / net kill", "Cross net shot", "Clear consistency"] },
       { label: "Footwork", items: ["Six corner with speed", "Recovery movement", "Shadow footwork"] },
@@ -74,7 +74,7 @@ export const TRAINING_LEVELS: TrainingLevel[] = [
     ],
   },
   {
-    level: 4, name: "Advanced", objective: "完整技术 + 战术意识",
+    level: 4, name: "Advanced", objective: "Complete technique + tactical awareness",
     groups: [
       { label: "Technical", items: ["Jump smash", "Half smash", "Drive (FH/BH)", "Backhand clear", "Net kill"] },
       { label: "Footwork", items: ["Advanced six corner", "Attack footwork", "Recovery speed drills"] },
@@ -83,7 +83,7 @@ export const TRAINING_LEVELS: TrainingLevel[] = [
     ],
   },
   {
-    level: 5, name: "Competition Team", objective: "比赛训练",
+    level: 5, name: "Competition Team", objective: "Competition training",
     groups: [
       { label: "Technical", items: ["Smash variation", "Deception drop", "Fast drive rally", "Net spinning"] },
       { label: "Tactical — Singles", items: ["Rally building", "Court control"] },
@@ -94,7 +94,7 @@ export const TRAINING_LEVELS: TrainingLevel[] = [
     ],
   },
   {
-    level: 6, name: "Elite Team", objective: "高水平运动员",
+    level: 6, name: "Elite Team", objective: "High-performance athlete",
     groups: [
       { label: "Technical", items: ["Advanced deception", "Reverse slice drop", "Backhand smash", "Net tumbling control"] },
       { label: "Tactical — Singles", items: ["Tempo control", "Opponent reading"] },
@@ -104,6 +104,53 @@ export const TRAINING_LEVELS: TrainingLevel[] = [
     ],
   },
 ];
+
+// Per-level color ramp — one distinct tone per level so the LevelLadder, parent
+// level card, syllabus headers and exam history all read at a glance. The
+// coarse 4-rank palette in src/lib/ranks.ts stays put for the leaderboard.
+export const LEVEL_BADGE: Record<number, string> = {
+  1: "bg-emerald-100 text-emerald-700",
+  2: "bg-teal-100 text-teal-700",
+  3: "bg-blue-100 text-blue-700",
+  4: "bg-amber-100 text-amber-700",
+  5: "bg-rose-100 text-rose-700",
+  6: "bg-purple-100 text-purple-700",
+};
+export const LEVEL_CARD: Record<number, string> = {
+  1: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  2: "border-teal-200 bg-teal-50 text-teal-800",
+  3: "border-blue-200 bg-blue-50 text-blue-800",
+  4: "border-amber-200 bg-amber-50 text-amber-800",
+  5: "border-rose-200 bg-rose-50 text-rose-800",
+  6: "border-purple-200 bg-purple-50 text-purple-800",
+};
+// Bg + text class for the active ladder node (solid pill, white text).
+export const LEVEL_ACTIVE: Record<number, string> = {
+  1: "bg-emerald-600 text-white ring-4 ring-emerald-100",
+  2: "bg-teal-600 text-white ring-4 ring-teal-100",
+  3: "bg-blue-600 text-white ring-4 ring-blue-100",
+  4: "bg-amber-600 text-white ring-4 ring-amber-100",
+  5: "bg-rose-600 text-white ring-4 ring-rose-100",
+  6: "bg-purple-600 text-white ring-4 ring-purple-100",
+};
+// Text-only accent (for "Level X · Name" headings).
+export const LEVEL_INK: Record<number, string> = {
+  1: "text-emerald-700", 2: "text-teal-700", 3: "text-blue-700",
+  4: "text-amber-700", 5: "text-rose-700", 6: "text-purple-700",
+};
+
+export function levelBadgeClass(level: number | null | undefined): string {
+  return (level && LEVEL_BADGE[level]) || "bg-slate-100 text-slate-500";
+}
+export function levelCardClass(level: number | null | undefined): string {
+  return (level && LEVEL_CARD[level]) || "border-slate-200 bg-slate-50 text-slate-700";
+}
+export function levelActiveClass(level: number | null | undefined): string {
+  return (level && LEVEL_ACTIVE[level]) || "bg-slate-600 text-white";
+}
+export function levelInkClass(level: number | null | undefined): string {
+  return (level && LEVEL_INK[level]) || "text-slate-700";
+}
 
 export function levelInfo(level: number | null | undefined): TrainingLevel | null {
   if (!level) return null;

@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { studentSchema } from "@/lib/validation";
-import { CLASS_RANKS, RANK_ORDER, studentRank, nextRank } from "@/lib/ranks";
+import { RANK_ORDER, studentRank } from "@/lib/ranks";
+import { levelToRank, levelName } from "@/lib/training";
 import { sendRankUpNotice } from "@/lib/reminders";
 import { recordRankChange } from "@/lib/rank-history";
 import { uploadStudentPhoto } from "@/lib/storage";
@@ -23,50 +24,38 @@ function revalidateRank(id: string) {
   revalidatePath("/admin/leaderboard");
 }
 
-// Admin: set a student's rank directly (empty → revert to class-derived).
-export async function setStudentRank(formData: FormData) {
-  await requireRole("admin");
-  const id = String(formData.get("id"));
-  const raw = String(formData.get("rank") ?? "").trim();
-  const rank = (CLASS_RANKS as readonly string[]).includes(raw) ? raw : null;
-  const supabase = await createClient();
-
-  // Effective rank before vs after, to congratulate only on a genuine rank-up.
-  const [{ data: cur }, { data: enr }] = await Promise.all([
-    supabase.from("students").select("rank").eq("id", id).maybeSingle(),
-    supabase.from("enrollments").select("classes(level)").eq("student_id", id).eq("active", true),
-  ]);
-  const levels = (enr ?? []).map((e: any) => e.classes?.level ?? null);
-  const prev = studentRank(cur?.rank, levels);
-
-  const { error } = await supabase.from("students").update({ rank }).eq("id", id);
-  if (error) err(`/admin/students/${id}`, error.message);
-
-  const next = studentRank(rank, levels);
-  await recordRankChange(createAdminClient(), { student_id: id, from: prev, to: next });
-  if (order(next) > order(prev)) {
-    try { await sendRankUpNotice(id, next); } catch { /* never block the rank change */ }
-  }
-  revalidateRank(id);
-}
-
-// Admin: bump a student one tier above their current effective rank.
+// Admin: bump a student up by one training level (max 6). One-way only — there
+// is no "set rank" or "demote" because the syllabus says <70 stays / retests,
+// never drops. Coarse 4-rank (Beginner/Intermediate/Advanced/Elite) is derived
+// from the new level via levelToRank so the leaderboard, badges and fee-tiers
+// stay in sync. Coaches promote via /coach/exams; this is the manual override.
 export async function promoteStudent(formData: FormData) {
   await requireRole("admin");
   const id = String(formData.get("id"));
   const supabase = await createClient();
   const [{ data: s }, { data: enr }] = await Promise.all([
-    supabase.from("students").select("rank").eq("id", id).maybeSingle(),
+    supabase.from("students").select("rank, level").eq("id", id).maybeSingle(),
     supabase.from("enrollments").select("classes(level)").eq("student_id", id).eq("active", true),
   ]);
-  const levels = (enr ?? []).map((e: any) => e.classes?.level ?? null);
-  const prev = studentRank(s?.rank, levels);
-  const promoted = nextRank(prev);
-  if (!promoted) err(`/admin/students/${id}`, "Already at the top rank (Elite).");
-  const { error } = await supabase.from("students").update({ rank: promoted }).eq("id", id);
+  const curLevel = Number((s as any)?.level ?? 1);
+  if (curLevel >= 6) err(`/admin/students/${id}`, "Already at the top level (6 · Elite Team).");
+  const nextLevel = curLevel + 1;
+
+  const classLevels = (enr ?? []).map((e: any) => e.classes?.level ?? null);
+  const prevRank = studentRank((s as any)?.rank, classLevels);
+  const nextRankCoarse = levelToRank(nextLevel);
+
+  const update: Record<string, unknown> = { level: nextLevel };
+  // Only nudge the coarse rank UPWARD — never overwrite an admin-set higher tier.
+  if (nextRankCoarse && order(nextRankCoarse) > order(prevRank)) update.rank = nextRankCoarse;
+
+  const { error } = await supabase.from("students").update(update).eq("id", id);
   if (error) err(`/admin/students/${id}`, error.message);
-  await recordRankChange(createAdminClient(), { student_id: id, from: prev, to: promoted });
-  try { await sendRankUpNotice(id, promoted); } catch { /* never block the promotion */ }
+
+  if (update.rank) {
+    await recordRankChange(createAdminClient(), { student_id: id, from: prevRank, to: nextRankCoarse });
+  }
+  try { await sendRankUpNotice(id, `Level ${nextLevel} · ${levelName(nextLevel)}`); } catch { /* never block the promotion */ }
   revalidateRank(id);
 }
 

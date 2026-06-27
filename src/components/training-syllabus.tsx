@@ -1,5 +1,5 @@
-import { Section, Badge } from "@/components/ui";
-import { TRAINING_LEVELS, EXAM_SPECS, levelName } from "@/lib/training";
+import { Section, Badge, cn } from "@/components/ui";
+import { TRAINING_LEVELS, EXAM_SPECS, levelName, levelActiveClass, levelInkClass } from "@/lib/training";
 
 // Read-only reference for the full HBA Training System: per-level curriculum +
 // the promotion-exam rubric between each level. Shared by the admin syllabus page
@@ -12,8 +12,8 @@ export function TrainingSyllabus() {
           {TRAINING_LEVELS.map((lv) => (
             <div key={lv.level} className="rounded-xl border border-slate-200 p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-sm font-bold text-green-700">{lv.level}</span>
-                <span className="text-base font-semibold text-slate-900">{lv.name}</span>
+                <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold", levelActiveClass(lv.level))}>{lv.level}</span>
+                <span className={cn("text-base font-semibold", levelInkClass(lv.level))}>{lv.name}</span>
                 <span className="text-sm text-slate-400">{lv.objective}</span>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">

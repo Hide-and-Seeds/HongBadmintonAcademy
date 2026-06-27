@@ -8,6 +8,7 @@ import {
 import { formatDate, formatDateTime, monthLabel } from "@/lib/format";
 import { GROUP_LABEL, type GroupKey } from "@/lib/growth";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
+import { levelName, levelBadgeClass } from "@/lib/training";
 import { RatingButtons } from "@/components/rating-buttons";
 import { createAssessment, addNote } from "../actions";
 
@@ -34,7 +35,7 @@ export default async function MarkStudentPage({
 
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, rank")
+    .select("id, full_name, rank, level")
     .eq("id", studentId)
     .maybeSingle();
   if (!student) notFound();
@@ -48,6 +49,7 @@ export default async function MarkStudentPage({
   const className = (enrClass as any)?.classes?.name ?? null;
   const classLevel = (enrClass as any)?.classes?.level ?? null;
   const effRank = studentRank((student as any).rank, [classLevel]);
+  const trainingLevel: number = Number((student as any).level ?? 1);
   const attTotal = (monthAtt ?? []).length;
   const attHere = (monthAtt ?? []).filter((a: any) => a.status === "present" || a.status === "late").length;
 
@@ -100,17 +102,18 @@ export default async function MarkStudentPage({
         )}
       </div>
 
-      {/* Rank is admin-only — coaches see it here but can't set or change it. */}
+      {/* Training level + coarse rank. Rank is admin-only here — promotion
+       *  happens via /coach/exams (graded) or admin Promote. */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-700">Rank:</span>
-          {effRank ? (
-            <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", rankBadgeClass(effRank))}>{effRank}</span>
-          ) : (
-            <span className="text-sm text-slate-400">none</span>
-          )}
-        </div>
-        <span className="text-xs text-slate-400">Set by an admin.</span>
+        <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", levelBadgeClass(trainingLevel))}>
+          L{trainingLevel} · {levelName(trainingLevel)}
+        </span>
+        {effRank && (
+          <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", rankBadgeClass(effRank))}>{effRank}</span>
+        )}
+        <LinkButton href={`/coach/exams/${student.id}`} variant="ghost" className="!px-2 !py-1 text-xs">
+          Grade promotion exam →
+        </LinkButton>
       </div>
 
       {saved && (
