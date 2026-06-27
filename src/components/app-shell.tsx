@@ -154,7 +154,9 @@ export function AppShell({
   const home = ROOTS.includes(`/${role}`) ? `/${role}` : "/";
   const homeActive = pathname === home;
   // Parent/coach get a mobile bottom-tab bar (consumer-app pattern). Admin keeps
-  // the sidebar — too many sections for tabs.
+  // the sidebar — too many sections for tabs. Show every nav item (Home + up to
+  // 5) so nothing is buried in the burger menu — coach has 5 (check-in,
+  // schedule, marking, payroll, exams), parent 4.
   const bottomItems =
     role === "admin"
       ? []
@@ -162,7 +164,7 @@ export function AppShell({
           { href: home, short: "Home", Icon: Home },
           ...groups
             .flatMap((g) => g.items)
-            .slice(0, 4)
+            .slice(0, 5)
             .map((it) => ({ href: it.href, short: shortLabel(it.label), Icon: navIcon(it.href) })),
         ];
 
