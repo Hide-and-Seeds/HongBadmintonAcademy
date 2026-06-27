@@ -21,12 +21,12 @@ export default async function ParentChildrenPage() {
     .order("full_name");
   const ids = (children ?? []).map((c: any) => c.id);
 
-  const [{ data: enr }, { data: cards }, levels] = await Promise.all([
+  const [{ data: enr }, { data: exams }, levels] = await Promise.all([
     ids.length
       ? supabase.from("enrollments").select("student_id, classes(name)").in("student_id", ids).eq("active", true)
       : Promise.resolve({ data: [] as any[] }),
     ids.length
-      ? supabase.from("scorecards").select("student_id, summary, period_month").in("student_id", ids).order("period_month", { ascending: false })
+      ? supabase.from("level_exams").select("student_id, total, created_at").in("student_id", ids).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as any[] }),
     getLevelsMerged(),
   ]);
@@ -35,9 +35,9 @@ export default async function ParentChildrenPage() {
   for (const e of (enr ?? []) as any[]) {
     if (e.classes?.name && !className.has(e.student_id)) className.set(e.student_id, e.classes.name);
   }
-  const growth = new Map<string, number | null>();
-  for (const sc of (cards ?? []) as any[]) {
-    if (!growth.has(sc.student_id)) growth.set(sc.student_id, sc.summary?.growth_index ?? null);
+  const lastExam = new Map<string, number>();
+  for (const ex of (exams ?? []) as any[]) {
+    if (!lastExam.has(ex.student_id)) lastExam.set(ex.student_id, ex.total);
   }
   const levelName = new Map(levels.map((l) => [l.level, l.name]));
 
@@ -49,8 +49,7 @@ export default async function ParentChildrenPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           {children.map((c: any) => {
             const lvl = Number(c.level ?? 1);
-            const gi = growth.get(c.id);
-            const hasReport = growth.has(c.id);
+            const total = lastExam.get(c.id);
             return (
               <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
                 <Card className="h-full p-4 transition-all hover:border-emerald-300 hover:shadow-md">
@@ -69,13 +68,13 @@ export default async function ParentChildrenPage() {
                     <ChevronRight className="h-5 w-5 shrink-0 text-slate-300" />
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
-                    {hasReport ? (
+                    {total != null ? (
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-2xl font-bold text-emerald-700">{gi ?? "—"}</span>
-                        <span className="text-xs font-medium text-slate-400">/100 growth index</span>
+                        <span className="text-2xl font-bold text-emerald-700">{total}</span>
+                        <span className="text-xs font-medium text-slate-400">/100 last exam</span>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-400">No growth report yet</span>
+                      <span className="text-xs text-slate-400">No exam yet</span>
                     )}
                     <span className="text-sm font-medium text-emerald-700">Open →</span>
                   </div>

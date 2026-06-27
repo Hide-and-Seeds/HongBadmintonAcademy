@@ -41,18 +41,14 @@ export default async function ChildDetailPage({
   const [
     { data: enrollment },
     { data: attendance },
-    { data: assessments },
     { data: ledger },
     { data: invoices },
-    { data: scorecard },
     { data: lastExam },
   ] = await Promise.all([
     supabase.from("enrollments").select("class_id, classes(name, level)").eq("student_id", id).eq("active", true).limit(1).maybeSingle(),
     supabase.from("attendance").select("status").eq("student_id", id).order("created_at", { ascending: false }).limit(60),
-    supabase.from("assessments").select("overall_score").eq("student_id", id).order("assessed_on", { ascending: false }).limit(20),
     supabase.from("reward_ledger").select("points").eq("student_id", id),
     supabase.from("invoices").select("amount, currency, status, due_date").eq("student_id", id),
-    supabase.from("scorecards").select("summary").eq("student_id", id).order("period_month", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("level_exams").select("id, exam_date, total, band, decision, to_level, next_target, window_label").eq("student_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
@@ -77,9 +73,7 @@ export default async function ChildDetailPage({
   const attended = att.filter((a: any) => a.status === "present" || a.status === "late").length;
   const rate = att.length ? Math.round((attended / att.length) * 100) : null;
 
-  const scores = (assessments ?? []).map((a: any) => Number(a.overall_score)).filter((n) => !Number.isNaN(n));
-  const avgScore = scores.length ? (scores.reduce((x, y) => x + y, 0) / scores.length).toFixed(0) : null;
-  const growthIndex = (scorecard as any)?.summary?.growth_index ?? null;
+  const examTotal = (lastExam as any)?.total ?? null;
 
   const points = (ledger ?? []).reduce((x: number, r: any) => x + Number(r.points), 0);
 
@@ -105,7 +99,7 @@ export default async function ChildDetailPage({
   const subtitle = [age != null ? `${age} yrs` : null, cls?.name ?? null].filter(Boolean).join(" · ") || "No class enrolment yet";
 
   const LINKS = [
-    { href: "/parent/scorecards", label: "View growth report", Icon: TrendingUp },
+    { href: "/parent/scorecards", label: "View progress card", Icon: TrendingUp },
     { href: "/parent/schedule", label: "All sessions & attendance", Icon: Calendar },
     { href: "/parent/invoices", label: "Fees & payments", Icon: CreditCard },
   ];
@@ -143,8 +137,8 @@ export default async function ChildDetailPage({
           <div className="mt-1 text-xs text-slate-500">Attendance</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">{growthIndex != null ? growthIndex : "—"}</div>
-          <div className="mt-1 text-xs text-slate-500">Growth index</div>
+          <div className="text-2xl font-bold text-green-600">{examTotal != null ? examTotal : "—"}</div>
+          <div className="mt-1 text-xs text-slate-500">Last exam /100</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
           <div className="text-2xl font-bold text-slate-900">{points}</div>

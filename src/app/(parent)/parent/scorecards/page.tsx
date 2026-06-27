@@ -1,157 +1,162 @@
 import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Card, Badge, EmptyState, cn } from "@/components/ui";
-import { monthLabel } from "@/lib/format";
-import { GROUP_LABEL, type GroupKey } from "@/lib/growth";
+import { formatDate } from "@/lib/format";
+import {
+  bandFor, DECISION_LABEL, levelBadgeClass, nextExamWindow,
+  type Decision,
+} from "@/lib/training";
+import { getLevelsMerged } from "@/lib/syllabus";
 
 export const dynamic = "force-dynamic";
 
-const GROUP_BAR: Record<GroupKey, string> = {
-  physical: "bg-blue-500",
-  technical: "bg-amber-500",
-  character: "bg-emerald-600",
+const BAND_TONE: Record<string, "green" | "blue" | "yellow" | "red" | "slate"> = {
+  excellent: "green", pass: "blue", borderline: "yellow", fail: "red",
 };
-const GROUP_TRACK: Record<GroupKey, string> = {
-  physical: "bg-blue-100",
-  technical: "bg-amber-100",
-  character: "bg-emerald-100",
+const SEC_BAR: Record<string, string> = {
+  technical: "bg-amber-500", footwork: "bg-blue-500", tactical: "bg-emerald-600", physical: "bg-purple-500",
 };
-const GROUP_ORDER: GroupKey[] = ["physical", "technical", "character"];
+const SEC_TRACK: Record<string, string> = {
+  technical: "bg-amber-100", footwork: "bg-blue-100", tactical: "bg-emerald-100", physical: "bg-purple-100",
+};
+const SEC_ORDER = ["technical", "footwork", "tactical", "physical"];
+const BAND_HERO: Record<string, string> = {
+  excellent: "bg-emerald-50", pass: "bg-blue-50", borderline: "bg-amber-50", fail: "bg-red-50",
+};
 
-function GroupBlock({ group, dims }: { group: GroupKey; dims: { name: string; score: number }[] }) {
-  if (!dims.length) return null;
-  return (
-    <div>
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{GROUP_LABEL[group]}</div>
-      <div className="space-y-2">
-        {dims.map((d) => (
-          <div key={d.name}>
-            <div className="flex justify-between text-xs text-slate-600">
-              <span>{d.name}</span>
-              <span className="font-medium text-slate-900">{d.score}</span>
-            </div>
-            <div className={`mt-1 h-1.5 rounded-full ${GROUP_TRACK[group]}`}>
-              <div className={`h-1.5 rounded-full ${GROUP_BAR[group]}`} style={{ width: `${Math.max(0, Math.min(100, d.score))}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default async function ParentScorecardsPage() {
+// Parent Progress Card — the student's promotion-exam result (the HBA v2 progress
+// card). Replaces the retired monthly Growth Report. Shows the latest graded exam
+// per child + history; the full breakdown is one tap away.
+export default async function ParentProgressPage() {
   const me = await requireParent();
   const supabase = createAdminClient();
 
-  // Scope to this parent's children only — service-role bypasses RLS so we
-  // must filter explicitly.
   const { data: kids } = await supabase
     .from("students")
-    .select("id")
-    .eq("parent_id", me.id);
+    .select("id, full_name, level")
+    .eq("parent_id", me.id)
+    .order("full_name");
   const kidIds = (kids ?? []).map((k: any) => k.id);
 
-  const { data: cards } = kidIds.length
-    ? await supabase
-        .from("scorecards")
-        .select("*, students(full_name)")
-        .in("student_id", kidIds)
-        .order("period_month", { ascending: false })
-    : { data: [] as any[] };
+  const [{ data: exams }, levels] = await Promise.all([
+    kidIds.length
+      ? supabase
+          .from("level_exams")
+          .select("id, student_id, exam_date, window_label, from_level, to_level, technical, footwork, tactical, physical, total, band, decision, scores, coach_comment, next_target")
+          .in("student_id", kidIds)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as any[] }),
+    getLevelsMerged(),
+  ]);
+  const levelName = new Map(levels.map((l) => [l.level, l.name]));
+  const win = nextExamWindow();
+
+  // Group exams by child, newest first.
+  const byKid = new Map<string, any[]>();
+  for (const e of (exams ?? []) as any[]) {
+    const arr = byKid.get(e.student_id) ?? [];
+    arr.push(e);
+    byKid.set(e.student_id, arr);
+  }
 
   return (
-    <div>
-      <PageHeader title="Growth Reports" description="Your child's monthly character & skills growth." />
+    <div className="space-y-5">
+      <PageHeader title="Progress Card" description="Your child's promotion-exam results. Exams run every 4 months — April, August, December." />
 
-      {cards && cards.length > 0 ? (
-        <div className="space-y-4">
-          {cards.map((c: any) => {
-            const s = c.summary ?? {};
-            const dims: { name: string; category: GroupKey | null; score: number }[] = s.dimensions ?? [];
-            const trend: { year: number; index: number }[] = s.trend ?? [];
-            return (
-              <Card key={c.id} className="p-5">
-                <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <div className="font-semibold text-slate-900">{c.students?.full_name ?? "—"}</div>
-                    <div className="text-sm text-slate-500">{monthLabel(c.period_month)}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {s.stage?.label && <Badge tone="yellow">{s.stage.label}</Badge>}
-                    <Badge tone={c.status === "sent" ? "green" : "blue"}>{c.status}</Badge>
-                  </div>
+      {!kids || kids.length === 0 ? (
+        <EmptyState message="No children linked to your account yet. Contact the academy." />
+      ) : (
+        kids.map((k: any) => {
+          const lvl = Number(k.level ?? 1);
+          const history = byKid.get(k.id) ?? [];
+          const latest = history[0] ?? null;
+          return (
+            <Card key={k.id} className="p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-slate-900">{k.full_name}</span>
+                  <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold", levelBadgeClass(lvl))}>
+                    L{lvl} · {levelName.get(lvl) ?? "—"}
+                  </span>
                 </div>
+                <span className="text-xs text-slate-400">Next exam: {win.label}</span>
+              </div>
 
-                {/* Headline: the one thing a parent needs — index + coach's line. */}
-                <div className="flex flex-col gap-3 rounded-xl bg-emerald-50 p-5 sm:flex-row sm:items-center sm:gap-x-6">
-                  <div className="flex items-center gap-3">
+              {latest ? (
+                <>
+                  <div className={cn("flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between", BAND_HERO[latest.band] ?? "bg-slate-50")}>
                     <div>
-                      <div className="text-xs font-medium text-emerald-700">HBA Growth Index</div>
-                      <div className="text-5xl font-bold leading-none text-emerald-900">
-                        {s.growth_index != null ? s.growth_index : "—"}
-                        <span className="ml-1 text-base font-medium text-emerald-700">/100</span>
+                      <div className="text-xs font-medium text-slate-500">Latest exam · {formatDate(latest.exam_date)}</div>
+                      <div className="text-4xl font-bold leading-none text-slate-900">
+                        {latest.total}<span className="ml-1 text-base font-medium text-slate-500">/100</span>
                       </div>
                     </div>
-                    {trend.length > 1 && (() => {
-                      const delta = trend[trend.length - 1].index - trend[trend.length - 2].index;
-                      return (
-                        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold", delta >= 0 ? "bg-emerald-200 text-emerald-900" : "bg-amber-100 text-amber-800")}>
-                          {delta >= 0 ? "▲" : "▼"} {Math.abs(delta)} vs last year
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  {s.comment && (
-                    <p className="min-w-[12rem] flex-1 text-sm italic text-emerald-900">“{s.comment}”</p>
-                  )}
-                </div>
-
-                {/* Everything else is one tap away — keeps it light for non-tech parents. */}
-                <details className="group mt-3">
-                  <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-emerald-700">
-                    <span className="transition-transform group-open:rotate-90">▸</span> See full breakdown
-                  </summary>
-                  <div className="mt-4 space-y-5">
-                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
-                      <span>Attendance <span className="font-semibold text-slate-900">{s.attendance_pct != null ? `${s.attendance_pct}%` : "—"}</span></span>
-                      <span>Reward points <span className="font-semibold text-slate-900">{s.reward_points ?? 0}</span></span>
+                    <div className="flex flex-col items-start gap-1 sm:items-end">
+                      <Badge tone={BAND_TONE[latest.band] ?? "slate"}>{bandFor(Number(latest.total)).label}</Badge>
+                      <span className="text-xs font-medium text-slate-600">{DECISION_LABEL[latest.decision as Decision] ?? latest.decision}</span>
                     </div>
-                    {trend.length > 1 && (
-                      <div className="flex items-end gap-2">
-                        {trend.map((t, i) => (
-                          <div key={t.year} className="flex items-end gap-2">
-                            {i > 0 && <span className="pb-2 text-emerald-500">→</span>}
-                            <div className="text-center">
-                              <div className="flex h-9 min-w-9 items-center justify-center rounded-md bg-emerald-200 px-2 text-sm font-semibold text-emerald-900">{t.index}</div>
-                              <div className="mt-1 text-[11px] text-emerald-700">{t.year}</div>
+                  </div>
+
+                  <details className="group mt-3">
+                    <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-emerald-700">
+                      <span className="transition-transform group-open:rotate-90">▸</span> See full breakdown
+                    </summary>
+                    <div className="mt-4 space-y-3">
+                      {SEC_ORDER.map((key) => {
+                        const sec = latest.scores?.[key];
+                        if (!sec) return null;
+                        const pct = sec.max ? Math.round((sec.subtotal / sec.max) * 100) : 0;
+                        return (
+                          <div key={key}>
+                            <div className="flex justify-between text-xs text-slate-600">
+                              <span>{sec.label}</span>
+                              <span className="font-medium text-slate-900">{sec.subtotal}/{sec.max}</span>
+                            </div>
+                            <div className={cn("mt-1 h-1.5 rounded-full", SEC_TRACK[key])}>
+                              <div className={cn("h-1.5 rounded-full", SEC_BAR[key])} style={{ width: `${pct}%` }} />
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="grid gap-5 sm:grid-cols-3">
-                      {GROUP_ORDER.map((g) => (
-                        <GroupBlock key={g} group={g} dims={dims.filter((d) => d.category === g)} />
-                      ))}
+                        );
+                      })}
+                      {latest.coach_comment && (
+                        <p className="rounded-lg bg-slate-50 p-3 text-sm italic text-slate-700">“{latest.coach_comment}”</p>
+                      )}
+                      {latest.next_target && (
+                        <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Next target:</span> {latest.next_target}</p>
+                      )}
                     </div>
-                  </div>
-                </details>
+                  </details>
 
-                {c.pdf_url && (
-                  <a
-                    href={`/api/scorecards/${c.id}/pdf`}
-                    className="mt-4 inline-block text-sm font-medium text-emerald-700 hover:underline"
-                  >
-                    Download PDF →
+                  <a href={`/api/exams/${latest.id}/pdf`} target="_blank" rel="noopener" className="mt-4 inline-block text-sm font-medium text-emerald-700 hover:underline">
+                    Download exam report (PDF) →
                   </a>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <EmptyState message="No growth reports available yet." />
+
+                  {history.length > 1 && (
+                    <div className="mt-4 border-t border-slate-100 pt-3">
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Earlier exams</div>
+                      <ul className="space-y-1.5">
+                        {history.slice(1).map((h: any) => (
+                          <li key={h.id} className="flex items-center justify-between gap-2 text-sm">
+                            <span className="text-slate-500">{formatDate(h.exam_date)} · L{h.from_level}→{h.to_level > 6 ? "Elite" : h.to_level}</span>
+                            <span className="flex items-center gap-2">
+                              <span className="font-medium text-slate-700">{h.total}/100</span>
+                              <Badge tone={BAND_TONE[h.band] ?? "slate"}>{h.band ?? "—"}</Badge>
+                              <a href={`/api/exams/${h.id}/pdf`} target="_blank" rel="noopener" className="text-emerald-700 hover:underline">PDF</a>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                  No exam taken yet. Promotion exams run every 4 months — April, August, December.
+                </div>
+              )}
+            </Card>
+          );
+        })
       )}
     </div>
   );

@@ -11,10 +11,6 @@
       "schedule": "0 1 * * *"
     },
     {
-      "path": "/api/cron/generate-scorecards",
-      "schedule": "0 2 * * *"
-    },
-    {
       "path": "/api/cron/generate-invoices",
       "schedule": "0 3 * * *"
     },

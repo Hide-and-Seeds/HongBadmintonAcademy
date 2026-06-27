@@ -37,8 +37,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/coaches/summary", label: "Coaches & Payroll" },
       { href: "/admin/leaderboard", label: "Leaderboard" },
-      { href: "/admin/exams", label: "Exams" },
-      { href: "/admin/marking-schemes", label: "Marking Schemes" },
+      { href: "/admin/exams", label: "Exams & Progress" },
       { href: "/admin/rewards", label: "Reward Rules" },
     ],
   },
@@ -47,7 +46,6 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/invoices", label: "Invoices & Payments" },
       { href: "/admin/collections", label: "Collections" },
-      { href: "/admin/scorecards", label: "Growth Reports" },
       { href: "/admin/announce", label: "Announcements" },
       { href: "/admin/messages", label: "WhatsApp Log" },
       { href: "/admin/fee-plans", label: "Fee Plans" },
@@ -72,14 +70,13 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
 export const COACH_NAV: NavItem[] = [
   { href: "/coach/checkin", label: "Check-in & mark" },
   { href: "/coach/schedule", label: "Schedule" },
-  { href: "/coach/marking", label: "Marking" },
-  { href: "/coach/payroll", label: "My Payroll" },
   { href: "/coach/exams", label: "Exams" },
+  { href: "/coach/payroll", label: "My Payroll" },
 ];
 
 export const PARENT_NAV: NavItem[] = [
   { href: "/parent/children", label: "My Children" },
   { href: "/parent/schedule", label: "Schedule" },
-  { href: "/parent/scorecards", label: "Growth Reports" },
+  { href: "/parent/scorecards", label: "Progress Card" },
   { href: "/parent/invoices", label: "Fees & Payments" },
 ];

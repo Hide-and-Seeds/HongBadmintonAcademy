@@ -8,6 +8,7 @@ import {
 import { formatCurrency, formatTime } from "@/lib/format";
 import { type SessionItem } from "@/components/parent-session-list";
 import { RANK_ORDER } from "@/lib/ranks";
+import { levelBadgeClass } from "@/lib/training";
 import type { FeeInterval } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export default async function ParentDashboard() {
 
   const { data: children } = await supabase
     .from("students")
-    .select("id, full_name, status, photo_url")
+    .select("id, full_name, status, photo_url, level")
     .eq("parent_id", me.id)
     .order("full_name");
 
@@ -27,8 +28,8 @@ export default async function ParentDashboard() {
   const myt = new Date(Date.now() + 8 * 3600 * 1000);
   const monthStartISO = new Date(Date.UTC(myt.getUTCFullYear(), myt.getUTCMonth(), 1)).toISOString();
 
-  // Class + fees + latest growth report + this-month promotions, per child.
-  const [{ data: enrollments }, { data: invoices }, { count: unpaid }, { data: scorecardRows }, { data: rankEvents }] =
+  // Class + fees + latest exam result + this-month promotions, per child.
+  const [{ data: enrollments }, { data: invoices }, { count: unpaid }, { data: examRows }, { data: rankEvents }] =
     await Promise.all([
       childIds.length
         ? supabase
@@ -51,10 +52,10 @@ export default async function ParentDashboard() {
         .in("status", ["unpaid", "overdue"]),
       childIds.length
         ? supabase
-            .from("scorecards")
-            .select("student_id, period_month, summary")
+            .from("level_exams")
+            .select("student_id, total, band, created_at")
             .in("student_id", childIds)
-            .order("period_month", { ascending: false })
+            .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
       childIds.length
         ? supabase
@@ -148,11 +149,11 @@ export default async function ParentDashboard() {
     (i: any) => (i.status === "unpaid" || i.status === "overdue") && i.due_date && i.due_date < today,
   ).length;
 
-  // Latest growth report per child (rows are newest-first) + who was promoted this month.
-  const growthByChild = new Map<string, number | null>();
-  for (const sc of (scorecardRows ?? []) as any[]) {
-    if (growthByChild.has(sc.student_id)) continue;
-    growthByChild.set(sc.student_id, sc.summary?.growth_index ?? null);
+  // Latest exam score per child (rows are newest-first) + who was promoted this month.
+  const examByChild = new Map<string, { total: number; band: string }>();
+  for (const ex of (examRows ?? []) as any[]) {
+    if (examByChild.has(ex.student_id)) continue;
+    examByChild.set(ex.student_id, { total: ex.total, band: ex.band });
   }
   const promoted = new Set<string>();
   for (const ev of (rankEvents ?? []) as any[]) {
@@ -189,8 +190,8 @@ export default async function ParentDashboard() {
         <div className="grid gap-3 md:grid-cols-2">
           {children.map((c) => {
             const clsName = classByChild.get(c.id);
-            const gi = growthByChild.get(c.id);
-            const hasReport = growthByChild.has(c.id);
+            const lvl = Number((c as any).level ?? 1);
+            const ex = examByChild.get(c.id);
             return (
               <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
                 <Card className="h-full p-4 transition-all hover:border-emerald-300 hover:shadow-md">
@@ -198,8 +199,9 @@ export default async function ParentDashboard() {
                     <div className="flex items-center gap-3">
                       <Avatar name={c.full_name} src={(c as any).photo_url} size={40} />
                       <div>
-                        <div className="text-base font-semibold text-slate-900 group-hover:text-emerald-700">
-                          {c.full_name}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-base font-semibold text-slate-900 group-hover:text-emerald-700">{c.full_name}</span>
+                          <span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold", levelBadgeClass(lvl))}>L{lvl}</span>
                         </div>
                         <div className="mt-0.5 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
                       </div>
@@ -215,15 +217,15 @@ export default async function ParentDashboard() {
                   </div>
 
                   <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
-                    {hasReport ? (
+                    {ex ? (
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-2xl font-bold text-emerald-700">{gi ?? "—"}</span>
-                        <span className="text-xs font-medium text-slate-400">/100 growth index</span>
+                        <span className="text-2xl font-bold text-emerald-700">{ex.total}</span>
+                        <span className="text-xs font-medium text-slate-400">/100 last exam</span>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-400">No growth report yet</span>
+                      <span className="text-xs text-slate-400">No exam yet</span>
                     )}
-                    <span className="text-sm font-medium text-emerald-700">Report →</span>
+                    <span className="text-sm font-medium text-emerald-700">Progress →</span>
                   </div>
                 </Card>
               </Link>

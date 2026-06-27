@@ -59,17 +59,6 @@ export default async function CoachClassDetailPage({ params }: { params: Promise
     }
   }
 
-  const assessed = new Set<string>();
-  if (studentIds.length) {
-    const { data: asd } = await supabase
-      .from("assessments")
-      .select("student_id")
-      .in("student_id", studentIds)
-      .gte("assessed_on", start)
-      .lte("assessed_on", end);
-    for (const a of (asd ?? []) as any[]) assessed.add(a.student_id);
-  }
-
   let came = 0;
   let total = 0;
   for (const v of attByStudent.values()) {
@@ -88,10 +77,9 @@ export default async function CoachClassDetailPage({ params }: { params: Promise
         description={cls.level ? <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", levelNameBadgeClass(cls.level))}>{cls.level} class</span> : undefined}
       />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <StatCard label="Students" value={`${sorted.length}${cls.capacity ? ` / ${cls.capacity}` : ""}`} />
         <StatCard label="Attendance" value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub="this month" />
-        <StatCard label="Assessed" value={`${assessed.size}/${sorted.length}`} sub="this month" />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -107,14 +95,13 @@ export default async function CoachClassDetailPage({ params }: { params: Promise
               const a = attByStudent.get(s.id);
               return (
                 <li key={s.id}>
-                  <Link href={`/coach/marking/${s.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
+                  <Link href={`/coach/exams/${s.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
                     <Avatar name={s.full_name} src={s.photo_url} size={36} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium text-slate-900">{s.full_name}</div>
                       <div className="text-xs text-slate-500">{a ? `${a.came}/${a.total} attended this month` : "no sessions yet"}</div>
                     </div>
-                    <span className={cn("hidden rounded-full px-2 py-0.5 text-xs font-semibold sm:inline-flex", levelBadgeClass(lvl))}>L{lvl} · {levelName(lvl)}</span>
-                    {assessed.has(s.id) ? <Badge tone="green">✓</Badge> : <Badge tone="slate">—</Badge>}
+                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", levelBadgeClass(lvl))}>L{lvl} · {levelName(lvl)}</span>
                   </Link>
                 </li>
               );
