@@ -3,10 +3,36 @@
 import { useMemo, useState } from "react";
 import { buttonClass, cn } from "@/components/ui";
 import {
-  bandFor, defaultDecision, DECISION_LABEL,
-  type Decision, type ExamSpec,
+  bandFor, defaultDecision, DECISION_LABEL, PERFORMANCE_RUBRIC,
+  type Decision, type ExamSpec, type ExamItem,
 } from "@/lib/training";
 import { createLevelExam } from "@/app/(coach)/coach/exams/actions";
+
+// Collapsible "How to test" panel — the brief's Objective / Test Method / Pass
+// Indicator + the generic 0–5 score guide, shown only when the item has detail.
+function HowToTest({ it }: { it: ExamItem }) {
+  if (!it.objective && !it.method && !it.pass) return null;
+  return (
+    <details className="group mt-2">
+      <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+        <span className="transition-transform group-open:rotate-90">▸</span> How to test
+      </summary>
+      <div className="mt-2 space-y-2 rounded-lg border border-blue-100 bg-blue-50/40 p-3 text-xs">
+        {it.objective && <p><span className="font-semibold text-slate-600">Objective.</span> <span className="text-slate-600">{it.objective}</span></p>}
+        {it.method && <p><span className="font-semibold text-slate-600">Method.</span> <span className="text-slate-600">{it.method}</span></p>}
+        <p className="text-slate-500">
+          <span className="font-semibold text-slate-600">Score /5.</span>{" "}
+          {PERFORMANCE_RUBRIC.map((r) => `${r.score} ${r.label.split(" — ")[1] ?? r.label}`).join(" · ")}
+        </p>
+        {it.pass && (
+          <p className="rounded-md bg-green-50 px-2 py-1.5 text-green-800">
+            <span className="font-semibold">Pass:</span> {it.pass}
+          </p>
+        )}
+      </div>
+    </details>
+  );
+}
 
 const TONE_RING: Record<string, string> = {
   green: "border-green-300 bg-green-50 text-green-700",
@@ -66,24 +92,27 @@ export function ExamForm({
             {sec.items.map((it, i) => {
               const key = `s_${sec.key}_${i}`;
               return (
-                <div key={key} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                  <label htmlFor={key} className="min-w-0 text-sm text-slate-800">{it.label}</label>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <input
-                      id={key}
-                      name={key}
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      max={it.max}
-                      step={1}
-                      value={scores[key] ?? ""}
-                      onChange={(e) => set(key, it.max, e.target.value)}
-                      placeholder="0"
-                      className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/30"
-                    />
-                    <span className="w-8 text-xs text-slate-400">/ {it.max}</span>
+                <div key={key} className="px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <label htmlFor={key} className="min-w-0 text-sm text-slate-800">{it.label}</label>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <input
+                        id={key}
+                        name={key}
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={it.max}
+                        step={1}
+                        value={scores[key] ?? ""}
+                        onChange={(e) => set(key, it.max, e.target.value)}
+                        placeholder="0"
+                        className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/30"
+                      />
+                      <span className="w-8 text-xs text-slate-400">/ {it.max}</span>
+                    </div>
                   </div>
+                  <HowToTest it={it} />
                 </div>
               );
             })}

@@ -2,6 +2,8 @@
 // promotion-exam rubrics, pass bands and the exam cycle. Source of truth for the
 // coach grading flow, the admin syllabus reference and the parent level card.
 // Mirrors the boss-approved HBA_TRAINING_SYSTEM_v2 document.
+import { EXAM_GUIDE } from "@/lib/exam-guide";
+export { PERFORMANCE_RUBRIC } from "@/lib/exam-guide";
 
 // ─── Exam cycle ─────────────────────────────────────────────────────────────
 // Exams run 4×/year, quarterly: January, April, July, October (HBA v2 brief).
@@ -198,7 +200,14 @@ export function levelToRank(level: number | null | undefined): string | null {
 // ─── Exam rubric ────────────────────────────────────────────────────────────
 export type SectionKey = "technical" | "footwork" | "tactical" | "physical";
 
-export interface ExamItem {
+// Coach guidance per test, transcribed from the v2 brief's detailed assessment
+// blocks. Surfaced as a "How to test" panel under each scored item.
+export interface ItemGuide {
+  objective?: string; // what the test assesses
+  method?: string;    // how the coach runs it
+  pass?: string;      // the pass indicator (the bar to clear)
+}
+export interface ExamItem extends ItemGuide {
   label: string;
   max: number;
 }
@@ -221,7 +230,7 @@ export const SECTION_MAX: Record<SectionKey, number> = {
   technical: 40, footwork: 25, tactical: 20, physical: 15,
 };
 
-export const EXAM_SPECS: ExamSpec[] = [
+const RAW_EXAM_SPECS: ExamSpec[] = [
   {
     fromLevel: 1, toLevel: 2, title: "Starter Assessment",
     sections: [
@@ -364,6 +373,17 @@ export const EXAM_SPECS: ExamSpec[] = [
     ],
   },
 ];
+
+// Bake the brief's coach guidance (Objective / Test Method / Pass Indicator)
+// into each item, so every consumer — the grade form, the syllabus reference —
+// gets it for free.
+export const EXAM_SPECS: ExamSpec[] = RAW_EXAM_SPECS.map((spec) => ({
+  ...spec,
+  sections: spec.sections.map((sec) => ({
+    ...sec,
+    items: sec.items.map((it, i) => ({ ...it, ...(EXAM_GUIDE[spec.fromLevel]?.[sec.key]?.[i] ?? {}) })),
+  })),
+}));
 
 export function examSpecFor(fromLevel: number): ExamSpec | null {
   return EXAM_SPECS.find((e) => e.fromLevel === fromLevel) ?? null;

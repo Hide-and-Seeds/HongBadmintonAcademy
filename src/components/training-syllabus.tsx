@@ -61,11 +61,19 @@ export function TrainingSyllabus({
                       <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{sec.label}</span>
                       <span className="text-xs font-medium text-slate-400">/ {sec.max}</span>
                     </div>
-                    <ul className="mt-1 space-y-0.5 text-sm text-slate-700">
+                    <ul className="mt-1 space-y-1.5 text-sm text-slate-700">
                       {sec.items.map((it) => (
-                        <li key={it.label} className="flex items-center justify-between gap-2">
-                          <span>· {it.label}</span>
-                          <span className="shrink-0 text-xs text-slate-400">{it.max}</span>
+                        <li key={it.label}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span>· {it.label}</span>
+                            <span className="shrink-0 text-xs text-slate-400">{it.max}</span>
+                          </div>
+                          {(it.method || it.pass) && (
+                            <div className="ml-3 mt-0.5 space-y-0.5 text-xs text-slate-400">
+                              {it.method && <div>{it.method}</div>}
+                              {it.pass && <div className="text-green-700">Pass: {it.pass}</div>}
+                            </div>
+                          )}
                         </li>
                       ))}
                     </ul>
