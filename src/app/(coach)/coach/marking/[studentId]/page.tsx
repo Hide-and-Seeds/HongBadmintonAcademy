@@ -8,7 +8,8 @@ import {
 import { formatDate, formatDateTime, monthLabel } from "@/lib/format";
 import { GROUP_LABEL, type GroupKey } from "@/lib/growth";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
-import { levelName, levelBadgeClass } from "@/lib/training";
+import { levelBadgeClass } from "@/lib/training";
+import { getLevelInfoMerged } from "@/lib/syllabus";
 import { RatingButtons } from "@/components/rating-buttons";
 import { createAssessment, addNote } from "../actions";
 
@@ -50,6 +51,7 @@ export default async function MarkStudentPage({
   const classLevel = (enrClass as any)?.classes?.level ?? null;
   const effRank = studentRank((student as any).rank, [classLevel]);
   const trainingLevel: number = Number((student as any).level ?? 1);
+  const trainingLevelName = (await getLevelInfoMerged(trainingLevel))?.name ?? "—";
   const attTotal = (monthAtt ?? []).length;
   const attHere = (monthAtt ?? []).filter((a: any) => a.status === "present" || a.status === "late").length;
 
@@ -106,7 +108,7 @@ export default async function MarkStudentPage({
        *  happens via /coach/exams (graded) or admin Promote. */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", levelBadgeClass(trainingLevel))}>
-          L{trainingLevel} · {levelName(trainingLevel)}
+          L{trainingLevel} · {trainingLevelName}
         </span>
         {effRank && (
           <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", rankBadgeClass(effRank))}>{effRank}</span>

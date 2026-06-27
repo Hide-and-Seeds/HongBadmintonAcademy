@@ -7,7 +7,8 @@ import { Avatar, Card, Badge, cn } from "@/components/ui";
 import { LevelLadder } from "@/components/level-ladder";
 import { studentRank, rankBadgeClass, bestRank } from "@/lib/ranks";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
-import { levelInfo, levelName, levelToRank, levelBadgeClass, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
+import { levelToRank, levelBadgeClass, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
+import { getLevelInfoMerged } from "@/lib/syllabus";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +98,8 @@ export default async function ChildDetailPage({
   const plan = (student as any).fee_plans ?? null;
 
   const level = (student as any).level ?? 1; // every student starts at Level 1 (Starter)
-  const lv = levelInfo(level);
+  const lv = await getLevelInfoMerged(level);
+  const levelLabel = lv?.name ?? "—";
   const exam = lastExam as any;
   const examWin = nextExamWindow();
   const examTone: Record<string, string> = {
@@ -129,7 +131,7 @@ export default async function ChildDetailPage({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-lg font-bold text-slate-900">{student.full_name}</span>
               <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold", levelBadgeClass(level))}>
-                L{level} · {levelName(level)}
+                L{level} · {levelLabel}
               </span>
               {currentRank && currentRank !== levelToRank(level) && (
                 <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold", rankBadgeClass(currentRank))}>{currentRank}</span>

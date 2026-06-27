@@ -7,7 +7,8 @@ import {
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/format";
 import { studentRank, rankBadgeClass } from "@/lib/ranks";
-import { levelName, levelBadgeClass, levelToRank } from "@/lib/training";
+import { levelBadgeClass, levelToRank } from "@/lib/training";
+import { getLevelInfoMerged } from "@/lib/syllabus";
 import type { AttendanceStatus, InvoiceStatus } from "@/lib/types";
 import { awardReward, promoteStudent } from "../actions";
 
@@ -87,6 +88,7 @@ export default async function StudentProfilePage({
   const levels = (enrollments ?? []).map((e: any) => e.classes?.level ?? null);
   const effRank = studentRank(student.rank, levels);
   const curLevel: number = Number((student as any).level ?? 1);
+  const curLevelName = (await getLevelInfoMerged(curLevel))?.name ?? "—";
 
   return (
     <div className="space-y-6">
@@ -123,7 +125,7 @@ export default async function StudentProfilePage({
       <Section title="Training level">
         <div className="flex flex-wrap items-center gap-3">
           <span className={cn("inline-flex rounded-full px-3 py-1 text-sm font-semibold", levelBadgeClass(curLevel))}>
-            L{curLevel} · {levelName(curLevel)}
+            L{curLevel} · {curLevelName}
           </span>
           <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", rankBadgeClass(effRank))}>
             {effRank ?? "—"}

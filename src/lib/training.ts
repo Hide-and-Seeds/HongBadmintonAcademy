@@ -368,6 +368,54 @@ export function bandFor(total: number): Band {
   return BANDS[BANDS.length - 1].band;
 }
 
+// ─── Exam eligibility ───────────────────────────────────────────────────────
+// A student needs >=70% attendance over the recent window to sit a promotion
+// exam. Catches sit-the-exam-cold cases the syllabus warns about; admin override
+// not exposed yet — coach can ask the admin to bump the level directly if a
+// genuine edge case comes up.
+export const EXAM_ATTENDANCE_MIN_PCT = 70;
+export const EXAM_ATTENDANCE_WINDOW_DAYS = 90;
+export const EXAM_ATTENDANCE_MIN_SESSIONS = 4; // need at least this many to judge
+
+export interface ExamEligibility {
+  eligible: boolean;
+  attendedPct: number | null; // null = too few sessions to judge yet
+  attended: number;
+  total: number;
+  reason: string | null; // human-readable why-not (null = eligible)
+}
+
+export async function getExamEligibility(
+  supabase: any,
+  studentId: string,
+): Promise<ExamEligibility> {
+  const since = new Date(Date.now() - EXAM_ATTENDANCE_WINDOW_DAYS * 86_400_000)
+    .toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("attendance")
+    .select("status, sessions!inner(session_date)")
+    .eq("student_id", studentId)
+    .gte("sessions.session_date", since);
+  const rows = (data ?? []) as { status: string }[];
+  const total = rows.length;
+  const attended = rows.filter((r) => r.status === "present" || r.status === "late").length;
+
+  if (total < EXAM_ATTENDANCE_MIN_SESSIONS) {
+    return {
+      eligible: false, attendedPct: null, attended, total,
+      reason: `Needs at least ${EXAM_ATTENDANCE_MIN_SESSIONS} sessions in the last ${EXAM_ATTENDANCE_WINDOW_DAYS} days (has ${total}).`,
+    };
+  }
+  const pct = Math.round((attended / total) * 100);
+  if (pct < EXAM_ATTENDANCE_MIN_PCT) {
+    return {
+      eligible: false, attendedPct: pct, attended, total,
+      reason: `Attendance ${pct}% is below the ${EXAM_ATTENDANCE_MIN_PCT}% required for a promotion exam.`,
+    };
+  }
+  return { eligible: true, attendedPct: pct, attended, total, reason: null };
+}
+
 export type Decision = "promote" | "maintain" | "reassess";
 export const DECISION_LABEL: Record<Decision, string> = {
   promote: "Promote",

@@ -20,7 +20,7 @@ export default async function LeaderboardPage() {
   const supabase = await createClient();
 
   const [{ data: students }, { data: att }, { data: enrollments }] = await Promise.all([
-    supabase.from("students").select("id, full_name, dob, rank").eq("status", "active").order("full_name"),
+    supabase.from("students").select("id, full_name, dob, rank, level").eq("status", "active").order("full_name"),
     supabase.from("attendance").select("student_id, status, sessions(session_date)"),
     supabase.from("enrollments").select("student_id, classes(level)").eq("active", true),
   ]);
@@ -57,14 +57,19 @@ export default async function LeaderboardPage() {
         streak = 0;
       }
     }
-    return { id: s.id, name: s.full_name, age: ageFrom(s.dob), attended, sessions: marked, rate, streak: max, classRank: studentRank(s.rank, levelsByStudent.get(s.id) ?? []) };
+    return {
+      id: s.id, name: s.full_name, age: ageFrom(s.dob),
+      attended, sessions: marked, rate, streak: max,
+      level: Number(s.level ?? 1),
+      classRank: studentRank(s.rank, levelsByStudent.get(s.id) ?? []),
+    };
   });
 
   return (
     <div>
       <PageHeader
         title="Students Leaderboard"
-        description="Ranked by attendance — tap any column to sort. Class rank is the student's skill tier."
+        description="Ranked by training level (1–6) by default — tap any column to sort. Tier is the coarse Beginner→Elite grouping."
         action={<LinkButton href="/admin/students" variant="ghost">Manage students →</LinkButton>}
       />
       {rows.length > 0 ? <LeaderboardTable rows={rows} /> : <EmptyState message="No active students yet." />}

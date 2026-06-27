@@ -11,7 +11,8 @@ import { pushToUsers } from "@/lib/push";
 import { RANK_ORDER } from "@/lib/ranks";
 import {
   examSpecFor, bandFor, defaultDecision, levelToRank, levelName,
-  examWindowLabel, type Decision, type SectionKey,
+  examWindowLabel, getExamEligibility,
+  type Decision, type SectionKey,
 } from "@/lib/training";
 
 function err(studentId: string, message: string): never {
@@ -55,6 +56,12 @@ export async function createLevelExam(formData: FormData) {
   const next_target = (formData.get("next_target") as string)?.trim() || null;
 
   const supabase = await createClient();
+
+  // Defense in depth: even though the UI hides the form when ineligible, the
+  // action enforces the same gate so a stale page can't bypass it.
+  const elig = await getExamEligibility(supabase, student_id);
+  if (!elig.eligible) err(student_id, elig.reason ?? "Not eligible for a promotion exam.");
+
   const { error } = await supabase.from("level_exams").insert({
     student_id,
     coach_id: me.id,

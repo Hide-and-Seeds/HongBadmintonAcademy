@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, Badge, EmptyState, LinkButton } from "@/components/ui";
-import { levelName, nextExamWindow, isExamMonth } from "@/lib/training";
+import { nextExamWindow, isExamMonth, getExamEligibility, EXAM_ATTENDANCE_MIN_PCT } from "@/lib/training";
+import { loadSyllabus } from "@/lib/syllabus";
 import { coachClassIds } from "../_data";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ export default async function CoachExamsPage() {
 
   const win = nextExamWindow();
   const examMonth = isExamMonth();
+  const { levels: syl } = await loadSyllabus();
+  const nameByLevel = new Map(syl.map((l) => [l.level, l.name]));
+  const levelName = (n: number) => nameByLevel.get(n) ?? "—";
 
   const students = new Map<string, { id: string; full_name: string; level: number | null; classes: string[] }>();
   if (classIds.length) {
@@ -55,7 +59,19 @@ export default async function CoachExamsPage() {
     }
   }
 
-  const list = [...students.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
+  // Eligibility (≥70% attendance over the last 90d) per student.
+  const eligibility = new Map<string, Awaited<ReturnType<typeof getExamEligibility>>>();
+  await Promise.all(
+    ids.map(async (sid) => { eligibility.set(sid, await getExamEligibility(supabase, sid)); }),
+  );
+
+  const list = [...students.values()].sort((a, b) => {
+    // Eligible first, then by name.
+    const ea = eligibility.get(a.id)?.eligible ? 0 : 1;
+    const eb = eligibility.get(b.id)?.eligible ? 0 : 1;
+    if (ea !== eb) return ea - eb;
+    return a.full_name.localeCompare(b.full_name);
+  });
 
   return (
     <div className="space-y-5">
@@ -67,6 +83,7 @@ export default async function CoachExamsPage() {
       <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border p-3 text-sm shadow-sm ${examMonth ? "border-green-300 bg-green-50" : "border-slate-200 bg-white"}`}>
         <span className="font-medium text-slate-800">{examMonth ? "🏸 Exam window is open" : "Next exam window"}</span>
         <span className={examMonth ? "text-green-700" : "text-slate-500"}>{win.label}</span>
+        <span className="text-xs text-slate-400">Requires ≥{EXAM_ATTENDANCE_MIN_PCT}% attendance over the last 90 days.</span>
       </div>
 
       {list.length === 0 ? (
@@ -76,6 +93,7 @@ export default async function CoachExamsPage() {
           <ul className="divide-y divide-slate-100">
             {list.map((s) => {
               const ex = lastExam.get(s.id);
+              const elig = eligibility.get(s.id);
               return (
                 <li key={s.id} className="flex items-center gap-3 px-4 py-2.5">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
@@ -89,12 +107,24 @@ export default async function CoachExamsPage() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    {elig && (
+                      <Badge tone={elig.eligible ? "green" : "yellow"}>
+                        {elig.attendedPct != null ? `${elig.attendedPct}%` : `${elig.attended}/${elig.total}`}
+                      </Badge>
+                    )}
                     {ex && (
                       <Badge tone={ex.band === "excellent" || ex.band === "pass" ? "green" : ex.band === "borderline" ? "yellow" : "red"}>
                         {ex.total}/100
                       </Badge>
                     )}
-                    <LinkButton href={`/coach/exams/${s.id}`} variant="secondary" className="!px-3 !py-1.5 text-xs">Exam</LinkButton>
+                    <LinkButton
+                      href={`/coach/exams/${s.id}`}
+                      variant={elig?.eligible ? "secondary" : "ghost"}
+                      className="!px-3 !py-1.5 text-xs"
+                      title={elig?.reason ?? undefined}
+                    >
+                      {elig?.eligible ? "Exam" : "View"}
+                    </LinkButton>
                   </div>
                 </li>
               );

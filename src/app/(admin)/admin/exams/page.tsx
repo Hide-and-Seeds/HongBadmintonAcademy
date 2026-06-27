@@ -5,8 +5,9 @@ import {
 } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import {
-  TRAINING_LEVELS, levelName, nextExamWindow, isExamMonth, DECISION_LABEL, type Decision,
+  nextExamWindow, isExamMonth, DECISION_LABEL, type Decision,
 } from "@/lib/training";
+import { loadSyllabus } from "@/lib/syllabus";
 
 export const dynamic = "force-dynamic";
 
@@ -20,14 +21,17 @@ export default async function AdminExamsPage() {
   const win = nextExamWindow();
   const examMonth = isExamMonth();
 
-  const [{ data: exams }, { data: students }] = await Promise.all([
+  const [{ data: exams }, { data: students }, { levels: syl }] = await Promise.all([
     supabase
       .from("level_exams")
       .select("id, exam_date, window_label, from_level, to_level, total, band, decision, students(full_name), coach:profiles(full_name)")
       .order("created_at", { ascending: false })
       .limit(100),
     supabase.from("students").select("level").eq("status", "active"),
+    loadSyllabus(),
   ]);
+  const nameByLevel = new Map(syl.map((l) => [l.level, l.name]));
+  const levelName = (n: number) => nameByLevel.get(n) ?? "—";
 
   // Level distribution across active students (null = not yet leveled → Level 1).
   const dist = new Map<number, number>();
@@ -61,7 +65,7 @@ export default async function AdminExamsPage() {
 
       <Section title="Students by level" flush>
         <div className="grid grid-cols-2 gap-px bg-slate-100 sm:grid-cols-6">
-          {TRAINING_LEVELS.map((lv) => (
+          {syl.map((lv) => (
             <div key={lv.level} className="bg-white p-4 text-center">
               <div className="text-2xl font-bold tabular-nums text-slate-900">{dist.get(lv.level) ?? 0}</div>
               <div className="mt-1 text-xs text-slate-500">L{lv.level} · {lv.name}</div>

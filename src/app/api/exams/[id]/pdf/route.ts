@@ -4,7 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getParentIdFromCookie } from "@/lib/parent-auth";
 import { renderExamPdf, type ExamPdfSection } from "@/lib/exam-pdf";
 import { APP_NAME } from "@/lib/constants";
-import { bandFor, levelName, DECISION_LABEL, type Decision } from "@/lib/training";
+import { bandFor, DECISION_LABEL, type Decision } from "@/lib/training";
+import { getLevelInfoMerged } from "@/lib/syllabus";
 import { formatDate } from "@/lib/format";
 
 export const runtime = "nodejs";
@@ -42,6 +43,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const review = Number(row.to_level) > 6;
+  const toName = (await getLevelInfoMerged(Number(row.to_level)))?.name ?? "—";
   const sections: ExamPdfSection[] = SEC_ORDER
     .map((key) => {
       const s = row.scores?.[key];
@@ -60,7 +62,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const band = bandFor(total);
   const levelLine = review
     ? `Level ${row.from_level} · Elite review`
-    : `Level ${row.from_level} → Level ${row.to_level} (${levelName(row.to_level)})`;
+    : `Level ${row.from_level} → Level ${row.to_level} (${toName})`;
 
   const bytes = await renderExamPdf({
     academyName: APP_NAME,
