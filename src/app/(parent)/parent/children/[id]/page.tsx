@@ -5,9 +5,8 @@ import { requireParent } from "@/lib/parent-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Avatar, Card, Badge, cn } from "@/components/ui";
 import { LevelLadder } from "@/components/level-ladder";
-import { studentRank, rankBadgeClass, bestRank } from "@/lib/ranks";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
-import { levelToRank, levelBadgeClass, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
+import { levelBadgeClass, nextExamWindow, DECISION_LABEL, bandFor, type Decision } from "@/lib/training";
 import { getLevelInfoMerged } from "@/lib/syllabus";
 
 export const dynamic = "force-dynamic";
@@ -73,12 +72,6 @@ export default async function ChildDetailPage({
   const next = (nextRows ?? [])[0] ?? null;
 
   const age = ageFromDob(student.dob);
-  // Parent-facing rank derives from the training level (single source of truth),
-  // but never shows lower than an explicit admin coarse-rank override.
-  const currentRank = bestRank([
-    levelToRank((student as any).level),
-    studentRank((student as any).rank, [cls?.level ?? null]),
-  ]);
 
   const att = attendance ?? [];
   const attended = att.filter((a: any) => a.status === "present" || a.status === "late").length;
@@ -133,9 +126,6 @@ export default async function ChildDetailPage({
               <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold", levelBadgeClass(level))}>
                 L{level} · {levelLabel}
               </span>
-              {currentRank && currentRank !== levelToRank(level) && (
-                <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold", rankBadgeClass(currentRank))}>{currentRank}</span>
-              )}
               {student.status !== "active" && <Badge tone="slate">{student.status}</Badge>}
             </div>
             <div className="mt-0.5 text-sm text-slate-500">{subtitle}</div>

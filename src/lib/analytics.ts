@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { monthLabel } from "@/lib/format";
-import { studentRank } from "@/lib/ranks";
+import { LEVEL_NAMES, levelName } from "@/lib/training";
 
 export interface Analytics {
   monthLabel: string;
@@ -84,7 +84,7 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     supabase.from("reward_ledger").select("points, student_id, students(full_name)").gte("awarded_at", monthStartISO).lt("awarded_at", mEnd.toISOString()).limit(10000),
     supabase.from("messages").select("status").limit(10000),
     supabase.from("enrollments").select("student_id, class_id, classes(name, level, capacity)").eq("active", true).limit(10000),
-    supabase.from("students").select("id, rank").eq("status", "active").limit(10000),
+    supabase.from("students").select("id, level").eq("status", "active").limit(10000),
     supabase.from("students").select("id, status, created_at").limit(10000),
     supabase.from("classes").select("id, name, capacity, coach_id").eq("is_active", true),
     supabase.from("class_coaches").select("class_id, coach_id"),
@@ -217,19 +217,15 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     };
   });
 
-  // ── Rank distribution (active students; own rank else class rank) ─────────
-  const levelsByStudent = new Map<string, (string | null)[]>();
+  // ── Level distribution (active students, by training level 1–6) ───────────
   const classNameById = new Map<string, string>();
   for (const e of (activeEnrollments ?? []) as any[]) {
-    const arr = levelsByStudent.get(e.student_id) ?? [];
-    arr.push(e.classes?.level ?? null);
-    levelsByStudent.set(e.student_id, arr);
     if (e.class_id && e.classes?.name) classNameById.set(e.class_id, e.classes.name);
   }
-  const rankDistribution: Record<string, number> = { Beginner: 0, Intermediate: 0, Advanced: 0, Elite: 0, Unranked: 0 };
+  const rankDistribution: Record<string, number> = Object.fromEntries(LEVEL_NAMES.map((n) => [n, 0]));
   for (const s of (activeStudents ?? []) as any[]) {
-    const r = studentRank(s.rank, levelsByStudent.get(s.id) ?? []);
-    rankDistribution[r ?? "Unranked"] = (rankDistribution[r ?? "Unranked"] ?? 0) + 1;
+    const name = levelName(Number(s.level ?? 1));
+    rankDistribution[name] = (rankDistribution[name] ?? 0) + 1;
   }
 
   // ── Class occupancy (% of capacity) ───────────────────────────────────────

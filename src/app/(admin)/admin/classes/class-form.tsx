@@ -27,7 +27,7 @@ export function ClassForm({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Class rank" hint="Skill tier — colour-coded on the class list & leaderboard.">
+          <Field label="Class level" hint="Training level this class targets — colour-coded on the class list.">
             <Select name="level" defaultValue={classRow?.level ?? ""}>
               <option value="">— none —</option>
               {CLASS_RANKS.map((r) => (

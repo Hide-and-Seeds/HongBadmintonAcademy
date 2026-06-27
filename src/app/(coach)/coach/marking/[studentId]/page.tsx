@@ -7,7 +7,6 @@ import {
 } from "@/components/ui";
 import { formatDate, formatDateTime, monthLabel } from "@/lib/format";
 import { GROUP_LABEL, type GroupKey } from "@/lib/growth";
-import { studentRank, rankBadgeClass } from "@/lib/ranks";
 import { levelBadgeClass } from "@/lib/training";
 import { getLevelInfoMerged } from "@/lib/syllabus";
 import { RatingButtons } from "@/components/rating-buttons";
@@ -36,7 +35,7 @@ export default async function MarkStudentPage({
 
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, rank, level")
+    .select("id, full_name, level")
     .eq("id", studentId)
     .maybeSingle();
   if (!student) notFound();
@@ -48,8 +47,6 @@ export default async function MarkStudentPage({
     supabase.from("assessments").select("assessed_on").eq("student_id", studentId).gte("assessed_on", mStart).lte("assessed_on", mEnd).order("assessed_on", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const className = (enrClass as any)?.classes?.name ?? null;
-  const classLevel = (enrClass as any)?.classes?.level ?? null;
-  const effRank = studentRank((student as any).rank, [classLevel]);
   const trainingLevel: number = Number((student as any).level ?? 1);
   const trainingLevelName = (await getLevelInfoMerged(trainingLevel))?.name ?? "—";
   const attTotal = (monthAtt ?? []).length;
@@ -104,15 +101,11 @@ export default async function MarkStudentPage({
         )}
       </div>
 
-      {/* Training level + coarse rank. Rank is admin-only here — promotion
-       *  happens via /coach/exams (graded) or admin Promote. */}
+      {/* Training level. Promotion happens via /coach/exams (graded) or admin. */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", levelBadgeClass(trainingLevel))}>
           L{trainingLevel} · {trainingLevelName}
         </span>
-        {effRank && (
-          <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", rankBadgeClass(effRank))}>{effRank}</span>
-        )}
         <LinkButton href={`/coach/exams/${student.id}`} variant="ghost" className="!px-2 !py-1 text-xs">
           Grade promotion exam →
         </LinkButton>

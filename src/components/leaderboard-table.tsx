@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { cn } from "@/components/ui";
-import { rankBadgeClass, RANK_ORDER as CLASS_RANK_ORDER } from "@/lib/ranks";
 import { levelBadgeClass, levelName } from "@/lib/training";
 
 export type LbRow = {
@@ -15,10 +14,9 @@ export type LbRow = {
   rate: number;
   streak: number;
   level: number;
-  classRank: string | null;
 };
 
-type Col = "level" | "classRank" | "name" | "age" | "attended" | "rate" | "streak";
+type Col = "level" | "name" | "age" | "attended" | "rate" | "streak";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -29,11 +27,7 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
 
   const sorted = useMemo(() => {
     const val = (r: LbRow): number | string =>
-      col === "name"
-        ? r.name.toLowerCase()
-        : col === "classRank"
-          ? CLASS_RANK_ORDER[r.classRank ?? ""] ?? 0
-          : (r[col] as number);
+      col === "name" ? r.name.toLowerCase() : (r[col] as number);
     return [...rows].sort((a, b) => {
       const x = val(a);
       const y = val(b);
@@ -74,7 +68,6 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
             <th className="border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">#</th>
             <Header c="name" label="Name" align="left" />
             <Header c="level" label="Level" />
-            <Header c="classRank" label="Tier" />
             <Header c="age" label="Age" />
             <Header c="attended" label="Attended" />
             <Header c="rate" label="Rate" />
@@ -93,15 +86,8 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
                   className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", levelBadgeClass(r.level))}
                   title={`Level ${r.level} · ${levelName(r.level)}`}
                 >
-                  L{r.level}
+                  L{r.level} · {levelName(r.level)}
                 </span>
-              </td>
-              <td className="border-b border-slate-100 px-3 py-2.5 text-center">
-                {r.classRank ? (
-                  <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(r.classRank))}>{r.classRank}</span>
-                ) : (
-                  <span className="text-slate-300">—</span>
-                )}
               </td>
               <td className="border-b border-slate-100 px-3 py-2.5 text-center text-slate-500">{r.age ?? "—"}</td>
               <td className="border-b border-slate-100 px-3 py-2.5 text-center text-slate-700">

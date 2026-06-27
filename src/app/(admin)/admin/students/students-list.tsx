@@ -7,19 +7,18 @@ import { Paginator } from "@/components/paginator";
 import { PAGE_SIZE } from "@/lib/constants";
 import { SortHeader } from "@/components/sort-header";
 import { formatDate } from "@/lib/format";
-import { studentRank, rankBadgeClass } from "@/lib/ranks";
+import { levelBadgeClass, levelName } from "@/lib/training";
 import { deleteStudent, deleteStudents } from "./actions";
 
-function RankPill({ rank }: { rank: string | null }) {
-  if (!rank) return <span className="text-slate-400">—</span>;
-  return <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(rank))}>{rank}</span>;
+function LevelPill({ level }: { level: number }) {
+  return <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", levelBadgeClass(level))}>L{level} · {levelName(level)}</span>;
 }
 
-type SortKey = "name" | "rank" | "dob" | "status" | "joined";
+type SortKey = "name" | "level" | "dob" | "status" | "joined";
 
 const SORT_COLUMN: Record<SortKey, string> = {
   name: "full_name",
-  rank: "rank",
+  level: "level",
   dob: "dob",
   status: "status",
   joined: "created_at",
@@ -55,24 +54,14 @@ export async function StudentsList({
   if (status === "active" || status === "inactive") base = base.eq("status", status);
   base = base.order(SORT_COLUMN[sortKey], { ascending });
 
-  const [{ data: students }, { data: enrollments }] = await Promise.all([
-    base,
-    supabase.from("enrollments").select("student_id, classes(level)").eq("active", true),
-  ]);
+  const { data: students } = await base;
 
-  // Class rank per student = highest tier among their enrolled classes.
-  const levelsByStudent = new Map<string, (string | null)[]>();
-  for (const e of (enrollments ?? []) as any[]) {
-    const arr = levelsByStudent.get(e.student_id) ?? [];
-    arr.push(e.classes?.level ?? null);
-    levelsByStudent.set(e.student_id, arr);
-  }
-  const rankOf = (s: any) => studentRank(s.rank, levelsByStudent.get(s.id) ?? []);
+  const levelOf = (s: any) => Number(s.level ?? 1);
 
-  // Rank is a computed value (own rank ∪ highest enrolled-class rank) so it has
-  // to be filtered in JS after the DB pull.
+  // The `rank` filter param now carries a training-level NAME (the dropdown is
+  // seeded from the 6 level names) — match it against the student's level.
   const filteredAll = (students ?? []).filter((s: any) => {
-    if (rank && rankOf(s) !== rank) return false;
+    if (rank && levelName(levelOf(s)) !== rank) return false;
     return true;
   });
 
@@ -103,7 +92,7 @@ export async function StudentsList({
                 </span>
               </Link>
               <div className="flex flex-shrink-0 items-center gap-2">
-                <RankPill rank={rankOf(s)} />
+                <LevelPill level={levelOf(s)} />
                 <Badge tone={s.status === "active" ? "green" : "slate"}>{s.status}</Badge>
               </div>
             </div>
@@ -142,7 +131,7 @@ export async function StudentsList({
               <tr>
                 <Th className="w-10"><BulkSelectAll /></Th>
                 <Th><SortHeader label="Name" sortKey="name" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
-                <Th><SortHeader label="Rank" sortKey="rank" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
+                <Th><SortHeader label="Level" sortKey="level" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
                 <Th>Parent</Th>
                 <Th>NFC tag</Th>
                 <Th><SortHeader label="DOB" sortKey="dob" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
@@ -160,7 +149,7 @@ export async function StudentsList({
                       <span className="font-medium text-slate-900 group-hover:text-green-700">{s.full_name}</span>
                     </Link>
                   </Td>
-                  <Td label="Rank"><RankPill rank={rankOf(s)} /></Td>
+                  <Td label="Level"><LevelPill level={levelOf(s)} /></Td>
                   <Td className="text-slate-500">{s.parent?.full_name ?? "—"}</Td>
                   <Td>{s.nfc_tag_uid ? <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{s.nfc_tag_uid}</code> : "—"}</Td>
                   <Td className="text-slate-500">{formatDate(s.dob)}</Td>

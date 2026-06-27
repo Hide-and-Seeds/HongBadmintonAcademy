@@ -48,9 +48,9 @@ export default async function ClassesPage({
           <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Class name…" className="h-9 w-48" />
         </label>
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-slate-600">Rank</span>
-          <FilterSelect name="rank" defaultValue={rankFilter} className="h-9 w-40">
-            <option value="">All ranks</option>
+          <span className="text-xs font-medium text-slate-600">Level</span>
+          <FilterSelect name="rank" defaultValue={rankFilter} className="h-9 w-44">
+            <option value="">All levels</option>
             {CLASS_RANKS.map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}
@@ -75,7 +75,7 @@ export default async function ClassesPage({
               <tr>
                 <Th className="w-10"><BulkSelectAll /></Th>
                 <Th>Name</Th>
-                <Th>Rank</Th>
+                <Th>Level</Th>
                 <Th>Primary coach</Th>
                 <Th>Students</Th>
                 <Th>Active</Th>
@@ -87,7 +87,7 @@ export default async function ClassesPage({
                 <tr key={c.id} className="hover:bg-slate-50">
                   <Td><BulkCheckbox id={c.id} /></Td>
                   <Td className="font-medium text-slate-900">{c.name}</Td>
-                  <Td label="Rank">
+                  <Td label="Level">
                     {c.level ? (
                       <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(c.level))}>
                         {c.level}

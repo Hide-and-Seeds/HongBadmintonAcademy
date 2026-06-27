@@ -45,7 +45,7 @@ export function FeePlanForm({
           <Field label="Currency">
             <Input name="currency" defaultValue={plan?.currency ?? "MYR"} />
           </Field>
-          <Field label="Class rank" hint="Optional — tag this plan to a tier.">
+          <Field label="Level" hint="Optional — tag this plan to a training level.">
             <Select name="rank" defaultValue={plan?.rank ?? ""}>
               <option value="">— none —</option>
               {CLASS_RANKS.map((r) => (

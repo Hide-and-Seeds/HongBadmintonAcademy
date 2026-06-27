@@ -7,7 +7,7 @@ import { Paginator } from "@/components/paginator";
 import { PAGE_SIZE } from "@/lib/constants";
 import { SortHeader } from "@/components/sort-header";
 import { formatDate } from "@/lib/format";
-import { studentRank, rankBadgeClass } from "@/lib/ranks";
+import { levelBadgeClass } from "@/lib/training";
 import type { Role } from "@/lib/types";
 import type { ReactNode } from "react";
 
@@ -70,26 +70,16 @@ export async function PeopleList({
 
   // For the parents tab, show each parent's children inline (the #1 thing admins
   // want to see). One query, grouped by parent_id. Scoped to the visible page.
-  const childrenByParent = new Map<string, { name: string; rank: string | null }[]>();
+  const childrenByParent = new Map<string, { name: string; level: number }[]>();
   if (isParent && people && people.length) {
     const { data: kids } = await supabase
       .from("students")
-      .select("id, full_name, parent_id, rank")
+      .select("id, full_name, parent_id, level")
       .in("parent_id", people.map((p: any) => p.id))
       .order("full_name");
-    const kidIds = (kids ?? []).map((k: any) => k.id);
-    const { data: enr } = kidIds.length
-      ? await supabase.from("enrollments").select("student_id, classes(level)").eq("active", true).in("student_id", kidIds)
-      : { data: [] as any[] };
-    const levelsByKid = new Map<string, (string | null)[]>();
-    for (const e of (enr ?? []) as any[]) {
-      const arr = levelsByKid.get(e.student_id) ?? [];
-      arr.push(e.classes?.level ?? null);
-      levelsByKid.set(e.student_id, arr);
-    }
     for (const k of (kids ?? []) as any[]) {
       const arr = childrenByParent.get(k.parent_id) ?? [];
-      arr.push({ name: k.full_name, rank: studentRank(k.rank, levelsByKid.get(k.id) ?? []) });
+      arr.push({ name: k.full_name, level: Number(k.level ?? 1) });
       childrenByParent.set(k.parent_id, arr);
     }
   }
@@ -151,9 +141,7 @@ export async function PeopleList({
                             {kids.map((k, i) => (
                               <span key={i} className="inline-flex items-center gap-1">
                                 {k.name}
-                                {k.rank && (
-                                  <span className={cn("inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold", rankBadgeClass(k.rank))}>{k.rank}</span>
-                                )}
+                                <span className={cn("inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold", levelBadgeClass(k.level))}>L{k.level}</span>
                               </span>
                             ))}
                           </div>

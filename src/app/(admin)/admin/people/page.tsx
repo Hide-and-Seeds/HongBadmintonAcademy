@@ -95,9 +95,9 @@ export default async function DirectoryPage({
         {active === "students" && (
           <>
             <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-slate-600">Rank</span>
-              <FilterSelect name="rank" defaultValue={rankFilter} className="h-9 w-40">
-                <option value="">All ranks</option>
+              <span className="text-xs font-medium text-slate-600">Level</span>
+              <FilterSelect name="rank" defaultValue={rankFilter} className="h-9 w-44">
+                <option value="">All levels</option>
                 {CLASS_RANKS.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}

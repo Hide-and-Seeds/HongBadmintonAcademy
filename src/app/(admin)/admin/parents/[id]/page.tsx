@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, Badge, EmptyState, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
-import { studentRank, rankBadgeClass } from "@/lib/ranks";
+import { levelBadgeClass, levelName } from "@/lib/training";
 import { PersonForm } from "../../_people/person-form";
 import {
   updatePerson,
@@ -33,21 +33,9 @@ export default async function EditParentPage({
   const supabase = await createClient();
   const [{ data: person }, { data: children }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
-    supabase.from("students").select("id, full_name, status, rank").eq("parent_id", id).order("full_name"),
+    supabase.from("students").select("id, full_name, status, level").eq("parent_id", id).order("full_name"),
   ]);
   if (!person) notFound();
-
-  // Effective rank per child (own rank, else highest enrolled-class rank).
-  const kidIds = (children ?? []).map((c: any) => c.id);
-  const { data: enr } = kidIds.length
-    ? await supabase.from("enrollments").select("student_id, classes(level)").eq("active", true).in("student_id", kidIds)
-    : { data: [] as any[] };
-  const levelsByKid = new Map<string, (string | null)[]>();
-  for (const e of (enr ?? []) as any[]) {
-    const arr = levelsByKid.get(e.student_id) ?? [];
-    arr.push(e.classes?.level ?? null);
-    levelsByKid.set(e.student_id, arr);
-  }
 
   return (
     <div className="space-y-6">
@@ -83,14 +71,12 @@ export default async function EditParentPage({
         {children && children.length > 0 ? (
           <ul className="divide-y divide-slate-100">
             {children.map((c: any) => {
-              const rank = studentRank(c.rank, levelsByKid.get(c.id) ?? []);
+              const lvl = Number(c.level ?? 1);
               return (
                 <li key={c.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50">
                   <Link href={`/admin/students/${c.id}`} className="flex min-w-0 items-center gap-2">
                     <span className="font-medium text-slate-900">{c.full_name}</span>
-                    {rank && (
-                      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(rank))}>{rank}</span>
-                    )}
+                    <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", levelBadgeClass(lvl))}>L{lvl} · {levelName(lvl)}</span>
                   </Link>
                   <div className="flex flex-shrink-0 items-center gap-2">
                     <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>

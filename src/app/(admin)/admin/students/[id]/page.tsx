@@ -6,8 +6,7 @@ import {
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/format";
-import { studentRank, rankBadgeClass } from "@/lib/ranks";
-import { levelBadgeClass, levelToRank } from "@/lib/training";
+import { levelBadgeClass } from "@/lib/training";
 import { getLevelInfoMerged } from "@/lib/syllabus";
 import type { AttendanceStatus, InvoiceStatus } from "@/lib/types";
 import { awardReward, promoteStudent } from "../actions";
@@ -85,8 +84,6 @@ export default async function StudentProfilePage({
 
   const totalPoints = (ledger ?? []).reduce((x: number, r: any) => x + Number(r.points), 0);
   const classNames = (enrollments ?? []).map((e: any) => e.classes?.name).filter(Boolean).join(", ");
-  const levels = (enrollments ?? []).map((e: any) => e.classes?.level ?? null);
-  const effRank = studentRank(student.rank, levels);
   const curLevel: number = Number((student as any).level ?? 1);
   const curLevelName = (await getLevelInfoMerged(curLevel))?.name ?? "—";
 
@@ -119,19 +116,15 @@ export default async function StudentProfilePage({
         <StatCard label="NFC tag" value={student.nfc_tag_uid ? "✓" : "—"} sub={student.nfc_tag_uid ?? "unbound"} />
       </div>
 
-      {/* Training level + coarse rank (read-only). Promotion is one-way: this
-       *  button bumps the level by +1 (max 6) and lifts the coarse rank if the
-       *  new level crosses a tier. Coaches normally promote via /coach/exams. */}
+      {/* Training level (read-only). Promotion is one-way: this button bumps the
+       *  level by +1 (max 6). Coaches normally promote via a graded /coach/exams. */}
       <Section title="Training level">
         <div className="flex flex-wrap items-center gap-3">
           <span className={cn("inline-flex rounded-full px-3 py-1 text-sm font-semibold", levelBadgeClass(curLevel))}>
             L{curLevel} · {curLevelName}
           </span>
-          <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", rankBadgeClass(effRank))}>
-            {effRank ?? "—"}
-          </span>
           <span className="text-xs text-slate-400">
-            Coarse rank derives from level ({levelToRank(curLevel) ?? "—"}); admin override is layered on top.
+            Set by promotion exams (Apr / Aug / Dec) or the button here.
           </span>
           <form action={promoteStudent}>
             <input type="hidden" name="id" value={id} />

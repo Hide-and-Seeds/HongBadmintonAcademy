@@ -6,13 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { studentSchema } from "@/lib/validation";
-import { RANK_ORDER, studentRank } from "@/lib/ranks";
-import { levelToRank, levelName } from "@/lib/training";
+import { levelName } from "@/lib/training";
 import { sendRankUpNotice } from "@/lib/reminders";
 import { recordRankChange } from "@/lib/rank-history";
 import { uploadStudentPhoto } from "@/lib/storage";
-
-const order = (r: string | null) => (r ? RANK_ORDER[r] ?? 0 : 0);
 
 function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -24,37 +21,23 @@ function revalidateRank(id: string) {
   revalidatePath("/admin/leaderboard");
 }
 
-// Admin: bump a student up by one training level (max 6). One-way only — there
-// is no "set rank" or "demote" because the syllabus says <70 stays / retests,
-// never drops. Coarse 4-rank (Beginner/Intermediate/Advanced/Elite) is derived
-// from the new level via levelToRank so the leaderboard, badges and fee-tiers
-// stay in sync. Coaches promote via /coach/exams; this is the manual override.
+// Admin: bump a student up by one training level (max 6). One-way only — the
+// syllabus says <70 stays / retests, never drops. `students.level` is the single
+// ladder (the old 4-tier rank was retired); the change is logged to rank_events
+// as level NAMES so the parent "promoted" timeline still works.
 export async function promoteStudent(formData: FormData) {
   await requireRole("admin");
   const id = String(formData.get("id"));
   const supabase = await createClient();
-  const [{ data: s }, { data: enr }] = await Promise.all([
-    supabase.from("students").select("rank, level").eq("id", id).maybeSingle(),
-    supabase.from("enrollments").select("classes(level)").eq("student_id", id).eq("active", true),
-  ]);
+  const { data: s } = await supabase.from("students").select("level").eq("id", id).maybeSingle();
   const curLevel = Number((s as any)?.level ?? 1);
   if (curLevel >= 6) err(`/admin/students/${id}`, "Already at the top level (6 · Elite Team).");
   const nextLevel = curLevel + 1;
 
-  const classLevels = (enr ?? []).map((e: any) => e.classes?.level ?? null);
-  const prevRank = studentRank((s as any)?.rank, classLevels);
-  const nextRankCoarse = levelToRank(nextLevel);
-
-  const update: Record<string, unknown> = { level: nextLevel };
-  // Only nudge the coarse rank UPWARD — never overwrite an admin-set higher tier.
-  if (nextRankCoarse && order(nextRankCoarse) > order(prevRank)) update.rank = nextRankCoarse;
-
-  const { error } = await supabase.from("students").update(update).eq("id", id);
+  const { error } = await supabase.from("students").update({ level: nextLevel }).eq("id", id);
   if (error) err(`/admin/students/${id}`, error.message);
 
-  if (update.rank) {
-    await recordRankChange(createAdminClient(), { student_id: id, from: prevRank, to: nextRankCoarse });
-  }
+  await recordRankChange(createAdminClient(), { student_id: id, from: levelName(curLevel), to: levelName(nextLevel) });
   try { await sendRankUpNotice(id, `Level ${nextLevel} · ${levelName(nextLevel)}`); } catch { /* never block the promotion */ }
   revalidateRank(id);
 }

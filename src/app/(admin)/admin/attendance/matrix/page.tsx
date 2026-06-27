@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, EmptyState, cn } from "@/components/ui";
-import { studentRank, rankBadgeClass } from "@/lib/ranks";
+import { levelBadgeClass, levelNameBadgeClass } from "@/lib/training";
 
 export const dynamic = "force-dynamic";
 
@@ -33,11 +33,11 @@ export default async function MatrixPage({
   const classId = qClass ?? classes?.[0]?.id ?? null;
 
   let sessions: { id: string; session_date: string }[] = [];
-  let rows: { student: any; rank: string | null; cells: (string | null)[]; attended: number; pct: number; streak: number }[] = [];
+  let rows: { student: any; level: number; cells: (string | null)[]; attended: number; pct: number; streak: number }[] = [];
 
   if (classId) {
     const [{ data: enr }, { data: sess }] = await Promise.all([
-      supabase.from("enrollments").select("students(id, full_name, rank)").eq("class_id", classId).eq("active", true),
+      supabase.from("enrollments").select("students(id, full_name, level)").eq("class_id", classId).eq("active", true),
       supabase.from("sessions").select("id, session_date").eq("class_id", classId).order("session_date", { ascending: false }).limit(16),
     ]);
     const students = (enr ?? [])
@@ -45,19 +45,6 @@ export default async function MatrixPage({
       .filter(Boolean)
       .sort((a: any, b: any) => a.full_name.localeCompare(b.full_name));
     sessions = (sess ?? []).slice().reverse(); // oldest → newest
-
-    // Class rank per student (highest tier across their enrolled classes).
-    const studentIds = students.map((s: any) => s.id);
-    const { data: enrAll } = studentIds.length
-      ? await supabase.from("enrollments").select("student_id, classes(level)").eq("active", true).in("student_id", studentIds)
-      : { data: [] as any[] };
-    const levelsByStudent = new Map<string, (string | null)[]>();
-    for (const e of (enrAll ?? []) as any[]) {
-      const arr = levelsByStudent.get(e.student_id) ?? [];
-      arr.push(e.classes?.level ?? null);
-      levelsByStudent.set(e.student_id, arr);
-    }
-    const rankOf = (st: any) => studentRank(st.rank, levelsByStudent.get(st.id) ?? []);
 
     const attMap = new Map<string, string>();
     const sessionIds = sessions.map((s) => s.id);
@@ -80,7 +67,7 @@ export default async function MatrixPage({
         else if (cells[i] === null) continue; // skip unmarked
         else break;
       }
-      return { student: st, rank: rankOf(st), cells, attended, pct, streak };
+      return { student: st, level: Number(st.level ?? 1), cells, attended, pct, streak };
     });
   }
 
@@ -103,7 +90,7 @@ export default async function MatrixPage({
             >
               {c.name}
               {c.level && (
-                <span className={cn("ml-1.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase", rankBadgeClass(c.level))}>{c.level}</span>
+                <span className={cn("ml-1.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase", levelNameBadgeClass(c.level))}>{c.level}</span>
               )}
             </LinkButton>
           ))}
@@ -120,7 +107,7 @@ export default async function MatrixPage({
                 <th className="sticky left-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Student
                 </th>
-                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Rank</th>
+                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Level</th>
                 {sessions.map((s) => {
                   const d = shortDate(s.session_date);
                   return (
@@ -142,11 +129,7 @@ export default async function MatrixPage({
                     <Link href={`/admin/students/${r.student.id}`} className="hover:text-green-700 hover:underline">{r.student.full_name}</Link>
                   </td>
                   <td className="border-b border-slate-100 px-2 py-2 text-center">
-                    {r.rank ? (
-                      <span className={cn("inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold", rankBadgeClass(r.rank))}>{r.rank}</span>
-                    ) : (
-                      <span className="text-slate-300">—</span>
-                    )}
+                    <span className={cn("inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold", levelBadgeClass(r.level))}>L{r.level}</span>
                   </td>
                   {r.cells.map((c, i) => (
                     <td key={i} className="border-b border-slate-100 px-1.5 py-2 text-center">

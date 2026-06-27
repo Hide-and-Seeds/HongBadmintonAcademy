@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, EmptyState } from "@/components/ui";
 import { LeaderboardTable, type LbRow } from "@/components/leaderboard-table";
-import { studentRank } from "@/lib/ranks";
 
 export const dynamic = "force-dynamic";
 
@@ -19,19 +18,10 @@ function ageFrom(dob: string | null): number | null {
 export default async function LeaderboardPage() {
   const supabase = await createClient();
 
-  const [{ data: students }, { data: att }, { data: enrollments }] = await Promise.all([
-    supabase.from("students").select("id, full_name, dob, rank, level").eq("status", "active").order("full_name"),
+  const [{ data: students }, { data: att }] = await Promise.all([
+    supabase.from("students").select("id, full_name, dob, level").eq("status", "active").order("full_name"),
     supabase.from("attendance").select("student_id, status, sessions(session_date)"),
-    supabase.from("enrollments").select("student_id, classes(level)").eq("active", true),
   ]);
-
-  // Each student's class rank = the highest tier among the classes they're in.
-  const levelsByStudent = new Map<string, (string | null)[]>();
-  for (const e of (enrollments ?? []) as any[]) {
-    const arr = levelsByStudent.get(e.student_id) ?? [];
-    arr.push(e.classes?.level ?? null);
-    levelsByStudent.set(e.student_id, arr);
-  }
 
   const byStudent = new Map<string, { date: string; status: string }[]>();
   for (const a of att ?? []) {
@@ -61,7 +51,6 @@ export default async function LeaderboardPage() {
       id: s.id, name: s.full_name, age: ageFrom(s.dob),
       attended, sessions: marked, rate, streak: max,
       level: Number(s.level ?? 1),
-      classRank: studentRank(s.rank, levelsByStudent.get(s.id) ?? []),
     };
   });
 
@@ -69,7 +58,7 @@ export default async function LeaderboardPage() {
     <div>
       <PageHeader
         title="Students Leaderboard"
-        description="Ranked by training level (1–6) by default — tap any column to sort. Tier is the coarse Beginner→Elite grouping."
+        description="Ranked by training level (1–6) by default — tap any column to sort."
         action={<LinkButton href="/admin/students" variant="ghost">Manage students →</LinkButton>}
       />
       {rows.length > 0 ? <LeaderboardTable rows={rows} /> : <EmptyState message="No active students yet." />}

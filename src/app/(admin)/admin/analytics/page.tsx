@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, Table, Th, Td, EmptyState, LinkButton, Badge, cn } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
+import { LEVEL_NAMES } from "@/lib/training";
 import { computeAnalytics } from "@/lib/analytics";
 import { RevenueAreaChart, CountBarChart, SkillBarChart, CategoryBarChart } from "@/components/charts";
 
@@ -107,16 +108,16 @@ export default async function AnalyticsPage({
           )}
         </Section>
 
-        <Section title="Students by rank" flush>
+        <Section title="Students by level" flush>
           <Table>
-            <thead><tr><Th>Rank</Th><Th className="text-right">Students</Th><Th className="text-right">Share</Th></tr></thead>
+            <thead><tr><Th>Level</Th><Th className="text-right">Students</Th><Th className="text-right">Share</Th></tr></thead>
             <tbody>
-              {(["Beginner", "Intermediate", "Advanced", "Elite", "Unranked"] as const).map((r) => {
+              {LEVEL_NAMES.map((r) => {
                 const n = a.rankDistribution[r] ?? 0;
                 return (
                   <tr key={r} className="hover:bg-slate-50">
                     <Td>
-                      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", r === "Unranked" ? "bg-slate-100 text-slate-500" : rankBadgeClass(r))}>{r}</span>
+                      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(r))}>{r}</span>
                     </Td>
                     <Td className="text-right tabular-nums">{n}</Td>
                     <Td className="text-right tabular-nums text-slate-500">{rankTotal ? Math.round((n / rankTotal) * 100) : 0}%</Td>

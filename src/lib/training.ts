@@ -161,6 +161,29 @@ export function levelName(level: number | null | undefined): string {
   return levelInfo(level)?.name ?? "—";
 }
 
+// The 6 level names, in order — the single tier vocabulary used app-wide for
+// student standing AND class / fee-plan tiers (Option C: the old 4-tier rank
+// was retired). The legacy 4 tiers (Beginner/Intermediate/Advanced/Elite) are a
+// subset of these names, so old class/fee data keeps resolving.
+export const LEVEL_NAMES = TRAINING_LEVELS.map((l) => l.name);
+
+// Name → level number. Tolerates the legacy "Elite" label (→ Elite Team / 6).
+export function levelFromName(name: string | null | undefined): number | null {
+  if (!name) return null;
+  const exact = TRAINING_LEVELS.find((l) => l.name === name);
+  if (exact) return exact.level;
+  if (name === "Elite") return 6; // legacy 4-tier label
+  return null;
+}
+
+// Colour a tier expressed as a level NAME (class.level, fee_plan.rank).
+export function levelNameBadgeClass(name: string | null | undefined): string {
+  return levelBadgeClass(levelFromName(name));
+}
+export function levelNameCardClass(name: string | null | undefined): string {
+  return levelCardClass(levelFromName(name));
+}
+
 // Coarse 4-tier rank derived from the fine 6-level (keeps the existing leaderboard
 // / badge / fee-tier plumbing in sync with the training ladder — one ladder, two
 // granularities). See src/lib/ranks.ts CLASS_RANKS.

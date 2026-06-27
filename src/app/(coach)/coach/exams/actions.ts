@@ -8,9 +8,8 @@ import { requireRole } from "@/lib/auth";
 import { recordRankChange } from "@/lib/rank-history";
 import { createNotifications, notifyAdmins } from "@/lib/notifications";
 import { pushToUsers } from "@/lib/push";
-import { RANK_ORDER } from "@/lib/ranks";
 import {
-  examSpecFor, bandFor, defaultDecision, levelToRank, levelName,
+  examSpecFor, bandFor, defaultDecision, levelName,
   examWindowLabel, getExamEligibility,
   type Decision, type SectionKey,
 } from "@/lib/training";
@@ -82,22 +81,17 @@ export async function createLevelExam(formData: FormData) {
   if (error) err(student_id, error.message);
 
   // Promote only when the coach decided so AND a real next level exists (not the
-  // L6 Elite review). Service-role: bump level, sync coarse rank upward, notify.
+  // L6 Elite review). Service-role: bump level + log the level change, notify.
   if (decision === "promote" && !spec.review && spec.toLevel <= 6) {
     const db = createAdminClient();
     const { data: s } = await db
       .from("students")
-      .select("full_name, rank, parent_id")
+      .select("full_name, parent_id")
       .eq("id", student_id)
       .maybeSingle();
-    const prevRank = (s as { rank?: string | null } | null)?.rank ?? null;
-    const newRank = levelToRank(spec.toLevel);
-    const ord = (r: string | null) => (r ? RANK_ORDER[r] ?? 0 : 0);
 
-    const update: Record<string, unknown> = { level: spec.toLevel };
-    if (newRank && ord(newRank) > ord(prevRank)) update.rank = newRank;
-    await db.from("students").update(update).eq("id", student_id);
-    if (update.rank) await recordRankChange(db, { student_id, from: prevRank, to: newRank });
+    await db.from("students").update({ level: spec.toLevel }).eq("id", student_id);
+    await recordRankChange(db, { student_id, from: levelName(from_level), to: levelName(spec.toLevel) });
 
     const name = (s as { full_name?: string } | null)?.full_name ?? "Your child";
     const parentId = (s as { parent_id?: string | null } | null)?.parent_id ?? null;

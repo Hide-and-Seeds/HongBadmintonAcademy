@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, Avatar, Badge, LinkButton, EmptyState, cn } from "@/components/ui";
 import { coachClassIds } from "../../_data";
-import { studentRank, rankBadgeClass } from "@/lib/ranks";
+import { levelBadgeClass, levelName, levelNameBadgeClass } from "@/lib/training";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export default async function CoachClassDetailPage({ params }: { params: Promise
   const { start, end } = monthBounds();
 
   const [{ data: enr }, { data: monthSess }] = await Promise.all([
-    supabase.from("enrollments").select("students(id, full_name, photo_url, rank)").eq("class_id", id).eq("active", true),
+    supabase.from("enrollments").select("students(id, full_name, photo_url, level)").eq("class_id", id).eq("active", true),
     supabase.from("sessions").select("id").eq("class_id", id).gte("session_date", start).lte("session_date", end),
   ]);
 
@@ -83,7 +83,10 @@ export default async function CoachClassDetailPage({ params }: { params: Promise
   return (
     <div className="space-y-6">
       <LinkButton href="/coach" variant="ghost" className="!px-0">← Back</LinkButton>
-      <PageHeader title={cls.name ?? "Class"} description={cls.level ? `${cls.level} class` : undefined} />
+      <PageHeader
+        title={cls.name ?? "Class"}
+        description={cls.level ? <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", levelNameBadgeClass(cls.level))}>{cls.level} class</span> : undefined}
+      />
 
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Students" value={`${sorted.length}${cls.capacity ? ` / ${cls.capacity}` : ""}`} />
@@ -100,7 +103,7 @@ export default async function CoachClassDetailPage({ params }: { params: Promise
         {sorted.length ? (
           <ul className="divide-y divide-slate-100">
             {sorted.map((s: any) => {
-              const rank = studentRank(s.rank, [cls.level]);
+              const lvl = Number(s.level ?? 1);
               const a = attByStudent.get(s.id);
               return (
                 <li key={s.id}>
@@ -110,9 +113,7 @@ export default async function CoachClassDetailPage({ params }: { params: Promise
                       <div className="truncate font-medium text-slate-900">{s.full_name}</div>
                       <div className="text-xs text-slate-500">{a ? `${a.came}/${a.total} attended this month` : "no sessions yet"}</div>
                     </div>
-                    {rank && (
-                      <span className={cn("hidden rounded-full px-2 py-0.5 text-xs font-semibold sm:inline-flex", rankBadgeClass(rank))}>{rank}</span>
-                    )}
+                    <span className={cn("hidden rounded-full px-2 py-0.5 text-xs font-semibold sm:inline-flex", levelBadgeClass(lvl))}>L{lvl} · {levelName(lvl)}</span>
                     {assessed.has(s.id) ? <Badge tone="green">✓</Badge> : <Badge tone="slate">—</Badge>}
                   </Link>
                 </li>

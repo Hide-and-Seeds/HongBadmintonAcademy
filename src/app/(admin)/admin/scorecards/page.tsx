@@ -5,7 +5,7 @@ import { WhatsAppButton } from "@/components/whatsapp-button";
 import { monthLabel } from "@/lib/format";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
-import { studentRank, rankBadgeClass } from "@/lib/ranks";
+import { levelBadgeClass, levelName } from "@/lib/training";
 import { generateScorecards, logScorecardSend } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -20,22 +20,9 @@ export default async function ScorecardsPage({
   const baseUrl = await getBaseUrl();
   const { data: cards } = await supabase
     .from("scorecards")
-    .select("*, students(full_name, rank, parent:profiles!students_parent_id_fkey(full_name, phone, id))")
+    .select("*, students(full_name, level, parent:profiles!students_parent_id_fkey(full_name, phone, id))")
     .order("period_month", { ascending: false })
     .order("created_at", { ascending: false });
-
-  // Class rank per student (highest tier among enrolled classes) for the report list.
-  const studentIds = [...new Set((cards ?? []).map((c: any) => c.student_id))];
-  const { data: enrollments } = studentIds.length
-    ? await supabase.from("enrollments").select("student_id, classes(level)").eq("active", true).in("student_id", studentIds)
-    : { data: [] as any[] };
-  const levelsByStudent = new Map<string, (string | null)[]>();
-  for (const e of (enrollments ?? []) as any[]) {
-    const arr = levelsByStudent.get(e.student_id) ?? [];
-    arr.push(e.classes?.level ?? null);
-    levelsByStudent.set(e.student_id, arr);
-  }
-  const rankOf = (ownRank: string | null, id: string) => studentRank(ownRank, levelsByStudent.get(id) ?? []);
 
   return (
     <div className="space-y-6">
@@ -80,7 +67,7 @@ export default async function ScorecardsPage({
           <Table>
             <thead>
               <tr>
-                <Th>Student</Th><Th>Rank</Th><Th>Period</Th><Th>Growth index</Th><Th>Stage</Th>
+                <Th>Student</Th><Th>Level</Th><Th>Period</Th><Th>Growth index</Th><Th>Stage</Th>
                 <Th>Attendance</Th><Th>Status</Th><Th className="text-right">Actions</Th>
               </tr>
             </thead>
@@ -98,13 +85,11 @@ export default async function ScorecardsPage({
                 return (
                   <tr key={c.id} className="hover:bg-slate-50">
                     <Td className="font-medium text-slate-900">{c.students?.full_name ?? "—"}</Td>
-                    <Td label="Rank">
+                    <Td label="Level">
                       {(() => {
-                        const r = rankOf(c.students?.rank ?? null, c.student_id);
-                        return r ? (
-                          <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(r))}>{r}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
+                        const lvl = Number(c.students?.level ?? 1);
+                        return (
+                          <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", levelBadgeClass(lvl))}>L{lvl} · {levelName(lvl)}</span>
                         );
                       })()}
                     </Td>
