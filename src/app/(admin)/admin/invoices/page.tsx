@@ -10,7 +10,7 @@ import { getMonthlySchedule } from "@/lib/settings";
 import { waLink } from "@/lib/wa";
 import { feeReminderText } from "@/lib/reminder-text";
 import type { InvoiceStatus } from "@/lib/types";
-import { markPaid, deleteInvoice, logReminderSend, generateMonthlyInvoices } from "./actions";
+import { markPaid, cancelInvoice, refundInvoice, deleteInvoice, logReminderSend, generateMonthlyInvoices } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +31,9 @@ function ordinal(n: number): string {
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ generated?: string; notice?: string; status?: string; month?: string; q?: string }>;
+  searchParams: Promise<{ generated?: string; notice?: string; status?: string; month?: string; q?: string; refunded?: string; error?: string }>;
 }) {
-  const { generated, notice, status, month, q } = await searchParams;
+  const { generated, notice, status, month, q, refunded, error } = await searchParams;
   const supabase = await createClient();
   const baseUrl = await getBaseUrl();
   const schedule = await getMonthlySchedule();
@@ -87,6 +87,13 @@ export default async function InvoicesPage({
             </>
           }
         />
+
+        {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {refunded && (
+          <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+            {refunded === "stripe" ? "Refunded via Stripe — the money is on its way back to the parent." : "Marked refunded. It was paid manually, so settle the refund with the parent yourself."}
+          </p>
+        )}
 
         {generated !== undefined && (() => {
           const n = Number(generated);
@@ -184,6 +191,21 @@ export default async function InvoicesPage({
                                 body: text,
                               }}
                             />
+                          )}
+                          {payable && (
+                            <form action={cancelInvoice}>
+                              <input type="hidden" name="id" value={i.id} />
+                              <ConfirmButton label="Cancel" confirmText="Cancel this invoice? No payment is taken. It stays on record as canceled." />
+                            </form>
+                          )}
+                          {i.status === "paid" && (
+                            <form action={refundInvoice}>
+                              <input type="hidden" name="id" value={i.id} />
+                              <ConfirmButton
+                                label="Refund"
+                                confirmText={i.stripe_payment_intent_id ? "Refund this invoice? This returns the money to the parent via Stripe and cannot be undone." : "Mark this invoice refunded? It was paid manually, so no money moves automatically — settle the refund yourself."}
+                              />
+                            </form>
                           )}
                           <form action={deleteInvoice}>
                             <input type="hidden" name="id" value={i.id} />

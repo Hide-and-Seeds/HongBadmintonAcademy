@@ -2,6 +2,7 @@ import { CalendarOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Section, Field, Input, Button, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
+import { Tabs } from "@/components/tabs";
 import { formatDate } from "@/lib/format";
 import { addSchoolHoliday, deleteSchoolHoliday, importPublicHolidays, clearImportedHolidays, removeHolidaySessions } from "./actions";
 
@@ -38,21 +39,57 @@ export default async function HolidaysPage({
         </p>
       )}
 
-      <Section title="Add a school holiday">
-        <form action={addSchoolHoliday} className="grid items-end gap-4 sm:grid-cols-4">
-          <div className="sm:col-span-2">
-            <Field label="Name" required>
-              <Input name="name" placeholder="e.g. Term 1 break, Deepavali closure" required />
-            </Field>
-          </div>
-          <Field label="From" required>
-            <Input type="date" name="start_date" required />
-          </Field>
-          <Field label="To (blank = one day)">
-            <Input type="date" name="end_date" />
-          </Field>
-          <Button type="submit">+ Add holiday</Button>
-        </form>
+      <Section title="Add holidays" description="A single school break, or bulk-import public holidays. Both block classes when generating sessions.">
+        <Tabs
+          tabs={[
+            {
+              id: "school",
+              label: "School holiday",
+              content: (
+                <form action={addSchoolHoliday} className="grid items-end gap-4 sm:grid-cols-4">
+                  <div className="sm:col-span-2">
+                    <Field label="Name" required>
+                      <Input name="name" placeholder="e.g. Term 1 break, Deepavali closure" required />
+                    </Field>
+                  </div>
+                  <Field label="From" required>
+                    <Input type="date" name="start_date" required />
+                  </Field>
+                  <Field label="To (blank = one day)">
+                    <Input type="date" name="end_date" />
+                  </Field>
+                  <Button type="submit">+ Add holiday</Button>
+                </form>
+              ),
+            },
+            {
+              id: "import",
+              label: "Import public (CSV/XLSX)",
+              content: (
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-500">Upload a CSV or Excel with two columns: date (YYYY-MM-DD), name. Rows merge with the built-in list and override on matching dates.</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <form action={importPublicHolidays} className="flex flex-wrap items-center gap-3">
+                      <input
+                        type="file"
+                        name="file"
+                        accept=".csv,.xlsx"
+                        required
+                        className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700"
+                      />
+                      <Button type="submit">Import</Button>
+                    </form>
+                    {importedRows && importedRows.length > 0 && (
+                      <form action={clearImportedHolidays}>
+                        <ConfirmButton label="Clear imported" confirmText={`Remove all ${importedRows.length} imported public holidays?`} />
+                      </form>
+                    )}
+                  </div>
+                </div>
+              ),
+            },
+          ]}
+        />
       </Section>
 
       <Section title={`School holidays (${holidays?.length ?? 0})`} flush>
@@ -92,26 +129,6 @@ export default async function HolidaysPage({
         <form action={removeHolidaySessions}>
           <ConfirmButton label="Remove holiday sessions" confirmText="Delete all upcoming scheduled sessions that fall on a holiday? This cannot be undone." />
         </form>
-      </Section>
-
-      <Section title="Import public holidays" description="Upload a CSV or Excel (.xlsx) with two columns: date (YYYY-MM-DD), name. Rows merge with the built-in list and override on matching dates.">
-        <div className="flex flex-wrap items-center gap-3">
-          <form action={importPublicHolidays} className="flex flex-wrap items-center gap-3">
-            <input
-              type="file"
-              name="file"
-              accept=".csv,.xlsx"
-              required
-              className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700"
-            />
-            <Button type="submit">Import</Button>
-          </form>
-          {importedRows && importedRows.length > 0 && (
-            <form action={clearImportedHolidays}>
-              <ConfirmButton label="Clear imported" confirmText={`Remove all ${importedRows.length} imported public holidays?`} />
-            </form>
-          )}
-        </div>
       </Section>
 
       {importedRows && importedRows.length > 0 && (

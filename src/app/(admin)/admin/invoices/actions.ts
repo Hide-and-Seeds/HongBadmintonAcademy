@@ -10,6 +10,8 @@ import { generateInvoicesCore } from "@/lib/billing";
 import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
 import { getMonthlySchedule } from "@/lib/settings";
 import { getBaseUrl } from "@/lib/url";
+import { getStripe } from "@/lib/payments/stripe";
+import { isStripeConfigured } from "@/lib/env";
 
 function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -84,6 +86,51 @@ export async function markPaid(formData: FormData) {
     });
   }
   revalidatePath("/admin/invoices");
+}
+
+// Cancel an unpaid/overdue/draft invoice (no money involved). Paid invoices must
+// be refunded instead.
+export async function cancelInvoice(formData: FormData) {
+  await requireRole("admin");
+  const id = String(formData.get("id"));
+  const supabase = await createClient();
+  const { data: inv } = await supabase.from("invoices").select("status").eq("id", id).maybeSingle();
+  if (!inv) err("/admin/invoices", "Invoice not found.");
+  if (inv.status === "paid") err("/admin/invoices", "Paid invoices can't be cancelled — use Refund.");
+  if (inv.status !== "canceled" && inv.status !== "refunded") {
+    await supabase.from("invoices").update({ status: "canceled" }).eq("id", id);
+  }
+  revalidatePath("/admin/invoices");
+}
+
+// Refund a PAID invoice. If it was paid via Stripe, return the money through
+// Stripe (refunds.create on the payment intent); the charge.refunded webhook
+// then records the refund + flips the invoice. For a manually-marked payment
+// there is no money to move — we just set the status to refunded.
+export async function refundInvoice(formData: FormData) {
+  await requireRole("admin");
+  const id = String(formData.get("id"));
+  const supabase = await createClient();
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select("status, stripe_payment_intent_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!inv) err("/admin/invoices", "Invoice not found.");
+  if (inv.status !== "paid") err("/admin/invoices", "Only paid invoices can be refunded.");
+
+  const pi = (inv as { stripe_payment_intent_id?: string | null }).stripe_payment_intent_id ?? null;
+  if (pi && isStripeConfigured()) {
+    try {
+      await getStripe().refunds.create({ payment_intent: pi });
+    } catch (e) {
+      err("/admin/invoices", `Stripe refund failed: ${(e as Error).message}`);
+    }
+  }
+  await supabase.from("invoices").update({ status: "refunded" }).eq("id", id);
+  await supabase.from("payments").update({ status: "refunded" }).eq("invoice_id", id).eq("status", "succeeded");
+  revalidatePath("/admin/invoices");
+  redirect(`/admin/invoices?refunded=${pi ? "stripe" : "manual"}`);
 }
 
 export async function deleteInvoice(formData: FormData) {
