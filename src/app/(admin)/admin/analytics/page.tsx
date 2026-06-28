@@ -82,7 +82,7 @@ export default async function AnalyticsPage({
       </div>
 
       {/* ── Money ─────────────────────────────────────────────────────────── */}
-      <Collapsible title="Money" defaultOpen>
+      <Collapsible title="Money" defaultOpen={false}>
         <div className="space-y-6 p-5">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatCard label="Billed" value={formatCurrency(a.collection.billed, a.currency)} />

@@ -1,8 +1,5 @@
-import { Section, Badge, cn } from "@/components/ui";
-import {
-  levelActiveClass, levelInkClass,
-  type TrainingLevel, type ExamSpec,
-} from "@/lib/training";
+import { Collapsible } from "@/components/ui";
+import type { TrainingLevel, ExamSpec } from "@/lib/training";
 
 // Read-only reference for the full HBA Training System: per-level curriculum +
 // the promotion-exam rubric between each level. Shared by the admin syllabus page
@@ -18,16 +15,17 @@ export function TrainingSyllabus({
   const levelName = (n: number) => nameByLevel.get(n) ?? "—";
   return (
     <div className="space-y-8">
-      <Section title="Level curriculum" description="What each level trains. Students progress 1 → 6 (Starter → Elite Team).">
-        <div className="space-y-5">
+      <div>
+        <h2 className="mb-1 text-sm font-semibold text-slate-900">Level curriculum</h2>
+        <p className="mb-3 text-xs text-slate-500">What each level trains. Students progress 1 → 6 (Starter → Elite Team). Tap a level to expand.</p>
+        <div className="space-y-2">
           {levels.map((lv) => (
-            <div key={lv.level} className="rounded-xl border border-slate-200 p-4">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold", levelActiveClass(lv.level))}>{lv.level}</span>
-                <span className={cn("text-base font-semibold", levelInkClass(lv.level))}>{lv.name}</span>
-                <span className="text-sm text-slate-400">{lv.objective}</span>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+            <Collapsible
+              key={lv.level}
+              defaultOpen={false}
+              title={`Level ${lv.level} · ${lv.name} — ${lv.objective}`}
+            >
+              <div className="grid gap-3 p-4 sm:grid-cols-2">
                 {lv.groups.map((g) => (
                   <div key={g.label}>
                     <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{g.label}</div>
@@ -37,24 +35,22 @@ export function TrainingSyllabus({
                   </div>
                 ))}
               </div>
-            </div>
+            </Collapsible>
           ))}
         </div>
-      </Section>
+      </div>
 
-      <Section title="Promotion exams" description="Each level jump is graded on a fixed 100-point rubric: Technical 40 · Footwork 25 · Game/Tactical 20 · Physical/Attitude 15. ≥ 70 promotes.">
-        <div className="space-y-5">
+      <div>
+        <h2 className="mb-1 text-sm font-semibold text-slate-900">Promotion exams</h2>
+        <p className="mb-3 text-xs text-slate-500">Each level jump is graded on a fixed 100-point rubric: Technical 40 · Footwork 25 · Game/Tactical 20 · Physical/Attitude 15. ≥ 70 promotes. Tap an exam to expand.</p>
+        <div className="space-y-2">
           {exams.map((spec) => (
-            <div key={spec.fromLevel} className="rounded-xl border border-slate-200 p-4">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-slate-900">{spec.title}</span>
-                {spec.review ? (
-                  <Badge tone="slate">Level {spec.fromLevel} · Elite review</Badge>
-                ) : (
-                  <Badge tone="blue">Level {spec.fromLevel} → {spec.toLevel} ({levelName(spec.toLevel)})</Badge>
-                )}
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+            <Collapsible
+              key={spec.fromLevel}
+              defaultOpen={false}
+              title={spec.review ? `${spec.title} · Level ${spec.fromLevel} Elite review` : `${spec.title} · Level ${spec.fromLevel} → ${spec.toLevel} (${levelName(spec.toLevel)})`}
+            >
+              <div className="grid gap-3 p-4 sm:grid-cols-2">
                 {spec.sections.map((sec) => (
                   <div key={sec.key}>
                     <div className="flex items-center justify-between">
@@ -80,10 +76,10 @@ export function TrainingSyllabus({
                   </div>
                 ))}
               </div>
-            </div>
+            </Collapsible>
           ))}
         </div>
-      </Section>
+      </div>
     </div>
   );
 }
