@@ -33,7 +33,7 @@ export default async function StudentProfilePage({
 
   const { data: student } = await supabase
     .from("students")
-    .select("*, parent:profiles!students_parent_id_fkey(full_name, phone)")
+    .select("*, parent:profiles!students_parent_id_fkey(full_name, phone), assigned_coach:profiles!students_coach_id_fkey(full_name)")
     .eq("id", id)
     .maybeSingle();
   if (!student) notFound();
@@ -92,9 +92,11 @@ export default async function StudentProfilePage({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Badge tone={student.status === "active" ? "green" : "slate"}>{student.status}</Badge>
+              {student.nickname && <span className="text-slate-500">“{student.nickname}”</span>}
               {classNames && <span>{classNames}</span>}
             </div>
             {student.parent?.full_name && <div>Parent: {student.parent.full_name}</div>}
+            {student.assigned_coach?.full_name && <div>Coach: {student.assigned_coach.full_name}</div>}
           </div>
         }
         action={

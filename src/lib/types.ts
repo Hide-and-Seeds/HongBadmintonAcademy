@@ -39,13 +39,16 @@ export interface Branch {
 export interface Student {
   id: string;
   full_name: string;
+  nickname: string | null;
   dob: string | null;
   gender: string | null;
   parent_id: string | null;
   fee_plan_id: string | null;
   branch_id: string | null;
+  coach_id: string | null;
   nfc_tag_uid: string | null;
   rank: string | null;
+  level: number | null;
   status: StudentStatus;
   photo_url: string | null;
   notes: string | null;

@@ -15,9 +15,10 @@ export default async function NewStudentPage({
   const { error } = await searchParams;
   const me = await requireRole("admin");
   const supabase = await createClient();
-  const [{ data: parents }, { data: plans }, branches] = await Promise.all([
+  const [{ data: parents }, { data: plans }, { data: coaches }, branches] = await Promise.all([
     supabase.from("profiles").select("id, full_name").eq("role", "parent").order("full_name"),
     supabase.from("fee_plans").select("id, name, amount, currency, interval").eq("is_active", true).order("name"),
+    supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name"),
     listBranches(),
   ]);
 
@@ -28,6 +29,7 @@ export default async function NewStudentPage({
         action={createStudent}
         parents={parents ?? []}
         plans={plans ?? []}
+        coaches={coaches ?? []}
         branches={branches}
         canChooseBranch={canChooseBranch(me)}
         defaultBranchId={me.branch_id}

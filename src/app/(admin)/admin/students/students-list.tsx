@@ -106,7 +106,7 @@ export async function StudentsList({
               <Link href={`/admin/students/${s.id}`} className="flex min-w-0 items-center gap-2.5">
                 <Avatar name={s.full_name} src={s.photo_url} size={36} className="flex-shrink-0" />
                 <span className="min-w-0">
-                  <span className="block truncate font-medium text-slate-900">{s.full_name}</span>
+                  <span className="block truncate font-medium text-slate-900">{s.full_name}{s.nickname ? <span className="font-normal text-slate-400"> · {s.nickname}</span> : null}</span>
                   <span className="block truncate text-xs text-slate-500">
                     {s.parent?.full_name ?? "No parent"} · {formatDate(s.dob)}
                     {showBranch ? ` · ${branchName.get(s.branch_id) ?? "—"}` : ""}
@@ -169,7 +169,7 @@ export async function StudentsList({
                   <Td>
                     <Link href={`/admin/students/${s.id}`} className="group flex items-center gap-3">
                       <Avatar name={s.full_name} src={s.photo_url} size={32} />
-                      <span className="font-medium text-slate-900 group-hover:text-green-700">{s.full_name}</span>
+                      <span className="font-medium text-slate-900 group-hover:text-green-700">{s.full_name}{s.nickname ? <span className="ml-1.5 font-normal text-slate-400">“{s.nickname}”</span> : null}</span>
                     </Link>
                   </Td>
                   <Td label="Level"><LevelPill level={levelOf(s)} /></Td>

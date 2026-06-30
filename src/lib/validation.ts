@@ -16,11 +16,13 @@ const requiredId = z.string().trim().min(1, "Required");
 
 export const studentSchema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
+  nickname: optionalStr,
   dob: optionalStr,
   gender: optionalStr,
   parent_id: optionalId,
   fee_plan_id: optionalId,
   branch_id: optionalId,
+  coach_id: optionalId,
   nfc_tag_uid: optionalStr,
   status: z.enum(["active", "inactive"]).default("active"),
   notes: optionalStr,

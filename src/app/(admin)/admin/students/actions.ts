@@ -16,6 +16,12 @@ function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
+// Clamp a form level field to the 1–6 ladder (default 1).
+function clampLevel(v: FormDataEntryValue | null): number {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.min(6, Math.max(1, n)) : 1;
+}
+
 function revalidateRank(id: string) {
   revalidatePath(`/admin/students/${id}`);
   revalidatePath("/admin/people");
@@ -53,7 +59,8 @@ export async function createStudent(formData: FormData) {
   // Branch is stamped authoritatively: a branch-admin can only create in their
   // own branch; a super-admin uses the chosen one (RLS also enforces this).
   const branch_id = resolveWriteBranch(me, parsed.data.branch_id);
-  const { data: created, error } = await supabase.from("students").insert({ ...parsed.data, branch_id }).select("id").single();
+  const level = clampLevel(formData.get("level"));
+  const { data: created, error } = await supabase.from("students").insert({ ...parsed.data, branch_id, level }).select("id").single();
   if (error) err("/admin/students/new", error.message);
 
   const photo = formData.get("photo");
@@ -74,7 +81,15 @@ export async function updateStudent(formData: FormData) {
   if (!parsed.success) err(`/admin/students/${id}`, parsed.error.issues[0].message);
 
   const supabase = await createClient();
-  const update: Record<string, unknown> = { ...parsed.data, branch_id: resolveWriteBranch(me, parsed.data.branch_id) };
+  const { data: before } = await supabase.from("students").select("level").eq("id", id).maybeSingle();
+  const oldLevel = Number((before as any)?.level ?? 1);
+  const newLevel = clampLevel(formData.get("level"));
+
+  const update: Record<string, unknown> = {
+    ...parsed.data,
+    branch_id: resolveWriteBranch(me, parsed.data.branch_id),
+    level: newLevel,
+  };
   const photo = formData.get("photo");
   if (photo instanceof File && photo.size > 0) {
     const url = await uploadStudentPhoto(id, photo);
@@ -82,6 +97,15 @@ export async function updateStudent(formData: FormData) {
   }
   const { error } = await supabase.from("students").update(update).eq("id", id);
   if (error) err(`/admin/students/${id}`, error.message);
+
+  // An admin editing the level directly is a real promotion/correction — log it
+  // to rank_events (level NAMES) and, on an increase, notify the parent.
+  if (newLevel !== oldLevel) {
+    try {
+      await recordRankChange(createAdminClient(), { student_id: id, from: levelName(oldLevel), to: levelName(newLevel) });
+      if (newLevel > oldLevel) await sendRankUpNotice(id, `Level ${newLevel} · ${levelName(newLevel)}`);
+    } catch { /* never block the edit on a notify/log failure */ }
+  }
 
   revalidatePath("/admin/students");
   redirect("/admin/students");
