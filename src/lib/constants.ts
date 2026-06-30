@@ -9,7 +9,8 @@ export const APP_SHORT = "HBA";
 export const PAGE_SIZE = 25;
 
 export const ROLE_LABEL: Record<string, string> = {
-  admin: "Administrator",
+  super_admin: "Super admin",
+  admin: "Branch admin",
   coach: "Coach",
   parent: "Parent",
 };
@@ -17,6 +18,8 @@ export const ROLE_LABEL: Record<string, string> = {
 export interface NavItem {
   href: string;
   label: string;
+  // Only super-admins see this item (branches, staff, settings, fee plans).
+  superOnly?: boolean;
 }
 
 // Admin sidebar — frequent sections first; occasional tools tucked under "More".
@@ -49,7 +52,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/collections", label: "Collections" },
       { href: "/admin/announce", label: "Announcements" },
       { href: "/admin/messages", label: "WhatsApp Log" },
-      { href: "/admin/fee-plans", label: "Fee Plans" },
+      { href: "/admin/fee-plans", label: "Fee Plans", superOnly: true },
     ],
   },
   {
@@ -58,7 +61,14 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/analytics", label: "Analytics" },
       { href: "/admin/reports", label: "Reports & Export" },
       { href: "/admin/holidays", label: "Holidays" },
-      { href: "/admin/settings", label: "Settings" },
+      { href: "/admin/settings", label: "Settings", superOnly: true },
+    ],
+  },
+  {
+    group: "Organization",
+    items: [
+      { href: "/admin/branches", label: "Branches", superOnly: true },
+      { href: "/admin/staff", label: "Staff & Admins", superOnly: true },
     ],
   },
 ];

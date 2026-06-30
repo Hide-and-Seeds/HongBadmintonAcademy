@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireSuperAdmin } from "@/lib/auth";
 import { feePlanSchema } from "@/lib/validation";
 import { isStripeConfigured } from "@/lib/env";
 import { syncFeePlanToStripe } from "@/lib/payments/stripe";
@@ -12,6 +13,7 @@ function err(path: string, message: string): never {
 }
 
 export async function createFeePlan(formData: FormData) {
+  await requireSuperAdmin();
   const parsed = feePlanSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) err("/admin/fee-plans/new", parsed.error.issues[0].message);
   const supabase = await createClient();
@@ -22,6 +24,7 @@ export async function createFeePlan(formData: FormData) {
 }
 
 export async function updateFeePlan(formData: FormData) {
+  await requireSuperAdmin();
   const id = String(formData.get("id"));
   const parsed = feePlanSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) err(`/admin/fee-plans/${id}`, parsed.error.issues[0].message);
@@ -33,6 +36,7 @@ export async function updateFeePlan(formData: FormData) {
 }
 
 export async function deleteFeePlan(formData: FormData) {
+  await requireSuperAdmin();
   const id = String(formData.get("id"));
   const supabase = await createClient();
   await supabase.from("fee_plans").delete().eq("id", id);
@@ -42,6 +46,7 @@ export async function deleteFeePlan(formData: FormData) {
 // Mirror every active fee plan into the Stripe product/price catalog and store
 // the resulting ids. Idempotent — re-running refreshes products + adds a price.
 export async function syncFeePlansToStripe() {
+  await requireSuperAdmin();
   if (!isStripeConfigured()) err("/admin/fee-plans", "Stripe is not configured (set STRIPE_SECRET_KEY).");
   const supabase = await createClient();
   const { data: plans, error } = await supabase

@@ -1,7 +1,7 @@
 // App-facing row types. (Full generated types can be produced later with
 // `npm run db:types` once the schema is pushed to a project.)
 
-export type Role = "admin" | "coach" | "parent";
+export type Role = "super_admin" | "admin" | "coach" | "parent";
 export type StudentStatus = "active" | "inactive";
 export type SessionStatus = "scheduled" | "in_progress" | "completed" | "canceled";
 export type AttendanceStatus = "present" | "late" | "absent" | "excused";
@@ -21,7 +21,18 @@ export interface Profile {
   phone: string | null;
   avatar_url: string | null;
   is_active: boolean;
+  branch_id: string | null;
   stripe_customer_id: string | null;
+  created_at: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  code: string | null;
+  address: string | null;
+  phone: string | null;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -32,6 +43,7 @@ export interface Student {
   gender: string | null;
   parent_id: string | null;
   fee_plan_id: string | null;
+  branch_id: string | null;
   nfc_tag_uid: string | null;
   rank: string | null;
   status: StudentStatus;
@@ -46,6 +58,7 @@ export interface ClassRow {
   level: string | null;
   description: string | null;
   coach_id: string | null;
+  branch_id: string | null;
   default_location: string | null;
   capacity: number | null;
   is_active: boolean;
@@ -69,6 +82,7 @@ export interface SessionRow {
   start_time: string;
   end_time: string;
   location: string | null;
+  branch_id: string | null;
   status: SessionStatus;
   grace_minutes: number;
 }
@@ -119,6 +133,7 @@ export interface Invoice {
   invoice_no: string | null;
   student_id: string | null;
   parent_id: string | null;
+  branch_id: string | null;
   description: string | null;
   amount: number;
   currency: string;

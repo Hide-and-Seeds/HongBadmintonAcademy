@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import { resolveWriteBranch } from "@/lib/branch";
 import { classSchema, scheduleSchema } from "@/lib/validation";
 import { loadHolidayMap } from "@/lib/holidays-server";
 
@@ -21,21 +23,27 @@ function revalidateSchedule(class_id: string) {
 }
 
 export async function createClass(formData: FormData) {
+  const me = await requireRole("admin");
   const parsed = classSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) err("/admin/classes/new", parsed.error.issues[0].message);
   const supabase = await createClient();
-  const { data, error } = await supabase.from("classes").insert(parsed.data).select("id").single();
+  const branch_id = resolveWriteBranch(me, parsed.data.branch_id);
+  const { data, error } = await supabase.from("classes").insert({ ...parsed.data, branch_id }).select("id").single();
   if (error) err("/admin/classes/new", error.message);
   revalidatePath("/admin/classes");
   redirect(`/admin/classes/${data!.id}`);
 }
 
 export async function updateClass(formData: FormData) {
+  const me = await requireRole("admin");
   const id = String(formData.get("id"));
   const parsed = classSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) err(`/admin/classes/${id}`, parsed.error.issues[0].message);
   const supabase = await createClient();
-  const { error } = await supabase.from("classes").update(parsed.data).eq("id", id);
+  const { error } = await supabase
+    .from("classes")
+    .update({ ...parsed.data, branch_id: resolveWriteBranch(me, parsed.data.branch_id) })
+    .eq("id", id);
   if (error) err(`/admin/classes/${id}`, error.message);
   revalidatePath(`/admin/classes/${id}`);
   redirect("/admin/classes");
@@ -148,11 +156,11 @@ export async function generateSessions(formData: FormData) {
   const class_id = String(formData.get("class_id"));
   const supabase = await createClient();
 
-  const { data: schedules } = await supabase
-    .from("class_schedules")
-    .select("*")
-    .eq("class_id", class_id)
-    .eq("is_active", true);
+  const [{ data: schedules }, { data: cls }] = await Promise.all([
+    supabase.from("class_schedules").select("*").eq("class_id", class_id).eq("is_active", true),
+    supabase.from("classes").select("branch_id").eq("id", class_id).maybeSingle(),
+  ]);
+  const branch_id = (cls as any)?.branch_id ?? null;
 
   if (!schedules || schedules.length === 0) {
     err(`/admin/classes/${class_id}`, "Add a schedule first");
@@ -181,6 +189,7 @@ export async function generateSessions(formData: FormData) {
           end_time: s.end_time,
           location: s.location,
           grace_minutes: s.grace_minutes,
+          branch_id,
           status: "scheduled",
         });
       }

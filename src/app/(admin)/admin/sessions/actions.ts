@@ -26,7 +26,12 @@ export async function createSession(formData: FormData) {
   if (!parsed.success) redirect(`${back}${sep}error=${encodeURIComponent(parsed.error.issues[0].message)}`);
 
   const supabase = await createClient();
-  const { error } = await supabase.from("sessions").insert({ ...parsed.data, status: "scheduled" });
+  // Inherit the branch from the parent class (RLS also requires the caller to be
+  // allowed in that class's branch).
+  const { data: cls } = await supabase.from("classes").select("branch_id").eq("id", parsed.data.class_id).maybeSingle();
+  const { error } = await supabase
+    .from("sessions")
+    .insert({ ...parsed.data, branch_id: (cls as any)?.branch_id ?? null, status: "scheduled" });
   if (error) {
     const msg = error.code === "23505" ? "A session for that class already exists at that date & time." : error.message;
     redirect(`${back}${sep}error=${encodeURIComponent(msg)}`);

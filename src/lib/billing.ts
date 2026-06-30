@@ -37,7 +37,7 @@ export async function generateInvoicesCore(
   const { data: students, error } = await db
     .from("students")
     .select(
-      "id, parent_id, fee_plan_id, fee_plan:fee_plans!students_fee_plan_id_fkey(amount, currency, interval, is_active)",
+      "id, parent_id, fee_plan_id, branch_id, fee_plan:fee_plans!students_fee_plan_id_fkey(amount, currency, interval, is_active)",
     )
     .eq("status", "active")
     .not("fee_plan_id", "is", null);
@@ -116,6 +116,7 @@ export async function generateInvoicesCore(
       student_id: s.id,
       parent_id: (s as any).parent_id,
       fee_plan_id: (s as any).fee_plan_id,
+      branch_id: (s as any).branch_id ?? null,
       amount,
       currency: plan.currency,
       period_month: period,

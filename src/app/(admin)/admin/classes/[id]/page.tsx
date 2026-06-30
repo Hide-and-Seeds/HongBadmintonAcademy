@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import { listBranches, canChooseBranch } from "@/lib/branch";
 import {
   PageHeader, Section, Field, Input, Select, Button, Badge,
   Table, Th, Td, EmptyState, LinkButton,
@@ -26,7 +28,9 @@ export default async function ManageClassPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
+  const me = await requireRole("admin");
   const supabase = await createClient();
+  const branches = await listBranches();
   const today = new Date().toLocaleDateString("en-CA");
 
   const [
@@ -72,7 +76,14 @@ export default async function ManageClassPage({
       />
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
-      <ClassForm action={updateClass} classRow={classRow} coaches={coaches ?? []} />
+      <ClassForm
+        action={updateClass}
+        classRow={classRow}
+        coaches={coaches ?? []}
+        branches={branches}
+        canChooseBranch={canChooseBranch(me)}
+        defaultBranchId={me.branch_id}
+      />
 
       {/* Schedule */}
       <Section title="Weekly schedule" flush>

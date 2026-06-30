@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import { listBranches, canChooseBranch } from "@/lib/branch";
 import { PageHeader } from "@/components/ui";
 import { ClassForm } from "../class-form";
 import { createClass } from "../actions";
@@ -11,17 +13,24 @@ export default async function NewClassPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const me = await requireRole("admin");
   const supabase = await createClient();
-  const { data: coaches } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .eq("role", "coach")
-    .order("full_name");
+  const [{ data: coaches }, branches] = await Promise.all([
+    supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name"),
+    listBranches(),
+  ]);
 
   return (
     <div>
       <PageHeader title="New class" />
-      <ClassForm action={createClass} coaches={coaches ?? []} error={error} />
+      <ClassForm
+        action={createClass}
+        coaches={coaches ?? []}
+        branches={branches}
+        canChooseBranch={canChooseBranch(me)}
+        defaultBranchId={me.branch_id}
+        error={error}
+      />
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Feather, Calendar, CalendarDays, CalendarOff, CreditCard, TrendingUp, UserCheck, ClipboardCheck, Banknote, Tablet, LayoutGrid, Users, GraduationCap, Trophy, Award, Medal, BookOpen, Megaphone, MessageCircle, Tag, BarChart3, FileText, Settings } from "lucide-react";
+import { Home, Feather, Calendar, CalendarDays, CalendarOff, CreditCard, TrendingUp, UserCheck, ClipboardCheck, Banknote, Tablet, LayoutGrid, Users, GraduationCap, Trophy, Award, Medal, BookOpen, Megaphone, MessageCircle, Tag, BarChart3, FileText, Settings, Building2, ShieldCheck } from "lucide-react";
 import { Avatar, cn } from "@/components/ui";
 import { SignOutButton } from "@/components/sign-out-button";
 import { APP_SHORT, ROLE_LABEL, type NavItem } from "@/lib/constants";
@@ -42,6 +42,8 @@ function navIcon(href: string) {
   if (href.includes("analytics")) return BarChart3;
   if (href.includes("reports")) return FileText;
   if (href.includes("holidays")) return CalendarOff;
+  if (href.includes("branches")) return Building2;
+  if (href.includes("staff")) return ShieldCheck;
   if (href.includes("settings")) return Settings;
   if (href.includes("kiosk")) return Tablet;
   if (href.includes("checkin")) return UserCheck;

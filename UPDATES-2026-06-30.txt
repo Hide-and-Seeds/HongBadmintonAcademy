@@ -1,0 +1,46 @@
+HONG BADMINTON ACADEMY — UPDATE 2026-06-30
+Phase 0 of the big upgrade: Branches + Super Admin
+
+WHAT'S NEW
+==========
+
+1. BRANCHES (multiple locations)
+   - The system now supports more than one branch/location.
+   - Every student, class, session and invoice belongs to a branch.
+   - All your current data was moved into a starter branch called "Main"
+     (nothing was lost — it all still shows exactly as before).
+   - New "Branches" screen (super admin only) to add/rename/activate
+     branches and see how many students, classes and staff each one has.
+
+2. TWO LEVELS OF ADMIN
+   - SUPER ADMIN — sees and controls the WHOLE academy across all branches.
+     Only a super admin can:
+       • add/remove admins and staff
+       • create and manage branches
+       • change WhatsApp/automation settings
+       • refund payments and edit fee-plan prices
+       • view academy-wide finances and every branch
+   - BRANCH ADMIN — runs ONE branch day-to-day. They only see their own
+     branch's students, classes, sessions and invoices. They can still do
+     all the everyday work (add students, take attendance, run classes,
+     raise invoices, mark paid, cancel unpaid invoices, exams, etc.).
+   - Your existing login was upgraded to SUPER ADMIN automatically.
+
+3. NEW "STAFF & ADMINS" SCREEN (super admin only)
+   - Create a branch admin, another super admin, or a coach — and assign
+     them to a branch — from one place.
+
+HOW IT KEEPS DATA SAFE
+======================
+   - A branch admin physically cannot load another branch's students,
+     classes, sessions or payments — it's enforced at the database, not
+     just hidden in the screen.
+   - Money-out actions (refunds) and academy-wide settings are locked to
+     super admin.
+
+WHAT'S NEXT (still to come in this upgrade)
+===========================================
+   - A branch switcher so a super admin can focus on one branch at a time.
+   - Branch column/filter on the big list screens.
+   - Then: student nicknames + assigned coach, coach check-in tracking,
+     parent leave & make-up classes, monthly report, and more.

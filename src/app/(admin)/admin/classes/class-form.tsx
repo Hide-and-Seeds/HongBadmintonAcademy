@@ -7,12 +7,18 @@ export function ClassForm({
   action,
   classRow,
   coaches,
+  branches,
+  canChooseBranch,
+  defaultBranchId,
   error,
   submitLabel,
 }: {
   action: (formData: FormData) => void;
   classRow?: ClassRow;
   coaches: { id: string; full_name: string | null }[];
+  branches?: { id: string; name: string }[];
+  canChooseBranch?: boolean;
+  defaultBranchId?: string | null;
   error?: string;
   submitLabel?: string;
 }) {
@@ -47,6 +53,16 @@ export function ClassForm({
               ))}
             </Select>
           </Field>
+          {canChooseBranch && (
+            <Field label="Branch" required hint="Which location runs this class.">
+              <Select name="branch_id" defaultValue={classRow?.branch_id ?? defaultBranchId ?? ""} required>
+                <option value="">— select —</option>
+                {(branches ?? []).map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </Select>
+            </Field>
+          )}
           <Field label="Default location">
             <Input name="default_location" defaultValue={classRow?.default_location ?? ""} />
           </Field>

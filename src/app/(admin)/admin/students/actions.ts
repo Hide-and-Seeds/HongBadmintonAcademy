@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
+import { resolveWriteBranch } from "@/lib/branch";
 import { studentSchema } from "@/lib/validation";
 import { levelName } from "@/lib/training";
 import { sendRankUpNotice } from "@/lib/reminders";
@@ -43,13 +44,16 @@ export async function promoteStudent(formData: FormData) {
 }
 
 export async function createStudent(formData: FormData) {
-  await requireRole("admin");
+  const me = await requireRole("admin");
   const raw = Object.fromEntries(formData);
   const parsed = studentSchema.safeParse(raw);
   if (!parsed.success) err("/admin/students/new", parsed.error.issues[0].message);
 
   const supabase = await createClient();
-  const { data: created, error } = await supabase.from("students").insert(parsed.data).select("id").single();
+  // Branch is stamped authoritatively: a branch-admin can only create in their
+  // own branch; a super-admin uses the chosen one (RLS also enforces this).
+  const branch_id = resolveWriteBranch(me, parsed.data.branch_id);
+  const { data: created, error } = await supabase.from("students").insert({ ...parsed.data, branch_id }).select("id").single();
   if (error) err("/admin/students/new", error.message);
 
   const photo = formData.get("photo");
@@ -63,14 +67,14 @@ export async function createStudent(formData: FormData) {
 }
 
 export async function updateStudent(formData: FormData) {
-  await requireRole("admin");
+  const me = await requireRole("admin");
   const id = String(formData.get("id"));
   const raw = Object.fromEntries(formData);
   const parsed = studentSchema.safeParse(raw);
   if (!parsed.success) err(`/admin/students/${id}`, parsed.error.issues[0].message);
 
   const supabase = await createClient();
-  const update: Record<string, unknown> = { ...parsed.data };
+  const update: Record<string, unknown> = { ...parsed.data, branch_id: resolveWriteBranch(me, parsed.data.branch_id) };
   const photo = formData.get("photo");
   if (photo instanceof File && photo.size > 0) {
     const url = await uploadStudentPhoto(id, photo);

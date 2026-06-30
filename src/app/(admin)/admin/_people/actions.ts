@@ -4,9 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireSuperAdmin } from "@/lib/auth";
 import { profileSchema } from "@/lib/validation";
 import type { Role } from "@/lib/types";
+
+// Parents are day-to-day records (branch-admin may manage them); coaches/admins
+// are staff lifecycle → super-admin only.
+async function guardForRole(role: Role) {
+  if (role === "parent") await requireRole("admin");
+  else await requireSuperAdmin();
+}
 import { createLoginToken } from "@/lib/parent-auth";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
@@ -33,7 +40,7 @@ export async function unlinkChild(formData: FormData) {
 // Create a coach/parent = create the auth user (service role). The
 // on_auth_user_created trigger then inserts the matching profile row.
 export async function createPerson(role: Role, formData: FormData) {
-  await requireRole("admin");
+  await guardForRole(role);
   const base = basePath(role);
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) err(`${base}/new`, parsed.error.issues[0].message);
@@ -41,7 +48,7 @@ export async function createPerson(role: Role, formData: FormData) {
   if (!password) err(`${base}/new`, "Password is required for a new account");
 
   const db = createAdminClient();
-  const { error } = await db.auth.admin.createUser({
+  const { data: created, error } = await db.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
@@ -49,12 +56,47 @@ export async function createPerson(role: Role, formData: FormData) {
   });
   if (error) err(`${base}/new`, error.message);
 
+  // Coaches can be assigned a home branch from the form (parents have none).
+  const branchId = String(formData.get("branch_id") ?? "").trim() || null;
+  if (created?.user?.id && branchId && role !== "parent") {
+    await db.from("profiles").update({ branch_id: branchId }).eq("id", created.user.id);
+  }
+
   revalidatePath(base);
   redirect(base);
 }
 
+// Super-admin: create an admin / branch-admin / coach with a role + branch
+// chosen on the Staff page. A super-admin row is cross-branch (branch null).
+export async function createStaff(formData: FormData) {
+  await requireSuperAdmin();
+  const roleRaw = String(formData.get("role") ?? "admin");
+  const role: Role = roleRaw === "super_admin" ? "super_admin" : roleRaw === "coach" ? "coach" : "admin";
+  const parsed = profileSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) err("/admin/staff/new", parsed.error.issues[0].message);
+  const { full_name, email, phone, password } = parsed.data;
+  if (!password) err("/admin/staff/new", "Password is required for a new account");
+
+  const db = createAdminClient();
+  const { data: created, error } = await db.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name, phone, role },
+  });
+  if (error) err("/admin/staff/new", error.message);
+
+  const branchId = String(formData.get("branch_id") ?? "").trim() || null;
+  if (created?.user?.id) {
+    await db.from("profiles").update({ branch_id: role === "super_admin" ? null : branchId }).eq("id", created.user.id);
+  }
+
+  revalidatePath("/admin/staff");
+  redirect("/admin/staff");
+}
+
 export async function updatePerson(role: Role, formData: FormData) {
-  await requireRole("admin");
+  await guardForRole(role);
   const base = basePath(role);
   const id = String(formData.get("id"));
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
@@ -62,10 +104,11 @@ export async function updatePerson(role: Role, formData: FormData) {
   const { full_name, phone, password } = parsed.data;
 
   const db = createAdminClient();
-  const { error } = await db
-    .from("profiles")
-    .update({ full_name, phone })
-    .eq("id", id);
+  const update: Record<string, unknown> = { full_name, phone };
+  // Coaches/staff can be reassigned a branch from the edit form.
+  const branchRaw = formData.get("branch_id");
+  if (branchRaw !== null && role !== "parent") update.branch_id = String(branchRaw).trim() || null;
+  const { error } = await db.from("profiles").update(update).eq("id", id);
   if (error) err(`${base}/${id}`, error.message);
 
   // Optional password reset
@@ -79,7 +122,7 @@ export async function updatePerson(role: Role, formData: FormData) {
 }
 
 export async function deletePerson(role: Role, formData: FormData) {
-  await requireRole("admin");
+  await guardForRole(role);
   const id = String(formData.get("id"));
   const db = createAdminClient();
   await db.auth.admin.deleteUser(id); // cascades to profile
@@ -87,7 +130,7 @@ export async function deletePerson(role: Role, formData: FormData) {
 }
 
 export async function deletePeople(role: Role, formData: FormData) {
-  await requireRole("admin");
+  await guardForRole(role);
   const ids = formData.getAll("ids").map(String);
   if (!ids.length) return;
   const db = createAdminClient();

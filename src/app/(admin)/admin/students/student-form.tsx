@@ -10,12 +10,18 @@ export function StudentForm({
   student,
   parents,
   plans,
+  branches,
+  canChooseBranch,
+  defaultBranchId,
   error,
 }: {
   action: (formData: FormData) => void;
   student?: Student;
   parents: { id: string; full_name: string | null }[];
   plans: { id: string; name: string; amount: number; currency: string; interval: string }[];
+  branches?: { id: string; name: string }[];
+  canChooseBranch?: boolean;
+  defaultBranchId?: string | null;
   error?: string;
 }) {
   return (
@@ -42,6 +48,17 @@ export function StudentForm({
             <Input name="gender" defaultValue={student?.gender ?? ""} placeholder="M / F" />
           </Field>
         </div>
+
+        {canChooseBranch && (
+          <Field label="Branch" required hint="Which location this student attends.">
+            <Select name="branch_id" defaultValue={student?.branch_id ?? defaultBranchId ?? ""} required>
+              <option value="">— select —</option>
+              {(branches ?? []).map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </Select>
+          </Field>
+        )}
 
         <Field label="Parent">
           <Select name="parent_id" defaultValue={student?.parent_id ?? ""}>

@@ -20,6 +20,7 @@ export const studentSchema = z.object({
   gender: optionalStr,
   parent_id: optionalId,
   fee_plan_id: optionalId,
+  branch_id: optionalId,
   nfc_tag_uid: optionalStr,
   status: z.enum(["active", "inactive"]).default("active"),
   notes: optionalStr,
@@ -40,6 +41,7 @@ export const classSchema = z.object({
   ),
   description: optionalStr,
   coach_id: optionalId,
+  branch_id: optionalId,
   default_location: optionalStr,
   capacity: z.coerce.number().int().positive().optional().nullable().or(z.literal("")).transform((v) => (v === "" ? null : v)),
 });

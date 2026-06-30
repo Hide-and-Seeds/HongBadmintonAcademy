@@ -23,21 +23,37 @@ export async function getProfile(): Promise<Profile | null> {
   return (data as Profile) ?? null;
 }
 
+// super_admin is a strict superset of admin — it satisfies every "admin" gate.
+export function isAdminRole(role: Role): boolean {
+  return role === "admin" || role === "super_admin";
+}
+
 // Default landing path for a role.
 export function homeForRole(role: Role): string {
-  return role === "admin" ? "/admin" : role === "coach" ? "/coach" : "/parent";
+  return isAdminRole(role) ? "/admin" : role === "coach" ? "/coach" : "/parent";
 }
 
 // Guard a page to one or more roles. Redirects to /login when signed out, or to
-// the user's own home when their role isn't allowed.
+// the user's own home when their role isn't allowed. A page that allows "admin"
+// implicitly allows "super_admin" too (super = admin++).
 export async function requireRole(
   allowed: Role | Role[],
 ): Promise<Profile> {
   const profile = await getProfile();
   if (!profile) redirect("/login");
 
-  const roles = Array.isArray(allowed) ? allowed : [allowed];
+  const roles = Array.isArray(allowed) ? [...allowed] : [allowed];
+  if (roles.includes("admin") && !roles.includes("super_admin")) roles.push("super_admin");
   if (!roles.includes(profile.role)) redirect(homeForRole(profile.role));
 
+  return profile;
+}
+
+// Guard a super-admin-only page or action (branches, staff, settings, refunds,
+// fee-plan pricing). Redirects a plain admin/coach/parent back to their home.
+export async function requireSuperAdmin(): Promise<Profile> {
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "super_admin") redirect(homeForRole(profile.role));
   return profile;
 }

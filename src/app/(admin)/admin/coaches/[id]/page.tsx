@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { listBranches } from "@/lib/branch";
 import { PageHeader, Section, StatCard, Badge, EmptyState, LinkButton } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
 import { PersonForm } from "../../_people/person-form";
@@ -94,6 +95,8 @@ export default async function EditCoachPage({
         role="coach"
         person={person}
         action={updatePerson.bind(null, "coach")}
+        branches={await listBranches()}
+        showBranch
         error={error}
       />
     </div>

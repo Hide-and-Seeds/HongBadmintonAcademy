@@ -10,9 +10,15 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const profile = await requireRole("admin");
+  // Branch-admins don't see super-only items (branches, staff, settings, fee
+  // plans); empty groups (e.g. Organization) drop out entirely.
+  const isSuper = profile.role === "super_admin";
+  const groups = ADMIN_NAV
+    .map((g) => ({ ...g, items: g.items.filter((i) => isSuper || !i.superOnly) }))
+    .filter((g) => g.items.length > 0);
   return (
     <AppShell
-      groups={ADMIN_NAV}
+      groups={groups}
       role={profile.role}
       name={profile.full_name ?? profile.email ?? "Admin"}
       accountHref="/admin/account"

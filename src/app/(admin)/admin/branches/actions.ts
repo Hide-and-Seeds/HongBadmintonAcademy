@@ -1,0 +1,81 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { requireSuperAdmin } from "@/lib/auth";
+
+function err(message: string): never {
+  redirect(`/admin/branches?error=${encodeURIComponent(message)}`);
+}
+
+const clean = (v: FormDataEntryValue | null) => {
+  const s = String(v ?? "").trim();
+  return s ? s : null;
+};
+
+export async function createBranch(formData: FormData) {
+  await requireSuperAdmin();
+  const name = clean(formData.get("name"));
+  if (!name) err("Branch name is required.");
+  const supabase = await createClient();
+  const { error } = await supabase.from("branches").insert({
+    name,
+    code: clean(formData.get("code")),
+    address: clean(formData.get("address")),
+    phone: clean(formData.get("phone")),
+  });
+  if (error) err(error.message);
+  revalidatePath("/admin/branches");
+  redirect("/admin/branches?saved=1");
+}
+
+export async function updateBranch(formData: FormData) {
+  await requireSuperAdmin();
+  const id = String(formData.get("id"));
+  const name = clean(formData.get("name"));
+  if (!name) err("Branch name is required.");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("branches")
+    .update({
+      name,
+      code: clean(formData.get("code")),
+      address: clean(formData.get("address")),
+      phone: clean(formData.get("phone")),
+    })
+    .eq("id", id);
+  if (error) err(error.message);
+  revalidatePath("/admin/branches");
+  redirect("/admin/branches?saved=1");
+}
+
+export async function toggleBranch(formData: FormData) {
+  await requireSuperAdmin();
+  const id = String(formData.get("id"));
+  const active = formData.get("active") === "true";
+  const supabase = await createClient();
+  await supabase.from("branches").update({ is_active: active }).eq("id", id);
+  revalidatePath("/admin/branches");
+}
+
+// Hard-delete a branch. The branch_id FKs are ON DELETE SET NULL, so members
+// aren't destroyed — they fall back to "no branch" (visible to all admins until
+// reassigned). Blocked while the branch still has members so it isn't silently
+// orphaning a live branch; deactivate instead.
+export async function deleteBranch(formData: FormData) {
+  await requireSuperAdmin();
+  const id = String(formData.get("id"));
+  const supabase = await createClient();
+  const [{ count: students }, { count: classes }, { count: staff }] = await Promise.all([
+    supabase.from("students").select("*", { count: "exact", head: true }).eq("branch_id", id),
+    supabase.from("classes").select("*", { count: "exact", head: true }).eq("branch_id", id),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("branch_id", id),
+  ]);
+  if ((students ?? 0) + (classes ?? 0) + (staff ?? 0) > 0) {
+    err("That branch still has members — reassign or deactivate it first.");
+  }
+  await supabase.from("branches").delete().eq("id", id);
+  revalidatePath("/admin/branches");
+  redirect("/admin/branches?saved=1");
+}

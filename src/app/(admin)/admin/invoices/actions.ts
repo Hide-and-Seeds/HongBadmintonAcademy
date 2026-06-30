@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireSuperAdmin } from "@/lib/auth";
 import { invoiceSchema } from "@/lib/validation";
 import { generateInvoicesCore } from "@/lib/billing";
 import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
@@ -24,18 +24,23 @@ export async function createInvoice(formData: FormData) {
   const supabase = await createClient();
 
   let parentId = parsed.data.parent_id;
-  if (!parentId && parsed.data.student_id) {
+  // Inherit branch (and parent if unset) from the student so the invoice is
+  // branch-scoped like everything else.
+  let branchId: string | null = null;
+  if (parsed.data.student_id) {
     const { data: s } = await supabase
       .from("students")
-      .select("parent_id")
+      .select("parent_id, branch_id")
       .eq("id", parsed.data.student_id)
       .maybeSingle();
-    parentId = s?.parent_id ?? null;
+    if (!parentId) parentId = s?.parent_id ?? null;
+    branchId = (s as any)?.branch_id ?? null;
   }
 
   const { error } = await supabase.from("invoices").insert({
     ...parsed.data,
     parent_id: parentId,
+    branch_id: branchId,
     period_month: new Date().toLocaleDateString("en-CA").slice(0, 8) + "01",
   });
   if (error) err("/admin/invoices/new", error.message);
@@ -108,7 +113,8 @@ export async function cancelInvoice(formData: FormData) {
 // then records the refund + flips the invoice. For a manually-marked payment
 // there is no money to move — we just set the status to refunded.
 export async function refundInvoice(formData: FormData) {
-  await requireRole("admin");
+  // Money out — super-admin only.
+  await requireSuperAdmin();
   const id = String(formData.get("id"));
   const supabase = await createClient();
   const { data: inv } = await supabase

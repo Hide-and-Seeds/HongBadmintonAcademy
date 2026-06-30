@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/auth";
 import { PageHeader, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { isWorkerPaused, getMonthlySchedule } from "@/lib/settings";
@@ -15,7 +15,7 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
-  await requireRole("admin");
+  await requireSuperAdmin();
   const { error, saved } = await searchParams;
   const paused = await isWorkerPaused();
   const schedule = await getMonthlySchedule();
