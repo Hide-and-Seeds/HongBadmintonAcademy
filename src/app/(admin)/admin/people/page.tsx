@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireRole } from "@/lib/auth";
 import { PageHeader, LinkButton, cn } from "@/components/ui";
 import { FilterSelect, FilterSearch } from "@/components/filter-controls";
 import { CLASS_RANKS } from "@/lib/ranks";
@@ -31,6 +32,8 @@ export default async function DirectoryPage({
   }>;
 }) {
   const { tab, q, status, rank, sort, dir, page } = await searchParams;
+  const me = await requireRole("admin");
+  const isSuper = me.role === "super_admin";
   const active: Tab = TABS.some((t) => t.key === tab) ? (tab as Tab) : "students";
 
   const statusFilter = status === "active" || status === "inactive" ? status : "";
@@ -44,9 +47,10 @@ export default async function DirectoryPage({
       <LinkButton href="/admin/students/new">+ New student</LinkButton>
     ) : active === "parents" ? (
       <LinkButton href="/admin/parents/new">+ New parent</LinkButton>
-    ) : (
+    ) : isSuper ? (
+      // Coaches are staff → only a super-admin can create them.
       <LinkButton href="/admin/coaches/new">+ New coach</LinkButton>
-    );
+    ) : null;
 
   return (
     <div>

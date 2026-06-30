@@ -1,8 +1,11 @@
 import { requireRole } from "@/lib/auth";
+import { listBranches, getViewBranchId } from "@/lib/branch";
 import { AppShell } from "@/components/app-shell";
+import { BranchSwitcher } from "@/components/branch-switcher";
 import { CommandPalette } from "@/components/command-palette";
 import { NotificationBellServer } from "@/components/notification-bell-server";
 import { ADMIN_NAV } from "@/lib/constants";
+import { setBranchView } from "./branches/actions";
 
 export default async function AdminLayout({
   children,
@@ -16,6 +19,12 @@ export default async function AdminLayout({
   const groups = ADMIN_NAV
     .map((g) => ({ ...g, items: g.items.filter((i) => isSuper || !i.superOnly) }))
     .filter((g) => g.items.length > 0);
+
+  // Super-admins get a branch focus switcher; branch-admins are locked to theirs.
+  const switcher = isSuper
+    ? <BranchSwitcher branches={await listBranches()} current={await getViewBranchId(profile)} action={setBranchView} />
+    : undefined;
+
   return (
     <AppShell
       groups={groups}
@@ -23,6 +32,7 @@ export default async function AdminLayout({
       name={profile.full_name ?? profile.email ?? "Admin"}
       accountHref="/admin/account"
       bell={<NotificationBellServer />}
+      switcher={switcher}
     >
       <CommandPalette />
       {children}

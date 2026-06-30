@@ -61,6 +61,7 @@ export function AppShell({
   name,
   accountHref,
   bell,
+  switcher,
   children,
 }: {
   groups: NavGroup[];
@@ -68,6 +69,7 @@ export function AppShell({
   name: string;
   accountHref?: string;
   bell?: React.ReactNode;
+  switcher?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -235,6 +237,8 @@ export function AppShell({
             {brand}
             {bell}
           </div>
+
+          {switcher && <div className="mb-4 px-1">{switcher}</div>}
 
           {dashboardLink}
           {nav}

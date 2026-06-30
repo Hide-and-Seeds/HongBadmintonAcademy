@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import { getViewBranchId } from "@/lib/branch";
 import { PageHeader, StatCard, Section, Badge, EmptyState } from "@/components/ui";
 import { formatTime } from "@/lib/format";
 
@@ -15,23 +17,33 @@ async function count(table: string, filter?: (q: any) => any) {
 }
 
 export default async function AdminDashboard() {
+  const me = await requireRole("admin");
   const supabase = await createClient();
   const today = new Date().toLocaleDateString("en-CA");
 
+  // Super-admin's branch focus (null = all branches / branch-admin = own via RLS).
+  const bf = await getViewBranchId(me);
+  const branched = (extra?: (q: any) => any) => (q: any) => {
+    let qq = extra ? extra(q) : q;
+    if (bf) qq = qq.eq("branch_id", bf);
+    return qq;
+  };
+
   const [students, coaches, activeClasses, totalClasses, unpaid, queued] = await Promise.all([
-    count("students", (q) => q.eq("status", "active")),
-    count("profiles", (q) => q.eq("role", "coach")),
-    count("classes", (q) => q.eq("is_active", true)),
-    count("classes"),
-    count("invoices", (q) => q.in("status", ["unpaid", "overdue"])),
+    count("students", branched((q) => q.eq("status", "active"))),
+    count("profiles", branched((q) => q.eq("role", "coach"))),
+    count("classes", branched((q) => q.eq("is_active", true))),
+    count("classes", branched()),
+    count("invoices", branched((q) => q.in("status", ["unpaid", "overdue"]))),
     count("messages", (q) => q.eq("status", "queued")),
   ]);
 
-  const { data: todaySessions } = await supabase
+  let sessQ = supabase
     .from("sessions")
     .select("id, start_time, end_time, location, status, classes(name)")
-    .eq("session_date", today)
-    .order("start_time");
+    .eq("session_date", today);
+  if (bf) sessQ = sessQ.eq("branch_id", bf);
+  const { data: todaySessions } = await sessQ.order("start_time");
 
   return (
     <div>

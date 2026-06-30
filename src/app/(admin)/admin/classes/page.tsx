@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import { getViewBranchId } from "@/lib/branch";
 import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState, cn } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
@@ -14,11 +16,15 @@ export default async function ClassesPage({
   searchParams: Promise<{ q?: string; rank?: string; active?: string }>;
 }) {
   const { q, rank, active } = await searchParams;
+  const me = await requireRole("admin");
   const supabase = await createClient();
-  const { data: classes } = await supabase
+  const bf = await getViewBranchId(me);
+  let classQuery = supabase
     .from("classes")
     .select("*, coach:profiles!classes_coach_id_fkey(full_name), enrollments(count)")
     .order("name");
+  if (bf) classQuery = classQuery.eq("branch_id", bf);
+  const { data: classes } = await classQuery;
 
   const search = (q ?? "").trim().toLowerCase();
   const rankFilter = rank && (CLASS_RANKS as readonly string[]).includes(rank) ? rank : "";

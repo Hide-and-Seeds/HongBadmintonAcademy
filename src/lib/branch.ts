@@ -1,6 +1,20 @@
 import "server-only";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Branch, Profile } from "@/lib/types";
+
+export const BRANCH_VIEW_COOKIE = "hba_branch";
+
+// The super-admin's chosen "viewing" branch — an app-layer convenience that
+// narrows list/dashboard reads to one branch. Returns a branch id, or null for
+// "all branches". Branch-admins are already RLS-scoped to their own branch, so
+// this returns null for them (no extra filter needed). NEVER a security
+// boundary — RLS is — so a missed page just shows all, never another branch.
+export async function getViewBranchId(me: Profile): Promise<string | null> {
+  if (me.role !== "super_admin") return null;
+  const v = (await cookies()).get(BRANCH_VIEW_COOKIE)?.value;
+  return v && v !== "all" ? v : null;
+}
 
 // Active branches for selectors/filters. Service-role read (branch names aren't
 // sensitive); callers that render this are already admin-gated.

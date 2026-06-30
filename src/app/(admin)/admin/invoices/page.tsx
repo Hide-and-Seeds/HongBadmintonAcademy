@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import { getViewBranchId } from "@/lib/branch";
 import { PageHeader, Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState } from "@/components/ui";
 import { FilterSelect, FilterSearch } from "@/components/filter-controls";
 import { SubmitButton } from "@/components/submit-button";
@@ -34,7 +36,9 @@ export default async function InvoicesPage({
   searchParams: Promise<{ generated?: string; notice?: string; status?: string; month?: string; q?: string; refunded?: string; error?: string }>;
 }) {
   const { generated, notice, status, month, q, refunded, error } = await searchParams;
+  const me = await requireRole("admin");
   const supabase = await createClient();
+  const bf = await getViewBranchId(me);
   const baseUrl = await getBaseUrl();
   const schedule = await getMonthlySchedule();
 
@@ -48,6 +52,7 @@ export default async function InvoicesPage({
     .order("created_at", { ascending: false });
   if (statusFilter) invQuery = invQuery.eq("status", statusFilter);
   if (monthFilter) invQuery = invQuery.eq("period_month", monthFilter);
+  if (bf) invQuery = invQuery.eq("branch_id", bf);
 
   const [{ data: rawInvoices }, { data: payments }, { data: monthRows }] = await Promise.all([
     invQuery,

@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import { getViewBranchId } from "@/lib/branch";
 import { PageHeader, LinkButton } from "@/components/ui";
 import { MonthCalendar } from "@/components/month-calendar";
 import { AddSessionModal } from "@/components/add-session-modal";
@@ -19,7 +21,9 @@ export default async function SessionsPage({
   searchParams: Promise<{ month?: string; class?: string; error?: string; created?: string }>;
 }) {
   const { month, class: classParam, error, created } = await searchParams;
+  const me = await requireRole("admin");
   const supabase = await createClient();
+  const bf = await getViewBranchId(me);
 
   // Displayed month (YYYY-MM), defaulting to the current MYT month.
   const monthStr = /^\d{4}-\d{2}$/.test(month ?? "") ? month! : todayMYT().slice(0, 7);
@@ -38,10 +42,14 @@ export default async function SessionsPage({
     .order("start_time")
     .limit(400);
   if (classFilter) sessQuery = sessQuery.eq("class_id", classFilter);
+  if (bf) sessQuery = sessQuery.eq("branch_id", bf);
+
+  let classQuery = supabase.from("classes").select("id, name").eq("is_active", true).order("name");
+  if (bf) classQuery = classQuery.eq("branch_id", bf);
 
   const [{ data: sessions }, { data: classes }, holidays] = await Promise.all([
     sessQuery,
-    supabase.from("classes").select("id, name").eq("is_active", true).order("name"),
+    classQuery,
     loadHolidayMap(supabase, start, end),
   ]);
 
