@@ -42,3 +42,34 @@ export async function promoteFromExam(formData: FormData) {
   revalidatePath(`/admin/students/${studentId}`);
   redirect("/admin/exams?promoted=1");
 }
+
+// Grading day: promote every student whose assessment this window recommends a
+// promotion (and who isn't already at/above that level). One tap at the end of
+// the window instead of clicking each row.
+export async function promoteAllRecommended(formData: FormData) {
+  await requireRole("admin");
+  const windowLabel = String(formData.get("window_label") ?? "").trim();
+  const db = createAdminClient();
+
+  let q = db
+    .from("level_exams")
+    .select("id, student_id, to_level, students(level)")
+    .eq("decision", "promote");
+  if (windowLabel) q = q.eq("window_label", windowLabel);
+  const { data: exams } = await q;
+
+  let promoted = 0;
+  for (const ex of (exams ?? []) as any[]) {
+    const toLevel = Number(ex.to_level);
+    if (toLevel > 6) continue;
+    const cur = Number(ex.students?.level ?? 1);
+    if (cur >= toLevel) continue;
+    await db.from("students").update({ level: toLevel }).eq("id", ex.student_id);
+    await recordRankChange(db, { student_id: ex.student_id, from: levelName(cur), to: levelName(toLevel) });
+    try { await sendRankUpNotice(ex.student_id, `Level ${toLevel} · ${levelName(toLevel)}`); } catch { /* never block */ }
+    promoted++;
+  }
+
+  revalidatePath("/admin/exams");
+  redirect(`/admin/exams?promoted=batch&n=${promoted}`);
+}
