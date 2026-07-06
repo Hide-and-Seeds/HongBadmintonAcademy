@@ -40,6 +40,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
     group: "Teaching",
     items: [
       { href: "/admin/coaches/summary", label: "Coaches & Payroll" },
+      { href: "/admin/at-risk", label: "At-risk" },
       { href: "/admin/leaderboard", label: "Leaderboard" },
       { href: "/admin/exams", label: "Exams & Progress" },
       { href: "/admin/training", label: "Training Syllabus" },
