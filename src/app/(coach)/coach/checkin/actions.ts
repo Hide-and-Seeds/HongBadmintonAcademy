@@ -12,7 +12,7 @@ export async function scanTap(
   uid: string,
 ): Promise<{ ok: boolean; action?: "tap_in" | "tap_out"; student?: string; error?: string }> {
   const profile = await getProfile();
-  if (!profile || (profile.role !== "coach" && profile.role !== "admin")) {
+  if (!profile || (profile.role !== "coach" && profile.role !== "admin" && profile.role !== "super_admin")) {
     return { ok: false, error: "Not authorized" };
   }
 

@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { setParentSessionCookie } from "@/lib/parent-auth";
-import { homeForRole } from "@/lib/auth";
+import { homeForRole, isAdminRole } from "@/lib/auth";
+import type { Role } from "@/lib/types";
 import { getBaseUrl } from "@/lib/url";
 
 // Forgot password → Supabase sends a reset email. We always report success so
@@ -50,14 +51,14 @@ export async function setNewPassword(formData: FormData) {
 
   const db = createAdminClient();
   const { data: prof } = await db.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  const role = prof?.role as "admin" | "coach" | "parent" | undefined;
+  const role = prof?.role as Role | undefined;
 
   if (role === "parent") {
     await supabase.auth.signOut({ scope: "local" });
     await setParentSessionCookie(user.id);
     redirect("/parent");
   }
-  if (role === "admin" || role === "coach") {
+  if (role && (isAdminRole(role) || role === "coach")) {
     redirect(homeForRole(role));
   }
   await supabase.auth.signOut({ scope: "local" });

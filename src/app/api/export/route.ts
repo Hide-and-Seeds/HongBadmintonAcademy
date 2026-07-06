@@ -129,7 +129,7 @@ async function dataset(type: string, supabase: any): Promise<Dataset | null> {
 // /api/export?type=students|invoices|payments|attendance&format=csv|xlsx|pdf
 export async function GET(req: NextRequest) {
   const profile = await getProfile();
-  if (!profile || profile.role !== "admin") {
+  if (!profile || profile.role !== "admin" && profile.role !== "super_admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 // avoids the HTTPS-page-loading-HTTP-worker mixed-content block in the browser.
 export async function GET() {
   const profile = await getProfile();
-  if (!profile || profile.role !== "admin") {
+  if (!profile || profile.role !== "admin" && profile.role !== "super_admin") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   if (!isWaWorkerConfigured()) {

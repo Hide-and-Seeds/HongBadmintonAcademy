@@ -165,7 +165,7 @@ export function AppShell({
   // 5) so nothing is buried in the burger menu — coach has 5 (check-in,
   // schedule, marking, payroll, exams), parent 4.
   const bottomItems =
-    role === "admin"
+    role === "admin" || role === "super_admin"
       ? []
       : [
           { href: home, short: labels?.home ?? "Home", Icon: Home },
