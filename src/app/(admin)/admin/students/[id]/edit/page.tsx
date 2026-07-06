@@ -23,7 +23,7 @@ export default async function EditStudentPage({
   const [{ data: student }, { data: parents }, { data: plans }, { data: coaches }, branches] = await Promise.all([
     supabase.from("students").select("*").eq("id", id).maybeSingle(),
     supabase.from("profiles").select("id, full_name").eq("role", "parent").order("full_name"),
-    supabase.from("fee_plans").select("id, name, amount, currency, interval").eq("is_active", true).order("name"),
+    supabase.from("fee_plans").select("id, name, amount, currency, interval, rank").eq("is_active", true).order("name"),
     supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name"),
     listBranches(),
   ]);

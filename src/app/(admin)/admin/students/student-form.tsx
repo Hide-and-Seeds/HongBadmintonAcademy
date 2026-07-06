@@ -22,7 +22,7 @@ export function StudentForm({
   action: (formData: FormData) => void;
   student?: Student;
   parents: { id: string; full_name: string | null }[];
-  plans: { id: string; name: string; amount: number; currency: string; interval: string }[];
+  plans: { id: string; name: string; amount: number; currency: string; interval: string; rank?: string | null }[];
   coaches?: { id: string; full_name: string | null }[];
   branches?: { id: string; name: string }[];
   canChooseBranch?: boolean;
@@ -108,6 +108,7 @@ export function StudentForm({
             {plans.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} — {formatCurrency(Number(p.amount), p.currency)}
+                {p.rank ? ` · ${p.rank}` : ""}
                 {p.interval !== "monthly" ? ` (${p.interval})` : ""}
               </option>
             ))}

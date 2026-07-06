@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { getViewBranchId } from "@/lib/branch";
 import { PageHeader, StatCard, Section, Badge, EmptyState } from "@/components/ui";
-import { formatTime } from "@/lib/format";
+import { formatCurrency, formatTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +43,30 @@ export default async function AdminDashboard() {
     .select("id, start_time, end_time, location, status, classes(name)")
     .eq("session_date", today);
   if (bf) sessQ = sessQ.eq("branch_id", bf);
-  const { data: todaySessions } = await sessQ.order("start_time");
+
+  // Finance snapshot — outstanding (unpaid+overdue), overdue tail, and what
+  // actually came in this month (succeeded payments, branch via the invoice).
+  const myt = new Date(Date.now() + 8 * 3600 * 1000);
+  const monthStartISO = new Date(Date.UTC(myt.getUTCFullYear(), myt.getUTCMonth(), 1)).toISOString();
+  let outQ = supabase.from("invoices").select("amount, currency, status").in("status", ["unpaid", "overdue"]);
+  if (bf) outQ = outQ.eq("branch_id", bf);
+  let payQ = supabase
+    .from("payments")
+    .select("amount, currency, invoices!inner(branch_id)")
+    .eq("status", "succeeded")
+    .gte("created_at", monthStartISO);
+  if (bf) payQ = payQ.eq("invoices.branch_id", bf);
+
+  const [{ data: todaySessions }, { data: outRows }, { data: payRows }] = await Promise.all([
+    sessQ.order("start_time"),
+    outQ,
+    payQ,
+  ]);
+
+  const outstanding = (outRows ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0);
+  const overdueSum = (outRows ?? []).filter((r: any) => r.status === "overdue").reduce((s: number, r: any) => s + Number(r.amount), 0);
+  const collected = (payRows ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0);
+  const currency = (outRows ?? [])[0]?.currency ?? (payRows ?? [])[0]?.currency ?? "MYR";
 
   return (
     <div>
@@ -64,6 +87,19 @@ export default async function AdminDashboard() {
         </Link>
         <Link href="/admin/messages" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
           <StatCard label="Queued messages" value={queued} tone={queued ? "amber" : "slate"} />
+        </Link>
+      </div>
+
+      {/* Finance — money in this month vs money still out */}
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <Link href="/admin/collections" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+          <StatCard label="Collected this month" value={formatCurrency(collected, currency)} tone="green" />
+        </Link>
+        <Link href="/admin/invoices?status=unpaid" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+          <StatCard label="Outstanding" value={formatCurrency(outstanding, currency)} tone={outstanding ? "amber" : "slate"} />
+        </Link>
+        <Link href="/admin/invoices?status=overdue" className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40">
+          <StatCard label="Overdue" value={formatCurrency(overdueSum, currency)} tone={overdueSum ? "red" : "slate"} />
         </Link>
       </div>
 
