@@ -110,7 +110,10 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
     setBlocks((prev) => prev.map((b) => (b.session.id !== sId ? b : { ...b, coachedIn: on })));
     startTransition(async () => {
       const r = await setCoachCheckin({ session_id: sId, on });
-      if (!r.ok) setBlocks(snapshot);
+      if (!r.ok) {
+        setBlocks(snapshot);
+        if (r.error) alert(r.error);
+      }
     });
   }
 
@@ -243,7 +246,11 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
               description={`${formatTime(session.start_time)}–${formatTime(session.end_time)} · ${
                 session.location ?? "—"
               }`}
-              action={
+              flush
+            >
+              {/* Toolbar — coach status on the left, roster actions on the right,
+                  full width so the buttons don't cram the title row on a phone. */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -259,6 +266,8 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                   <Badge tone={roster.length && present === roster.length ? "green" : "blue"}>
                     {present}/{roster.length} present
                   </Badge>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   {unmarked > 0 && (
                     <button
                       type="button"
@@ -277,9 +286,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                     <Plus className="h-3.5 w-3.5" /> Add student
                   </button>
                 </div>
-              }
-              flush
-            >
+              </div>
               {addFor === session.id && (
                 <div className="border-b border-slate-100 bg-slate-50 p-3">
                   <div className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-2.5">

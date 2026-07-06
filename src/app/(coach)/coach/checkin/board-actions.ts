@@ -61,6 +61,26 @@ export async function setCoachCheckin(input: {
   if (!user) return { ok: false, error: "unauthenticated" };
 
   if (input.on) {
+    // Presence guard: only allow the self-check-in within the session's own time
+    // window (60 min before start → 60 min after end, on the session date), so
+    // "I'm here" can't be pressed from home the night before. The timestamp is
+    // stored (checked_in_at) and cross-checked against a marked roster on the
+    // admin coverage page — a check-in with no marks is the tell-tale of a fake.
+    const { data: sess } = await createAdminClient()
+      .from("sessions")
+      .select("session_date, start_time, end_time")
+      .eq("id", input.session_id)
+      .maybeSingle();
+    if (sess?.session_date && sess.start_time && sess.end_time) {
+      // Compare wall-clock (MYT) values in a common frame: treat both "now+8h"
+      // and the session times as UTC ms.
+      const nowMs = Date.now() + 8 * 3600 * 1000;
+      const startMs = Date.parse(`${sess.session_date}T${sess.start_time}Z`) - 60 * 60000;
+      const endMs = Date.parse(`${sess.session_date}T${sess.end_time}Z`) + 60 * 60000;
+      if (Number.isFinite(startMs) && (nowMs < startMs || nowMs > endMs)) {
+        return { ok: false, error: "You can only check in around the session time." };
+      }
+    }
     const { error } = await supabase.from("coach_checkins").upsert(
       { session_id: input.session_id, coach_id: user.id, method: "self" },
       { onConflict: "session_id,coach_id" },
