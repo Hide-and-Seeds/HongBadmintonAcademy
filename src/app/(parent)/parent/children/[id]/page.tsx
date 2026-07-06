@@ -52,12 +52,14 @@ export default async function ChildDetailPage({
     { data: ledger },
     { data: invoices },
     { data: lastExam },
+    { data: lastMonthly },
   ] = await Promise.all([
     supabase.from("enrollments").select("class_id, classes(name, level)").eq("student_id", id).eq("active", true).limit(1).maybeSingle(),
     supabase.from("attendance").select("status").eq("student_id", id).order("created_at", { ascending: false }).limit(60),
     supabase.from("reward_ledger").select("points").eq("student_id", id),
     supabase.from("invoices").select("amount, currency, status, due_date").eq("student_id", id),
     supabase.from("level_exams").select("id, exam_date, total, band, decision, to_level, next_target, window_label").eq("student_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("monthly_assessments").select("period_month, fitness, skills, attitude").eq("student_id", id).order("period_month", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const classId = (enrollment as any)?.class_id ?? null;
@@ -81,7 +83,14 @@ export default async function ChildDetailPage({
   const attended = att.filter((a: any) => a.status === "present" || a.status === "late").length;
   const rate = att.length ? Math.round((attended / att.length) * 100) : null;
 
-  const examTotal = (lastExam as any)?.total ?? null;
+  // Latest monthly coach marks → average of the three 1-5 dimensions. Headlines
+  // the child card in place of the exam score (exam detail stays in the card below).
+  const monthlyAvg = (() => {
+    const m = lastMonthly as any;
+    if (!m) return null;
+    const dims = [m.fitness, m.skills, m.attitude].map(Number).filter((n) => n > 0);
+    return dims.length ? dims.reduce((a: number, b: number) => a + b, 0) / dims.length : null;
+  })();
 
   const points = (ledger ?? []).reduce((x: number, r: any) => x + Number(r.points), 0);
 
@@ -146,8 +155,8 @@ export default async function ChildDetailPage({
           <div className="mt-1 text-xs text-slate-500">Attendance</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">{examTotal != null ? examTotal : "—"}</div>
-          <div className="mt-1 text-xs text-slate-500">Last exam /100</div>
+          <div className="text-2xl font-bold text-green-600">{monthlyAvg != null ? monthlyAvg.toFixed(1) : "—"}</div>
+          <div className="mt-1 text-xs text-slate-500">{L.monthly_score_label}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
           <div className="text-2xl font-bold text-slate-900">{points}</div>

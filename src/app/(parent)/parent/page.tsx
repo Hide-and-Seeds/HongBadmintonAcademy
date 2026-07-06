@@ -30,8 +30,8 @@ export default async function ParentDashboard() {
   const myt = new Date(Date.now() + 8 * 3600 * 1000);
   const monthStartISO = new Date(Date.UTC(myt.getUTCFullYear(), myt.getUTCMonth(), 1)).toISOString();
 
-  // Class + fees + latest exam result + this-month promotions, per child.
-  const [{ data: enrollments }, { data: invoices }, { count: unpaid }, { data: examRows }, { data: rankEvents }] =
+  // Class + fees + latest monthly coach marks + this-month promotions, per child.
+  const [{ data: enrollments }, { data: invoices }, { count: unpaid }, { data: monthlyRows }, { data: rankEvents }] =
     await Promise.all([
       childIds.length
         ? supabase
@@ -54,10 +54,10 @@ export default async function ParentDashboard() {
         .in("status", ["unpaid", "overdue"]),
       childIds.length
         ? supabase
-            .from("level_exams")
-            .select("student_id, total, band, created_at")
+            .from("monthly_assessments")
+            .select("student_id, period_month, fitness, skills, attitude")
             .in("student_id", childIds)
-            .order("created_at", { ascending: false })
+            .order("period_month", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
       childIds.length
         ? supabase
@@ -151,11 +151,15 @@ export default async function ParentDashboard() {
     (i: any) => (i.status === "unpaid" || i.status === "overdue") && i.due_date && i.due_date < today,
   ).length;
 
-  // Latest exam score per child (rows are newest-first) + who was promoted this month.
-  const examByChild = new Map<string, { total: number; band: string }>();
-  for (const ex of (examRows ?? []) as any[]) {
-    if (examByChild.has(ex.student_id)) continue;
-    examByChild.set(ex.student_id, { total: ex.total, band: ex.band });
+  // Latest monthly coach marks per child (rows newest-first) → average of the
+  // three 1-5 dimensions. Skip a month with no marks so we fall back to the most
+  // recent month that actually has scores. + who was promoted this month.
+  const monthlyByChild = new Map<string, { avg: number }>();
+  for (const m of (monthlyRows ?? []) as any[]) {
+    if (monthlyByChild.has(m.student_id)) continue;
+    const dims = [m.fitness, m.skills, m.attitude].map(Number).filter((n) => n > 0);
+    if (!dims.length) continue;
+    monthlyByChild.set(m.student_id, { avg: dims.reduce((a, b) => a + b, 0) / dims.length });
   }
   const promoted = new Set<string>();
   for (const ev of (rankEvents ?? []) as any[]) {
@@ -193,7 +197,7 @@ export default async function ParentDashboard() {
           {children.map((c) => {
             const clsName = classByChild.get(c.id);
             const lvl = Number((c as any).level ?? 1);
-            const ex = examByChild.get(c.id);
+            const ms = monthlyByChild.get(c.id);
             return (
               <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
                 <Card className="h-full p-4 transition-all hover:border-emerald-300 hover:shadow-md">
@@ -219,13 +223,13 @@ export default async function ParentDashboard() {
                   </div>
 
                   <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
-                    {ex ? (
+                    {ms ? (
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-2xl font-bold text-emerald-700">{ex.total}</span>
-                        <span className="text-xs font-medium text-slate-400">{L.last_exam_suffix}</span>
+                        <span className="text-2xl font-bold text-emerald-700">{ms.avg.toFixed(1)}</span>
+                        <span className="text-xs font-medium text-slate-400">{L.monthly_score_suffix}</span>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-400">{L.no_exam_yet}</span>
+                      <span className="text-xs text-slate-400">{L.no_marks_yet}</span>
                     )}
                     <span className="text-sm font-medium text-emerald-700">{L.progress_arrow}</span>
                   </div>

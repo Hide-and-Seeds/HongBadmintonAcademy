@@ -87,8 +87,10 @@ export default async function CoachSessionDetailPage({
         </div>
       )}
 
-      {/* Coach leave — only for sessions that haven't happened yet. */}
+      {/* Coach leave — only for sessions that haven't happened yet. The wrapper id
+          anchors the "Leave" deep-link from the coach schedule rows. */}
       {!canceled && s.session_date >= todayMYT() && (
+        <div id="leave" className="scroll-mt-20">
         <Section title="Can't make this session?">
           {myLeave ? (
             <div className="flex flex-wrap items-center gap-3">
@@ -110,6 +112,7 @@ export default async function CoachSessionDetailPage({
             </form>
           )}
         </Section>
+        </div>
       )}
 
       <Section title={`Roster (${roster.length}) · ${marked} marked`} flush>

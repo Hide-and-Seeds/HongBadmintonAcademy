@@ -15,12 +15,15 @@ function todayMYT(): string {
 }
 
 // One tappable row → the session detail page. Used for both upcoming and past.
+// Upcoming, non-canceled rows also get a "Leave" link that deep-links to the
+// leave form on the detail page (coaches kept missing it buried down that page).
 function CoachSessionRow({ s }: { s: any }) {
   const d = new Date(`${s.session_date}T00:00:00`);
   const upcoming = s.session_date >= todayMYT();
+  const canLeave = upcoming && s.status !== "canceled";
   return (
-    <li>
-      <Link href={`/coach/sessions/${s.id}`} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50">
+    <li className="flex items-stretch">
+      <Link href={`/coach/sessions/${s.id}`} className="flex flex-1 items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50">
         <div className={cn("flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl", upcoming ? "bg-emerald-50" : "bg-slate-100")}>
           <span className={cn("text-[10px] font-semibold uppercase tracking-wide", upcoming ? "text-emerald-600" : "text-slate-500")}>{d.toLocaleDateString("en-MY", { month: "short" })}</span>
           <span className={cn("text-xl font-bold leading-none", upcoming ? "text-emerald-800" : "text-slate-700")}>{d.getDate()}</span>
@@ -35,8 +38,16 @@ function CoachSessionRow({ s }: { s: any }) {
         {s.status !== "scheduled" && (
           <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : "blue"}>{s.status}</Badge>
         )}
-        <span className="shrink-0 text-slate-300">›</span>
+        {!canLeave && <span className="shrink-0 text-slate-300">›</span>}
       </Link>
+      {canLeave && (
+        <Link
+          href={`/coach/sessions/${s.id}#leave`}
+          className="flex shrink-0 items-center border-l border-slate-100 px-3.5 text-xs font-semibold text-amber-700 hover:bg-amber-50"
+        >
+          Leave
+        </Link>
+      )}
     </li>
   );
 }
@@ -81,7 +92,7 @@ export default async function CoachSchedulePage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My schedule" description="Your classes' sessions, month by month — browse back for past classes." />
+      <PageHeader title="My schedule" description="Your classes' sessions, month by month. Tap a session for its roster, or 'Leave' to request time off." />
       {classIds.length === 0 ? (
         <EmptyState message="You're not assigned to any classes yet." />
       ) : (
