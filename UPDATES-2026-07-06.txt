@@ -1,0 +1,56 @@
+HONG BADMINTON ACADEMY — UPDATES
+Mon 6 Jul 2026
+
+================================================================
+PARENT APP
+================================================================
+- The child's DASHBOARD now leads with their MONTHLY SCORE (the coach's
+  monthly marks, averaged out of 5) instead of the last exam result. The
+  distracting "last exam /100" line is gone from the dashboard.
+  (Full exam results still live on the Progress Card and the child's
+  Training & exams card — nothing was lost, just moved off the front.)
+- When a parent requests LEAVE, they can now propose a PREFERRED MAKEUP
+  class. The list shows same-level upcoming sessions with how many spots
+  are left; full sessions can't be picked. The admin still confirms it.
+
+================================================================
+COACH APP
+================================================================
+- COACH LEAVE is now easy to find. Each upcoming session on the coach's
+  Schedule has a "Leave" button that jumps straight to the leave form.
+  (It already existed but was buried inside the session page — that's why
+  it felt missing.)
+
+================================================================
+ADMIN — LEAVE & MAKEUP
+================================================================
+- Pending leave now shows "Parent requested makeup: …" and the makeup
+  dropdown is pre-filled with the parent's pick — approve to confirm, or
+  change it.
+
+================================================================
+ADMIN — MONEY (WHO SEES WHAT)
+================================================================
+- BRANCH admins now see FOLLOW-UP payments only (unpaid + overdue) — their
+  Invoices page is an "Outstanding Fees" worklist where they still chase,
+  remind and mark paid. No revenue, no paid history, no analytics.
+- Revenue, the analytics dashboard, and the invoice/payment exports are now
+  SUPER-ADMIN only.
+- New "COURT RENTALS" area (super-admin only): record what the academy pays
+  to rent courts and see the cost per court, per month, with a CSV export.
+  Add courts with an hourly rate, then log each rental (date / hours /
+  amount / note).
+
+================================================================
+YOUR "DOUBLE-CHECK" QUESTIONS — ANSWERS
+================================================================
+- Coaches checked in to their own sessions? YES, already tracked. See
+  Attendance → "Coach coverage" (last 30 days) and each session's "Coach on
+  court" line. Coaches tap "I'm here" on their check-in board.
+- Add a student to a session then scan their NFC card? YES — a coach can add
+  an existing student as a drop-in and scan them straight away.
+- Brand-new student on the spot? Kept ADMIN-ONLY (clean records — parent,
+  fee, level all set properly). Coaches add existing students only.
+- Assessment based on class? YES — the monthly assessment is entered class
+  by class (whole roster grid), scored per student. The promotion exam stays
+  per student (individual rubric) by design.
