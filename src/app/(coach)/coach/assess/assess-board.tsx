@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { Avatar, cn } from "@/components/ui";
 import { useFlash } from "@/components/flash";
+import { dict } from "@/lib/i18n";
 import { setMonthlyScore, setMonthlyComment, type Dim } from "./actions";
 
 export interface AssessRow {
@@ -25,13 +26,16 @@ export function AssessBoard({
   classId,
   period,
   initialRows,
+  locale,
 }: {
   classId: string;
   period: string; // YYYY-MM-01
   initialRows: AssessRow[];
+  locale?: string | null;
 }) {
   const [rows, setRows] = useState<AssessRow[]>(initialRows);
   const { flash: toast, node } = useFlash();
+  const L = dict(locale);
   const [, startTransition] = useTransition();
   const savedFlash = useRef<Record<string, number>>({});
   const [, force] = useState(0);
@@ -47,7 +51,7 @@ export function AssessBoard({
     setRows((rs) => rs.map((r) => (r.student.id !== studentId ? r : { ...r, [dim]: value })));
     startTransition(async () => {
       const r = await setMonthlyScore({ student_id: studentId, class_id: classId, period_month: period, dim, value });
-      if (!r.ok) { setRows(prev); toast("Couldn't save — tap again"); }
+      if (!r.ok) { setRows(prev); toast(L.save_fail); }
       else flash(studentId);
     });
   }
@@ -57,7 +61,7 @@ export function AssessBoard({
     setRows((rs) => rs.map((r) => (r.student.id !== studentId ? r : { ...r, comment })));
     startTransition(async () => {
       const r = await setMonthlyComment({ student_id: studentId, class_id: classId, period_month: period, comment });
-      if (!r.ok) { setRows(prev); toast("Couldn't save — tap again"); }
+      if (!r.ok) { setRows(prev); toast(L.save_fail); }
       else flash(studentId);
     });
   }
@@ -79,7 +83,7 @@ export function AssessBoard({
                   {r.student.nickname && <span className="ml-1.5 font-normal text-slate-400">“{r.student.nickname}”</span>}
                 </div>
                 <div className={cn("text-xs font-medium", justSaved ? "text-emerald-600" : done ? "text-green-600" : "text-slate-400")}>
-                  {justSaved ? "Saved ✓" : done ? "All 3 marked" : "Tap 1–5 for each"}
+                  {justSaved ? L.saved_tick : done ? L.all_3_marked : L.tap_1_5}
                 </div>
               </div>
             </div>
@@ -87,7 +91,7 @@ export function AssessBoard({
             <div className="grid gap-2 sm:grid-cols-3">
               {DIMS.map((d) => (
                 <div key={d.key} className="flex items-center gap-1.5">
-                  <span className="w-16 shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400">{d.label}</span>
+                  <span className="w-16 shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400">{L[d.key]}</span>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
                       key={n}
@@ -112,14 +116,14 @@ export function AssessBoard({
               onBlur={(e) => {
                 if ((e.target.value ?? "") !== (r.comment ?? "")) saveComment(r.student.id, e.target.value);
               }}
-              placeholder="Comment for the parent (optional) — saves when you tap away"
+              placeholder={L.assess_comment_ph}
               maxLength={500}
               className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white"
             />
           </li>
         );
       })}
-      {rows.length === 0 && <li className="px-5 py-4 text-sm text-slate-400">No students enrolled.</li>}
+      {rows.length === 0 && <li className="px-5 py-4 text-sm text-slate-400">{L.no_students_enrolled}</li>}
     </ul>
     </>
   );

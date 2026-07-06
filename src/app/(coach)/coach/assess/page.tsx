@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, cn } from "@/components/ui";
 import { monthLabel } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { coachClassIds } from "../_data";
 import { AssessBoard, type AssessRow } from "./assess-board";
 
@@ -18,6 +19,7 @@ export default async function CoachAssessPage({
   searchParams: Promise<{ class?: string; month?: string }>;
 }) {
   const me = await requireRole("coach");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const { class: classParam, month } = await searchParams;
 
@@ -69,12 +71,12 @@ export default async function CoachAssessPage({
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Monthly marks"
-        description="Grade the whole class for the month — Fitness, Skills, Attitude (1–5) + a note for the parent. Every tap saves."
+        title={L.coach_monthly}
+        description={L.coach_assess_desc}
       />
 
       {(classes ?? []).length === 0 ? (
-        <EmptyState message="You're not assigned to any classes yet." />
+        <EmptyState message={L.not_assigned_classes} />
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
@@ -106,9 +108,9 @@ export default async function CoachAssessPage({
           </div>
 
           {activeClass ? (
-            <AssessBoard key={`${activeClass}:${period}`} classId={activeClass} period={period} initialRows={rows} />
+            <AssessBoard key={`${activeClass}:${period}`} classId={activeClass} period={period} initialRows={rows} locale={me.locale} />
           ) : (
-            <EmptyState message="Pick a class." />
+            <EmptyState message={L.pick_a_class} />
           )}
         </>
       )}

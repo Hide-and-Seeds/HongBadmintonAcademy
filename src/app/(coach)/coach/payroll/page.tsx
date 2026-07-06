@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, Table, Th, Td, EmptyState } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { coachClassIds } from "../_data";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ function monthBounds(offset = 0) {
 
 export default async function CoachPayrollPage() {
   const me = await requireRole("coach");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const tm = monthBounds(0);
   const lm = monthBounds(-1);
@@ -78,38 +80,38 @@ export default async function CoachPayrollPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Payroll" description={`Auto-calculated from lessons taught · ${tm.label}`} />
+      <PageHeader title={L.coach_payroll} description={`${L.payroll_auto} · ${tm.label}`} />
 
       {/* Headline — what you earned this month */}
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-        <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Earned this month · {tm.label}</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{L.earned_this_month} · {tm.label}</div>
         <div className="mt-1 text-4xl font-bold text-emerald-900">{money(thisPay)}</div>
         <div className="mt-1 text-sm text-emerald-800">
-          {thisSess.length} lesson{thisSess.length === 1 ? "" : "s"} × {money(rate)} per lesson
+          {thisSess.length} {L.lessons_word} × {money(rate)} {L.per_lesson}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <StatCard label="Pay rate" value={money(rate)} sub="per lesson" />
-        <StatCard label="Attendance" value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub="your classes" />
-        <StatCard label="Last month" value={money(lastPay)} sub={`${lastSess.length} lessons · ${lm.label}`} />
+        <StatCard label={L.pay_rate} value={money(rate)} sub={L.per_lesson} />
+        <StatCard label={L.attendance} value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub={L.your_classes} />
+        <StatCard label={L.last_month_word} value={money(lastPay)} sub={`${lastSess.length} ${L.lessons_word} · ${lm.label}`} />
       </div>
 
       {classRows.length > 0 ? (
-        <Section title="By class · this month" flush>
+        <Section title={L.by_class_month} flush>
           {/* Mobile: stacked rows (a 3-col table is too tight on a phone). */}
           <ul className="divide-y divide-slate-100 sm:hidden">
             {classRows.map((c) => (
               <li key={c.name} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <div className="truncate font-medium text-slate-900">{c.name}</div>
-                  <div className="text-xs text-slate-500">{c.lessons} lesson{c.lessons === 1 ? "" : "s"}</div>
+                  <div className="text-xs text-slate-500">{c.lessons} {L.lessons_word}</div>
                 </div>
                 <div className="shrink-0 font-semibold tabular-nums text-slate-900">{money(c.pay)}</div>
               </li>
             ))}
             <li className="flex items-center justify-between gap-3 border-t-2 border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="font-semibold text-slate-900">Total · {thisSess.length} lesson{thisSess.length === 1 ? "" : "s"}</div>
+              <div className="font-semibold text-slate-900">{L.total_word} · {thisSess.length} {L.lessons_word}</div>
               <div className="shrink-0 font-bold tabular-nums text-emerald-700">{money(thisPay)}</div>
             </li>
           </ul>
@@ -117,7 +119,7 @@ export default async function CoachPayrollPage() {
           <div className="hidden sm:block">
             <Table>
               <thead>
-                <tr><Th>Class</Th><Th className="text-right">Lessons</Th><Th className="text-right">Pay</Th></tr>
+                <tr><Th>{L.class_word}</Th><Th className="text-right">{L.lessons_col}</Th><Th className="text-right">{L.pay_word}</Th></tr>
               </thead>
               <tbody>
                 {classRows.map((c) => (
@@ -128,7 +130,7 @@ export default async function CoachPayrollPage() {
                   </tr>
                 ))}
                 <tr className="border-t-2 border-slate-200 bg-slate-50">
-                  <Td className="font-semibold text-slate-900">Total</Td>
+                  <Td className="font-semibold text-slate-900">{L.total_word}</Td>
                   <Td className="text-right font-semibold tabular-nums">{thisSess.length}</Td>
                   <Td className="text-right font-bold tabular-nums text-emerald-700">{money(thisPay)}</Td>
                 </tr>
@@ -138,12 +140,12 @@ export default async function CoachPayrollPage() {
         </Section>
       ) : (
         <EmptyState
-          message={classIds.length === 0 ? "You're not assigned to any classes yet." : "No lessons recorded this month yet."}
+          message={classIds.length === 0 ? L.not_assigned_classes : L.no_lessons_month}
         />
       )}
 
       <p className="text-xs text-slate-400">
-        Pay = lessons taught × your per-lesson rate. The academy sets your rate; contact admin if it looks wrong.
+        {L.payroll_note}
       </p>
     </div>
   );
