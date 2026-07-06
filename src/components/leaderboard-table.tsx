@@ -99,7 +99,27 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
         <span className="ml-auto text-xs text-slate-400">{sorted.length} student{sorted.length === 1 ? "" : "s"}</span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      {/* Mobile: cards (the 7-col table is unreadable on a phone). */}
+      <div className="space-y-2 sm:hidden">
+        {sorted.map((r, i) => (
+          <div key={r.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <span className="w-6 shrink-0 text-center text-slate-400">{i < 3 ? MEDAL[i] : i + 1}</span>
+            <div className="min-w-0 flex-1">
+              <Link href={`/admin/students/${r.id}`} className="block truncate font-medium text-slate-900 hover:text-green-700 hover:underline">{r.name}</Link>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+                <span className={cn("inline-flex rounded-full px-1.5 py-0.5 font-semibold", levelBadgeClass(r.level))}>L{r.level}</span>
+                <span>{r.attended}/{r.sessions}</span>
+                {r.age != null && <span>· {r.age}y</span>}
+                <span className="font-medium text-green-700">🔥 {r.streak}</span>
+              </div>
+            </div>
+            <span className={cn("shrink-0 text-lg font-bold tabular-nums", r.rate >= 80 ? "text-green-600" : r.rate >= 50 ? "text-amber-600" : "text-slate-500")}>{r.rate}%</span>
+          </div>
+        ))}
+        {sorted.length === 0 && <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-400">No students match.</div>}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:block">
       <table className="w-full text-sm">
         <thead>
           <tr>

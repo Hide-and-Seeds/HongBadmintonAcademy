@@ -1,5 +1,7 @@
 import { requireRole } from "@/lib/auth";
-import { PageHeader, Card, Field, Input, Button } from "@/components/ui";
+import { PageHeader, Card, Field, Input } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
+import { FlashClear } from "@/components/flash-clear";
 import { dict } from "@/lib/i18n";
 import { changeCoachPassword, updateCoachContact } from "./actions";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
@@ -29,6 +31,7 @@ export default async function CoachAccountPage({
       {error && (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
       )}
+      <FlashClear />
 
       <Card className="max-w-md p-6">
         <h2 className="text-base font-semibold text-slate-900">{L.contact_details}</h2>
@@ -45,7 +48,7 @@ export default async function CoachAccountPage({
           <Field label={L.current_pw} hint={L.pw_email_only}>
             <Input type="password" name="current" autoComplete="current-password" />
           </Field>
-          <Button type="submit">{L.save_contact}</Button>
+          <SubmitButton pendingText="…">{L.save_contact}</SubmitButton>
         </form>
       </Card>
 
@@ -62,7 +65,7 @@ export default async function CoachAccountPage({
           <Field label={L.confirm_pw} required>
             <Input type="password" name="confirm" required minLength={8} autoComplete="new-password" />
           </Field>
-          <Button type="submit">{L.update_password}</Button>
+          <SubmitButton pendingText="…">{L.update_password}</SubmitButton>
         </form>
       </Card>
 

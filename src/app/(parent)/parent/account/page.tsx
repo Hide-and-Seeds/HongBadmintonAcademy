@@ -1,5 +1,7 @@
 import { requireParent } from "@/lib/parent-auth";
-import { PageHeader, Card, Field, Input, Button, Select } from "@/components/ui";
+import { PageHeader, Card, Field, Input, Select } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
+import { FlashClear } from "@/components/flash-clear";
 import { changeParentPassword, updateParentContact } from "./actions";
 import { setParentLocale } from "./locale-actions";
 import { dict } from "@/lib/i18n";
@@ -30,6 +32,7 @@ export default async function ParentAccountPage({
       {error && (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
       )}
+      <FlashClear />
 
       <Card className="max-w-md p-6">
         <h2 className="text-base font-semibold text-slate-900">{L.language}</h2>
@@ -41,7 +44,7 @@ export default async function ParentAccountPage({
               <option value="zh">中文 (Chinese)</option>
             </Select>
           </Field>
-          <Button type="submit">{L.save}</Button>
+          <SubmitButton pendingText="…">{L.save}</SubmitButton>
         </form>
       </Card>
 
@@ -60,7 +63,7 @@ export default async function ParentAccountPage({
           <Field label="Current password" hint="Only needed when changing your email">
             <Input type="password" name="current" autoComplete="current-password" />
           </Field>
-          <Button type="submit">Save contact</Button>
+          <SubmitButton pendingText="…">Save contact</SubmitButton>
         </form>
       </Card>
 
@@ -77,7 +80,7 @@ export default async function ParentAccountPage({
           <Field label="Confirm new password" required>
             <Input type="password" name="confirm" required minLength={8} autoComplete="new-password" />
           </Field>
-          <Button type="submit">Update password</Button>
+          <SubmitButton pendingText="…">Update password</SubmitButton>
         </form>
       </Card>
 

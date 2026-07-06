@@ -1,5 +1,7 @@
 import { requireRole } from "@/lib/auth";
-import { PageHeader, Card, Field, Input, Button } from "@/components/ui";
+import { PageHeader, Card, Field, Input } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
+import { FlashClear } from "@/components/flash-clear";
 import { changeAdminPassword, updateAdminPhone } from "./actions";
 import { PushPanel } from "@/components/push-panel";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
@@ -27,6 +29,7 @@ export default async function AdminAccountPage({
       {error && (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
       )}
+      <FlashClear />
 
       <Card className="max-w-md p-6">
         <h2 className="text-base font-semibold text-slate-900">Contact</h2>
@@ -37,7 +40,7 @@ export default async function AdminAccountPage({
           <Field label="Phone">
             <Input type="tel" name="phone" defaultValue={me.phone ?? ""} autoComplete="tel" placeholder="012-345 6789" />
           </Field>
-          <Button type="submit">Save phone</Button>
+          <SubmitButton pendingText="…">Save phone</SubmitButton>
         </form>
       </Card>
 
@@ -54,7 +57,7 @@ export default async function AdminAccountPage({
           <Field label="Confirm new password" required>
             <Input type="password" name="confirm" required minLength={8} autoComplete="new-password" />
           </Field>
-          <Button type="submit">Update password</Button>
+          <SubmitButton pendingText="…">Update password</SubmitButton>
         </form>
       </Card>
 

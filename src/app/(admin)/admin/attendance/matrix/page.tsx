@@ -114,7 +114,30 @@ export default async function MatrixPage({
       {rows.length === 0 || sessions.length === 0 ? (
         <EmptyState message="No students or sessions for this class yet." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <>
+        {/* Mobile: per-student cards (the wide dot grid is unusable on a phone). */}
+        <div className="space-y-2 md:hidden">
+          {rows.map((r) => (
+            <div key={r.student.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <Link href={`/admin/students/${r.student.id}`} className="truncate font-medium text-slate-900 hover:text-green-700 hover:underline">{r.student.full_name}</Link>
+                <span className={cn("shrink-0 text-sm font-semibold tabular-nums", r.pct >= 80 ? "text-green-600" : r.pct >= 50 ? "text-amber-600" : "text-red-600")}>{r.pct}%</span>
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                <span className={cn("inline-flex rounded-full px-1.5 py-0.5 font-semibold", levelBadgeClass(r.level))}>L{r.level}</span>
+                <span>{r.attended} attended</span>
+                <span className="font-medium text-green-700">🔥 {r.streak}</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {r.cells.slice(-10).map((c, i) => (
+                  <span key={i} aria-label={c ?? "no record"} className={cn("inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white", c ? DOT[c] : "bg-slate-100 text-transparent ring-1 ring-inset ring-slate-200")}>{c ? LETTER[c] : ""}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm md:block">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-slate-50">
@@ -167,6 +190,7 @@ export default async function MatrixPage({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
