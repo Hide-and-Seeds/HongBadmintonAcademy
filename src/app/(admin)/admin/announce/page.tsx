@@ -99,8 +99,8 @@ export default async function AnnouncePage({
               {history.map((m: any) => (
                 <tr key={m.id} className="hover:bg-slate-50">
                   <Td className="whitespace-nowrap text-slate-500">{formatDateTime(m.created_at)}</Td>
-                  <Td className="max-w-lg whitespace-pre-wrap text-slate-700">{m.body}</Td>
-                  <Td>
+                  <Td label="Message" className="max-w-lg whitespace-pre-wrap text-slate-700">{m.body}</Td>
+                  <Td label="Status">
                     <Badge tone="green">{m.status}</Badge>
                   </Td>
                 </tr>

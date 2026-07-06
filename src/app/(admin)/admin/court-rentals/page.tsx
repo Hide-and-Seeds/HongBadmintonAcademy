@@ -111,16 +111,16 @@ export default async function CourtRentalsPage({
               {rows.map((r) => (
                 <tr key={r.name} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{r.name}</Td>
-                  <Td className="text-right tabular-nums text-slate-500">{r.count}</Td>
-                  <Td className="text-right tabular-nums text-slate-500">{r.hours % 1 === 0 ? r.hours : r.hours.toFixed(1)}</Td>
-                  <Td className="text-right font-semibold tabular-nums text-slate-900">{formatCurrency(r.amount, currency)}</Td>
+                  <Td label="Rentals" className="text-right tabular-nums text-slate-500">{r.count}</Td>
+                  <Td label="Hours" className="text-right tabular-nums text-slate-500">{r.hours % 1 === 0 ? r.hours : r.hours.toFixed(1)}</Td>
+                  <Td label="Cost" className="text-right font-semibold tabular-nums text-slate-900">{formatCurrency(r.amount, currency)}</Td>
                 </tr>
               ))}
               <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
                 <Td className="text-slate-900">Total</Td>
-                <Td className="text-right tabular-nums text-slate-500">{rentalList.length}</Td>
-                <Td className="text-right tabular-nums text-slate-500">{totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}</Td>
-                <Td className="text-right tabular-nums text-slate-900">{formatCurrency(totalAmount, currency)}</Td>
+                <Td label="Rentals" className="text-right tabular-nums text-slate-500">{rentalList.length}</Td>
+                <Td label="Hours" className="text-right tabular-nums text-slate-500">{totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}</Td>
+                <Td label="Cost" className="text-right tabular-nums text-slate-900">{formatCurrency(totalAmount, currency)}</Td>
               </tr>
             </tbody>
           </Table>
@@ -176,11 +176,11 @@ export default async function CourtRentalsPage({
               {rentalList.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50">
                   <Td className="text-slate-500">{formatDate(r.rental_date)}</Td>
-                  <Td className="font-medium text-slate-900">{r.courts?.name ?? "—"}</Td>
-                  <Td className="text-right tabular-nums text-slate-500">{Number(r.hours) % 1 === 0 ? Number(r.hours) : Number(r.hours).toFixed(1)}</Td>
-                  <Td className="text-right tabular-nums text-slate-900">{formatCurrency(Number(r.amount), currency)}</Td>
-                  <Td className="text-slate-500">{r.note ?? ""}</Td>
-                  <Td className="text-right">
+                  <Td label="Court" className="font-medium text-slate-900">{r.courts?.name ?? "—"}</Td>
+                  <Td label="Hours" className="text-right tabular-nums text-slate-500">{Number(r.hours) % 1 === 0 ? Number(r.hours) : Number(r.hours).toFixed(1)}</Td>
+                  <Td label="Amount" className="text-right tabular-nums text-slate-900">{formatCurrency(Number(r.amount), currency)}</Td>
+                  <Td label="Note" className="text-slate-500">{r.note ?? ""}</Td>
+                  <Td label="Actions" className="text-right">
                     <form action={deleteRental}>
                       <input type="hidden" name="id" value={r.id} />
                       <ConfirmButton confirmText="Delete this rental entry?" />

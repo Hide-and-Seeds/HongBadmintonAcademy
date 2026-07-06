@@ -47,8 +47,14 @@ export function CommandPalette() {
         close();
       }
     }
+    // A visible search button (mobile has no ⌘K) dispatches this to open us.
+    function onOpen() { setOpen(true); }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("hba:search", onOpen);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("hba:search", onOpen);
+    };
   }, [open, close]);
 
   useEffect(() => {

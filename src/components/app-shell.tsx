@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Home, Feather, Calendar, CalendarDays, CalendarOff, CreditCard, TrendingUp, UserCheck, ClipboardCheck, Banknote, Tablet, LayoutGrid, Users, GraduationCap, Trophy, Award, Medal, BookOpen, Megaphone, MessageCircle, Tag, BarChart3, FileText, Settings, Building2, ShieldCheck, Calculator } from "lucide-react";
 import { Avatar, cn } from "@/components/ui";
 import { SignOutButton } from "@/components/sign-out-button";
+import { SearchButton } from "@/components/search-button";
 import { APP_SHORT, ROLE_LABEL, type NavItem } from "@/lib/constants";
 
 const ROOTS = ["/admin", "/coach", "/parent"];
@@ -218,6 +219,7 @@ export function AppShell({
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
         {brand}
         <div className="flex items-center gap-2">
+          {(role === "admin" || role === "super_admin") && <SearchButton />}
           {langToggle}
           {bell}
           <button
@@ -244,6 +246,7 @@ export function AppShell({
           <div className="mb-6 hidden items-center justify-between px-2 md:flex">
             {brand}
             <div className="flex items-center gap-2">
+              {(role === "admin" || role === "super_admin") && <SearchButton />}
               {langToggle}
               {bell}
             </div>

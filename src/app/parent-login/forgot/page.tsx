@@ -1,4 +1,5 @@
 import { Feather } from "lucide-react";
+import { SubmitButton } from "@/components/submit-button";
 import { requestPasswordReset } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -36,12 +37,12 @@ export default async function ParentForgotPasswordPage({
             <label className="block text-sm font-medium text-slate-700">Email</label>
             <input name="email" type="email" required autoComplete="email" placeholder="you@example.com" className={INPUT} />
           </div>
-          <button
-            type="submit"
+          <SubmitButton
+            pendingText="Sending…"
             className="w-full rounded-xl bg-green-600 px-6 py-3.5 text-base font-semibold text-white shadow-sm transition-all hover:bg-green-700 active:scale-95"
           >
             Send reset link
-          </button>
+          </SubmitButton>
         </form>
       )}
 

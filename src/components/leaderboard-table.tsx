@@ -57,8 +57,12 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
     return (
       <th
         onClick={() => sortBy(c)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sortBy(c); } }}
+        role="button"
+        tabIndex={0}
+        aria-sort={col === c ? (dir === 1 ? "ascending" : "descending") : "none"}
         className={cn(
-          "cursor-pointer select-none border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-800",
+          "cursor-pointer select-none border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-500/40",
           align === "left" ? "text-left" : "text-center",
         )}
       >

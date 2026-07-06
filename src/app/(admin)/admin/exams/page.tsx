@@ -100,13 +100,13 @@ export default async function AdminExamsPage({
                 return (
                 <tr key={e.id} className="hover:bg-slate-50">
                   <Td>{formatDate(e.exam_date)}{e.window_label ? <span className="block text-xs text-slate-400">{e.window_label}</span> : null}</Td>
-                  <Td className="font-medium text-slate-900">{e.students?.full_name ?? "—"}</Td>
-                  <Td>{e.from_level} → {e.to_level > 6 ? "Elite" : `${e.to_level} (${levelName(e.to_level)})`}</Td>
-                  <Td className="font-semibold tabular-nums">{e.total}/100</Td>
-                  <Td><Badge tone={BAND_TONE[e.band] ?? "slate"}>{e.band ?? "—"}</Badge></Td>
-                  <Td className="text-slate-600">{DECISION_LABEL[e.decision as Decision] ?? e.decision ?? "—"}</Td>
-                  <Td className="text-slate-500">{e.coach?.full_name ?? "—"}</Td>
-                  <Td className="text-right">
+                  <Td label="Student" className="font-medium text-slate-900">{e.students?.full_name ?? "—"}</Td>
+                  <Td label="Level">{e.from_level} → {e.to_level > 6 ? "Elite" : `${e.to_level} (${levelName(e.to_level)})`}</Td>
+                  <Td label="Score" className="font-semibold tabular-nums">{e.total}/100</Td>
+                  <Td label="Result"><Badge tone={BAND_TONE[e.band] ?? "slate"}>{e.band ?? "—"}</Badge></Td>
+                  <Td label="Recommends" className="text-slate-600">{DECISION_LABEL[e.decision as Decision] ?? e.decision ?? "—"}</Td>
+                  <Td label="Coach" className="text-slate-500">{e.coach?.full_name ?? "—"}</Td>
+                  <Td label="Actions" className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <a href={`/api/exams/${e.id}/pdf`} target="_blank" rel="noopener" className="text-green-700 hover:underline">PDF</a>
                       {canPromote && (

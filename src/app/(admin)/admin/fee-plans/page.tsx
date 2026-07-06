@@ -85,14 +85,14 @@ export default async function FeePlansPage({
                       <span className="text-slate-400">—</span>
                     )}
                   </Td>
-                  <Td className="font-medium text-slate-900">{formatCurrency(Number(p.amount), p.currency)}</Td>
-                  <Td>
+                  <Td label="Amount" className="font-medium text-slate-900">{formatCurrency(Number(p.amount), p.currency)}</Td>
+                  <Td label="Billing">
                     <Badge tone="blue">{p.interval === "one_time" ? "one-time" : p.interval}</Badge>
                   </Td>
-                  <Td>
+                  <Td label="Stripe">
                     {p.stripe_price_id ? <Badge tone="green">synced</Badge> : <Badge tone="slate">—</Badge>}
                   </Td>
-                  <Td className="text-right">
+                  <Td label="Actions" className="text-right">
                     <div className="flex justify-end gap-2">
                       <LinkButton href={`/admin/fee-plans/${p.id}`} variant="secondary">
                         Edit

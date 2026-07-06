@@ -32,13 +32,13 @@ export default async function RewardsPage() {
               {rules.map((r: any) => (
                 <tr key={r.id} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{r.name}</Td>
-                  <Td><Badge tone="green">+{r.points}</Badge></Td>
-                  <Td>
+                  <Td label="Points"><Badge tone="green">+{r.points}</Badge></Td>
+                  <Td label="Active">
                     <Badge tone={r.is_active ? "green" : "slate"}>
                       {r.is_active ? "active" : "inactive"}
                     </Badge>
                   </Td>
-                  <Td className="text-right">
+                  <Td label="Actions" className="text-right">
                     <div className="flex justify-end gap-2">
                       <LinkButton href={`/admin/rewards/${r.id}`} variant="secondary">
                         Edit

@@ -102,9 +102,9 @@ export default async function HolidaysPage({
               {holidays.map((h: any) => (
                 <tr key={h.id} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{h.name}</Td>
-                  <Td className="text-slate-500">{formatDate(h.start_date)}</Td>
-                  <Td className="text-slate-500">{formatDate(h.end_date)}</Td>
-                  <Td className="text-right">
+                  <Td label="From" className="text-slate-500">{formatDate(h.start_date)}</Td>
+                  <Td label="To" className="text-slate-500">{formatDate(h.end_date)}</Td>
+                  <Td label="Actions" className="text-right">
                     <form action={deleteSchoolHoliday}>
                       <input type="hidden" name="id" value={h.id} />
                       <ConfirmButton label="Remove" confirmText={`Remove "${h.name}"?`} />
@@ -139,7 +139,7 @@ export default async function HolidaysPage({
               {importedRows.map((h: any) => (
                 <tr key={h.holiday_date} className="hover:bg-slate-50">
                   <Td className="text-slate-600">{formatDate(h.holiday_date)}</Td>
-                  <Td><Badge tone="green">{h.name}</Badge></Td>
+                  <Td label="Holiday"><Badge tone="green">{h.name}</Badge></Td>
                 </tr>
               ))}
             </tbody>

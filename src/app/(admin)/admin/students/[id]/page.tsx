@@ -151,10 +151,10 @@ export default async function StudentProfilePage({
                 {att.slice(0, 3).map((a: any, i) => (
                   <tr key={i} className="hover:bg-slate-50">
                     <Td>{formatDate(a.sessions?.session_date)}</Td>
-                    <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
-                    <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
-                    <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
-                    <Td className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
+                    <Td label="Class" className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
+                    <Td label="Status"><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
+                    <Td label="Tap in" className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
+                    <Td label="Tap out" className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -170,10 +170,10 @@ export default async function StudentProfilePage({
                       {att.slice(3).map((a: any, i) => (
                         <tr key={i} className="hover:bg-slate-50">
                           <Td>{formatDate(a.sessions?.session_date)}</Td>
-                          <Td className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
-                          <Td><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
-                          <Td className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
-                          <Td className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
+                          <Td label="Class" className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
+                          <Td label="Status"><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
+                          <Td label="Tap in" className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
+                          <Td label="Tap out" className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
                         </tr>
                       ))}
                     </tbody>
@@ -194,10 +194,10 @@ export default async function StudentProfilePage({
               {exams.map((e: any) => (
                 <tr key={e.id} className="hover:bg-slate-50">
                   <Td>{formatDate(e.exam_date)}</Td>
-                  <Td>{e.from_level} → {e.to_level > 6 ? "Elite" : e.to_level}</Td>
-                  <Td className="font-semibold tabular-nums">{e.total}/100</Td>
-                  <Td><Badge tone={e.band === "excellent" || e.band === "pass" ? "green" : e.band === "borderline" ? "yellow" : "red"}>{e.band ?? "—"}</Badge></Td>
-                  <Td><a href={`/api/exams/${e.id}/pdf`} target="_blank" rel="noopener" className="text-green-700 hover:underline">PDF</a></Td>
+                  <Td label="Level">{e.from_level} → {e.to_level > 6 ? "Elite" : e.to_level}</Td>
+                  <Td label="Score" className="font-semibold tabular-nums">{e.total}/100</Td>
+                  <Td label="Result"><Badge tone={e.band === "excellent" || e.band === "pass" ? "green" : e.band === "borderline" ? "yellow" : "red"}>{e.band ?? "—"}</Badge></Td>
+                  <Td label="PDF"><a href={`/api/exams/${e.id}/pdf`} target="_blank" rel="noopener" className="text-green-700 hover:underline">PDF</a></Td>
                 </tr>
               ))}
             </tbody>
@@ -214,11 +214,11 @@ export default async function StudentProfilePage({
               {monthly.map((m: any, i) => (
                 <tr key={i} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{monthLabel(m.period_month)}</Td>
-                  <Td className="tabular-nums">{m.fitness ?? "—"}/5</Td>
-                  <Td className="tabular-nums">{m.skills ?? "—"}/5</Td>
-                  <Td className="tabular-nums">{m.attitude ?? "—"}/5</Td>
-                  <Td className="max-w-xs truncate text-slate-500">{m.comment ?? "—"}</Td>
-                  <Td className="text-slate-500">{m.coach?.full_name ?? "—"}</Td>
+                  <Td label="Fitness" className="tabular-nums">{m.fitness ?? "—"}/5</Td>
+                  <Td label="Skills" className="tabular-nums">{m.skills ?? "—"}/5</Td>
+                  <Td label="Attitude" className="tabular-nums">{m.attitude ?? "—"}/5</Td>
+                  <Td label="Comment" className="max-w-xs truncate text-slate-500">{m.comment ?? "—"}</Td>
+                  <Td label="Coach" className="text-slate-500">{m.coach?.full_name ?? "—"}</Td>
                 </tr>
               ))}
             </tbody>
@@ -237,9 +237,9 @@ export default async function StudentProfilePage({
                   {ledger.map((r: any, i) => (
                     <tr key={i} className="hover:bg-slate-50">
                       <Td>{formatDate(r.awarded_at)}</Td>
-                      <Td className="text-slate-500">{r.reward_rules?.name ?? "—"}</Td>
-                      <Td className="text-slate-500">{r.reason ?? "—"}</Td>
-                      <Td className="text-right font-semibold text-green-700">+{r.points}</Td>
+                      <Td label="Rule" className="text-slate-500">{r.reward_rules?.name ?? "—"}</Td>
+                      <Td label="Reason" className="text-slate-500">{r.reason ?? "—"}</Td>
+                      <Td label="Points" className="text-right font-semibold text-green-700">+{r.points}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -278,9 +278,9 @@ export default async function StudentProfilePage({
               {invoices.map((inv: any, i) => (
                 <tr key={i} className="hover:bg-slate-50">
                   <Td className="font-mono text-xs text-slate-500">{inv.invoice_no ?? "—"}</Td>
-                  <Td className="font-medium text-slate-900">{formatCurrency(Number(inv.amount), inv.currency)}</Td>
-                  <Td className="text-slate-500">{formatDate(inv.due_date)}</Td>
-                  <Td><Badge tone={INV_TONE[inv.status as InvoiceStatus]}>{inv.status}</Badge></Td>
+                  <Td label="Amount" className="font-medium text-slate-900">{formatCurrency(Number(inv.amount), inv.currency)}</Td>
+                  <Td label="Due" className="text-slate-500">{formatDate(inv.due_date)}</Td>
+                  <Td label="Status"><Badge tone={INV_TONE[inv.status as InvoiceStatus]}>{inv.status}</Badge></Td>
                 </tr>
               ))}
             </tbody>

@@ -55,9 +55,9 @@ export default async function MessagesPage() {
               {queued.map((m: any) => (
                 <tr key={m.id} className="hover:bg-slate-50">
                   <Td className="text-slate-500">{formatDateTime(m.created_at)}</Td>
-                  <Td><Badge tone="slate">{kindLabel(m.kind)}</Badge></Td>
-                  <Td className="font-mono text-xs text-slate-500">{m.recipient_phone}</Td>
-                  <Td className="max-w-md truncate text-xs text-slate-500" title={m.body ?? ""}>{m.body}</Td>
+                  <Td label="Type"><Badge tone="slate">{kindLabel(m.kind)}</Badge></Td>
+                  <Td label="To" className="font-mono text-xs text-slate-500">{m.recipient_phone}</Td>
+                  <Td label="Message" className="max-w-md truncate text-xs text-slate-500" title={m.body ?? ""}>{m.body}</Td>
                 </tr>
               ))}
             </tbody>
@@ -79,10 +79,10 @@ export default async function MessagesPage() {
               {messages.map((m: any) => (
                 <tr key={m.id} className="hover:bg-slate-50">
                   <Td className="text-slate-500">{formatDateTime(m.created_at)}</Td>
-                  <Td><Badge tone="slate">{m.type}</Badge></Td>
-                  <Td className="font-mono text-xs text-slate-500">{m.recipient_phone}</Td>
-                  <Td><Badge tone={TONE[m.status as MessageStatus]}>{m.status}</Badge></Td>
-                  <Td className="max-w-md truncate text-xs text-slate-500" title={m.error ?? m.body ?? ""}>
+                  <Td label="Type"><Badge tone="slate">{m.type}</Badge></Td>
+                  <Td label="To" className="font-mono text-xs text-slate-500">{m.recipient_phone}</Td>
+                  <Td label="Status"><Badge tone={TONE[m.status as MessageStatus]}>{m.status}</Badge></Td>
+                  <Td label="Detail" className="max-w-md truncate text-xs text-slate-500" title={m.error ?? m.body ?? ""}>
                     {m.error ? <span className="text-red-600">{m.error}</span> : m.body}
                   </Td>
                 </tr>
