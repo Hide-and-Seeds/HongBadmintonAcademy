@@ -31,7 +31,7 @@ export default async function ParentDashboard() {
   const monthStartISO = new Date(Date.UTC(myt.getUTCFullYear(), myt.getUTCMonth(), 1)).toISOString();
 
   // Class + fees + latest monthly coach marks + this-month promotions, per child.
-  const [{ data: enrollments }, { data: invoices }, { count: unpaid }, { data: monthlyRows }, { data: rankEvents }] =
+  const [{ data: enrollments }, { data: invoices }, { count: unpaid }, { data: monthlyRows }, { data: rankEvents }, { data: attRows }] =
     await Promise.all([
       childIds.length
         ? supabase
@@ -65,6 +65,14 @@ export default async function ParentDashboard() {
             .select("student_id, from_rank, to_rank, created_at")
             .in("student_id", childIds)
             .gte("created_at", monthStartISO)
+        : Promise.resolve({ data: [] as any[] }),
+      childIds.length
+        ? supabase
+            .from("attendance")
+            .select("student_id, status, created_at")
+            .in("student_id", childIds)
+            .order("created_at", { ascending: false })
+            .limit(400)
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
@@ -166,6 +174,20 @@ export default async function ParentDashboard() {
     if ((RANK_ORDER[ev.to_rank] ?? 0) > (RANK_ORDER[ev.from_rank] ?? 0)) promoted.add(ev.student_id);
   }
 
+  // Current attendance streak per child — consecutive present/late from the most
+  // recent marked session. An excused (approved-leave) session is skipped, not a
+  // break, so a sanctioned absence doesn't zero a good run.
+  const streakByChild = new Map<string, number>();
+  const streakBroken = new Set<string>();
+  for (const a of (attRows ?? []) as any[]) {
+    if (streakBroken.has(a.student_id)) continue;
+    if (a.status === "present" || a.status === "late") {
+      streakByChild.set(a.student_id, (streakByChild.get(a.student_id) ?? 0) + 1);
+    } else if (a.status === "absent") {
+      streakBroken.add(a.student_id);
+    }
+  }
+
   const homeSessions: SessionItem[] = (upcomingSessions ?? []).map((s: any) => {
     const d = new Date(`${s.session_date}T00:00:00`);
     return {
@@ -198,6 +220,7 @@ export default async function ParentDashboard() {
             const clsName = classByChild.get(c.id);
             const lvl = Number((c as any).level ?? 1);
             const ms = monthlyByChild.get(c.id);
+            const streak = streakByChild.get(c.id) ?? 0;
             return (
               <Link key={c.id} href={`/parent/children/${c.id}`} className="group">
                 <Card className="h-full p-4 transition-all hover:border-emerald-300 hover:shadow-md">
@@ -213,6 +236,9 @@ export default async function ParentDashboard() {
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
+                      {streak >= 2 && (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-700">🔥 {streak}</span>
+                      )}
                       {c.status !== "active" && <Badge tone="slate">{c.status}</Badge>}
                       {promoted.has(c.id) && (
                         <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">

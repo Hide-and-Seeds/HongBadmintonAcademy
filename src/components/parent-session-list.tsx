@@ -41,7 +41,9 @@ const LEAVE_TONE: Record<string, "green" | "yellow" | "red"> = {
 // per-child leave requests. Past → each child's attendance, tap-in and mark.
 export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[]; locale?: string | null }) {
   const L = dict(locale);
-  const [open, setOpen] = useState<string | null>(null);
+  // Auto-open the nearest upcoming session so "Request leave" is visible without
+  // a tap (it used to be buried behind a row that looked purely decorative).
+  const [open, setOpen] = useState<string | null>(() => sessions.find((s) => s.kind === "upcoming")?.id ?? null);
   const [items, setItems] = useState(sessions);
   const [leaveFor, setLeaveFor] = useState<string | null>(null); // `${sessionId}:${kidId}`
   const [reason, setReason] = useState("");

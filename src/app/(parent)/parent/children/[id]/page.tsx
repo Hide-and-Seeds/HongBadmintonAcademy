@@ -49,14 +49,12 @@ export default async function ChildDetailPage({
   const [
     { data: enrollment },
     { data: attendance },
-    { data: ledger },
     { data: invoices },
     { data: lastExam },
     { data: lastMonthly },
   ] = await Promise.all([
     supabase.from("enrollments").select("class_id, classes(name, level)").eq("student_id", id).eq("active", true).limit(1).maybeSingle(),
     supabase.from("attendance").select("status").eq("student_id", id).order("created_at", { ascending: false }).limit(60),
-    supabase.from("reward_ledger").select("points").eq("student_id", id),
     supabase.from("invoices").select("amount, currency, status, due_date").eq("student_id", id),
     supabase.from("level_exams").select("id, exam_date, total, band, decision, to_level, next_target, window_label").eq("student_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("monthly_assessments").select("period_month, fitness, skills, attitude").eq("student_id", id).order("period_month", { ascending: false }).limit(1).maybeSingle(),
@@ -82,6 +80,13 @@ export default async function ChildDetailPage({
   const att = attendance ?? [];
   const attended = att.filter((a: any) => a.status === "present" || a.status === "late").length;
   const rate = att.length ? Math.round((attended / att.length) * 100) : null;
+  // Current attendance streak: consecutive present/late from the newest marked
+  // session; an excused (approved-leave) session is skipped rather than breaking it.
+  let streak = 0;
+  for (const a of att as any[]) {
+    if (a.status === "present" || a.status === "late") streak++;
+    else if (a.status === "absent") break;
+  }
 
   // Latest monthly coach marks → average of the three 1-5 dimensions. Headlines
   // the child card in place of the exam score (exam detail stays in the card below).
@@ -91,8 +96,6 @@ export default async function ChildDetailPage({
     const dims = [m.fitness, m.skills, m.attitude].map(Number).filter((n) => n > 0);
     return dims.length ? dims.reduce((a: number, b: number) => a + b, 0) / dims.length : null;
   })();
-
-  const points = (ledger ?? []).reduce((x: number, r: any) => x + Number(r.points), 0);
 
   const unpaid = (invoices ?? []).filter((i: any) => i.status === "unpaid" || i.status === "overdue");
   const outstanding = unpaid.reduce((s: number, i: any) => s + Number(i.amount), 0);
@@ -159,8 +162,8 @@ export default async function ChildDetailPage({
           <div className="mt-1 text-xs text-slate-500">{L.monthly_score_label}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
-          <div className="text-2xl font-bold text-slate-900">{points}</div>
-          <div className="mt-1 text-xs text-slate-500">Reward points</div>
+          <div className="text-2xl font-bold text-orange-600">{streak > 0 ? `🔥 ${streak}` : "—"}</div>
+          <div className="mt-1 text-xs text-slate-500">{L.streak_label}</div>
         </div>
       </div>
 
