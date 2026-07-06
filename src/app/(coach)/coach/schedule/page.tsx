@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, EmptyState, Badge, cn } from "@/components/ui";
+import { PageHeader, EmptyState, Badge, Table, Th, Td, cn } from "@/components/ui";
 import { Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatTime } from "@/lib/format";
 import { MonthCalendar } from "@/components/month-calendar";
@@ -56,14 +56,17 @@ function CoachSessionRow({ s, leaveLabel }: { s: any; leaveLabel: string }) {
 export default async function CoachSchedulePage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; view?: string }>;
 }) {
   const me = await requireRole("coach");
   const L = dict(me.locale);
   const supabase = await createClient();
   const classIds = await coachClassIds(supabase, me.id);
 
-  const monthStr = /^\d{4}-\d{2}$/.test((await searchParams).month ?? "") ? (await searchParams).month! : todayMYT().slice(0, 7);
+  const sp = await searchParams;
+  const monthStr = /^\d{4}-\d{2}$/.test(sp.month ?? "") ? sp.month! : todayMYT().slice(0, 7);
+  const view = sp.view === "table" ? "table" : "calendar";
+  const viewQ = view === "table" ? "&view=table" : "";
   const [y, m] = monthStr.split("-").map(Number);
   const start = `${monthStr}-01`;
   const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
@@ -101,19 +104,66 @@ export default async function CoachSchedulePage({
         <>
         {/* Month nav — browse past + future months on any device. */}
         <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-          <Link href={`/coach/schedule?month=${prevM}`} aria-label="Previous month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+          <Link href={`/coach/schedule?month=${prevM}${viewQ}`} aria-label="Previous month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
             <ChevronLeft className="h-5 w-5" />
           </Link>
           <div className="text-center">
             <div className="text-sm font-semibold text-slate-900">{monthLabelStr}</div>
             {monthStr !== thisM && (
-              <Link href={`/coach/schedule?month=${thisM}`} className="text-xs font-medium text-green-700 hover:underline">{L.back_to_this_month}</Link>
+              <Link href={`/coach/schedule?month=${thisM}${viewQ}`} className="text-xs font-medium text-green-700 hover:underline">{L.back_to_this_month}</Link>
             )}
           </div>
-          <Link href={`/coach/schedule?month=${nextM}`} aria-label="Next month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+          <Link href={`/coach/schedule?month=${nextM}${viewQ}`} aria-label="Next month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
             <ChevronRight className="h-5 w-5" />
           </Link>
         </div>
+          {/* View toggle: calendar (default) or a flat table of every session. */}
+          <div className="flex justify-end">
+            <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm font-medium shadow-sm">
+              <Link href={`/coach/schedule?month=${monthStr}`} className={cn("rounded-md px-3 py-1.5", view === "calendar" ? "bg-emerald-600 text-white" : "text-slate-600 hover:bg-slate-50")}>{L.view_calendar}</Link>
+              <Link href={`/coach/schedule?month=${monthStr}&view=table`} className={cn("rounded-md px-3 py-1.5", view === "table" ? "bg-emerald-600 text-white" : "text-slate-600 hover:bg-slate-50")}>{L.view_table}</Link>
+            </div>
+          </div>
+
+          {view === "table" ? (
+            all.length ? (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{L.col_date}</Th>
+                    <Th>{L.col_class}</Th>
+                    <Th>{L.col_time}</Th>
+                    <Th>{L.col_place}</Th>
+                    <Th>{L.col_status}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {all.map((s: any) => {
+                    const d = new Date(`${s.session_date}T00:00:00`);
+                    const upcoming = s.session_date >= today;
+                    return (
+                      <tr key={s.id} className={cn(!upcoming && "opacity-60")}>
+                        <Td label={L.col_date}>
+                          <Link href={`/coach/sessions/${s.id}`} className="font-medium text-slate-900 hover:text-emerald-700">
+                            {d.toLocaleDateString("en-MY", { weekday: "short", day: "numeric", month: "short" })}
+                          </Link>
+                        </Td>
+                        <Td label={L.col_class}>{s.classes?.name ?? "Class"}</Td>
+                        <Td label={L.col_time}>{formatTime(s.start_time)}–{formatTime(s.end_time)}</Td>
+                        <Td label={L.col_place}>{s.location ?? "—"}</Td>
+                        <Td label={L.col_status}>
+                          <Badge tone={s.status === "completed" ? "green" : s.status === "canceled" ? "red" : upcoming ? "blue" : "slate"}>{s.status}</Badge>
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            ) : (
+              <EmptyState message={L.no_sessions_month} />
+            )
+          ) : (
+          <>
           {/* Phone: a readable list — upcoming first, earlier sessions collapsed.
               Tap a row for the full session + roster. */}
           <div className="md:hidden">
@@ -162,6 +212,8 @@ export default async function CoachSchedulePage({
               }))}
             />
           </div>
+          </>
+          )}
         </>
       )}
     </div>
