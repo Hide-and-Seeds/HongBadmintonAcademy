@@ -22,6 +22,7 @@ export interface Profile {
   avatar_url: string | null;
   is_active: boolean;
   branch_id: string | null;
+  locale: string | null;
   stripe_customer_id: string | null;
   created_at: string;
 }

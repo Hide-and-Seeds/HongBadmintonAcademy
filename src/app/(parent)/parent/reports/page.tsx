@@ -3,14 +3,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Card, EmptyState, Avatar, cn } from "@/components/ui";
 import { Star } from "lucide-react";
 import { monthLabel } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
-const DIMS = [
-  { key: "fitness", label: "Fitness" },
-  { key: "skills", label: "Skills" },
-  { key: "attitude", label: "Attitude" },
-] as const;
+const DIM_KEYS = ["fitness", "skills", "attitude"] as const;
 
 function dotRow(v: number | null) {
   return (
@@ -29,6 +26,7 @@ function dotRow(v: number | null) {
 // ratings + reward points, month by month. Exams stay on the Progress Card page.
 export default async function ParentReportsPage() {
   const me = await requireParent();
+  const L = dict(me.locale);
   const db = createAdminClient();
 
   const { data: children } = await db
@@ -41,8 +39,8 @@ export default async function ParentReportsPage() {
   if (!childIds.length) {
     return (
       <div>
-        <PageHeader title="Monthly report" />
-        <EmptyState message="No children linked to your account." />
+        <PageHeader title={L.monthly_report} />
+        <EmptyState message={L.no_children} />
       </div>
     );
   }
@@ -110,10 +108,7 @@ export default async function ParentReportsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Monthly report"
-        description="How each month went — coach's marks, attendance and rewards. Exam results live on the Progress Card."
-      />
+      <PageHeader title={L.monthly_report} description={L.monthly_report_desc} />
 
       {(children ?? []).map((c) => {
         // Show months that have anything to say (always include the current one).
@@ -144,17 +139,17 @@ export default async function ParentReportsPage() {
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-slate-900">{monthLabel(m)}</span>
                       {pts > 0 && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">+{pts} pts</span>
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">+{pts} {L.pts_suffix}</span>
                       )}
                     </div>
 
                     {emptyMonth ? (
-                      <p className="text-sm text-slate-400">Nothing recorded this month yet.</p>
+                      <p className="text-sm text-slate-400">{L.nothing_recorded}</p>
                     ) : (
                       <>
                         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
                           <span className="text-slate-600">
-                            Attendance{" "}
+                            {L.attendance}{" "}
                             <span className={cn("font-semibold", attPct == null ? "text-slate-300" : attPct >= 80 ? "text-green-600" : attPct >= 50 ? "text-amber-600" : "text-red-600")}>
                               {attPct == null ? "—" : `${attPct}%`}
                             </span>
@@ -162,23 +157,23 @@ export default async function ParentReportsPage() {
                           </span>
                           {avgMark != null && (
                             <span className="inline-flex items-center gap-1 text-slate-600">
-                              <Star className="h-3.5 w-3.5 text-amber-500" /> {avgMark}/5 avg session rating
+                              <Star className="h-3.5 w-3.5 text-amber-500" /> {avgMark}/5 {L.avg_session_rating}
                             </span>
                           )}
                         </div>
 
                         {a ? (
                           <div className="space-y-1.5 border-t border-slate-100 pt-2.5">
-                            {DIMS.map((d) => (
-                              <div key={d.key} className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">{d.label}</span>
-                                {dotRow(a[d.key])}
+                            {DIM_KEYS.map((k2) => (
+                              <div key={k2} className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600">{L[k2]}</span>
+                                {dotRow(a[k2])}
                               </div>
                             ))}
                             {a.comment && <p className="pt-1 text-sm italic text-slate-600">“{a.comment}”</p>}
                           </div>
                         ) : (
-                          <p className="border-t border-slate-100 pt-2.5 text-xs text-slate-400">Coach's monthly marks not in yet.</p>
+                          <p className="border-t border-slate-100 pt-2.5 text-xs text-slate-400">{L.marks_not_in}</p>
                         )}
                       </>
                     )}

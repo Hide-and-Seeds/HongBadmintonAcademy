@@ -10,11 +10,13 @@ import { type SessionItem } from "@/components/parent-session-list";
 import { RANK_ORDER } from "@/lib/ranks";
 import { levelBadgeClass } from "@/lib/training";
 import type { FeeInterval } from "@/lib/types";
+import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function ParentDashboard() {
   const me = await requireParent();
+  const L = dict(me.locale);
   const supabase = createAdminClient();
 
   const { data: children } = await supabase
@@ -183,7 +185,7 @@ export default async function ParentDashboard() {
 
   return (
     <div>
-      <PageHeader title={`Hello, ${me.full_name ?? "Parent"}`} />
+      <PageHeader title={`${L.hello}, ${me.full_name ?? "Parent"}`} />
 
       {/* ─── Your children — growth first ────────────────────────────────── */}
       {children && children.length > 0 ? (
@@ -203,14 +205,14 @@ export default async function ParentDashboard() {
                           <span className="text-base font-semibold text-slate-900 group-hover:text-emerald-700">{c.full_name}</span>
                           <span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold", levelBadgeClass(lvl))}>L{lvl}</span>
                         </div>
-                        <div className="mt-0.5 text-sm text-slate-500">{clsName ?? "Not enrolled"}</div>
+                        <div className="mt-0.5 text-sm text-slate-500">{clsName ?? L.not_enrolled}</div>
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {c.status !== "active" && <Badge tone="slate">{c.status}</Badge>}
                       {promoted.has(c.id) && (
                         <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                          ↑ Promoted
+                          ↑ {L.promoted}
                         </span>
                       )}
                     </div>
@@ -220,12 +222,12 @@ export default async function ParentDashboard() {
                     {ex ? (
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-2xl font-bold text-emerald-700">{ex.total}</span>
-                        <span className="text-xs font-medium text-slate-400">/100 last exam</span>
+                        <span className="text-xs font-medium text-slate-400">{L.last_exam_suffix}</span>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-400">No exam yet</span>
+                      <span className="text-xs text-slate-400">{L.no_exam_yet}</span>
                     )}
-                    <span className="text-sm font-medium text-emerald-700">Progress →</span>
+                    <span className="text-sm font-medium text-emerald-700">{L.progress_arrow}</span>
                   </div>
                 </Card>
               </Link>
@@ -233,13 +235,13 @@ export default async function ParentDashboard() {
           })}
         </div>
       ) : (
-        <EmptyState message="No children linked to your account yet. Contact the academy." />
+        <EmptyState message={L.no_children} />
       )}
 
       {/* ─── Today's schedule (else the next upcoming session) ───────────── */}
       {todaysSessions.length > 0 ? (
         <div className="mt-6">
-          <h2 className="mb-2 text-lg font-semibold text-slate-900">Today&apos;s schedule</h2>
+          <h2 className="mb-2 text-lg font-semibold text-slate-900">{L.todays_schedule}</h2>
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
             {todaysSessions.map((s: any) => (
               <Link
@@ -275,19 +277,19 @@ export default async function ParentDashboard() {
               <span className="text-base font-bold leading-none text-emerald-800">{homeSessions[0].day}</span>
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-slate-900">Next: {homeSessions[0].className}</div>
+              <div className="truncate text-sm font-semibold text-slate-900">{L.next_session}: {homeSessions[0].className}</div>
               <div className="truncate text-xs text-slate-500">
                 {homeSessions[0].wd} {homeSessions[0].timeLabel}{homeSessions[0].location ? ` · ${homeSessions[0].location}` : ""}
               </div>
             </div>
           </div>
-          <span className="shrink-0 text-sm font-medium text-emerald-700">Schedule →</span>
+          <span className="shrink-0 text-sm font-medium text-emerald-700">{L.schedule_arrow}</span>
         </Link>
       ) : null}
 
       {/* ─── Fees — kept calm and last ───────────────────────────────────── */}
       <div className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Fees</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">{L.fees}</h2>
         {unpaid && unpaid > 0 ? (
           <Link
             href="/parent/invoices"
@@ -298,12 +300,12 @@ export default async function ParentDashboard() {
           >
             <div className="min-w-0">
               <div className={cn("text-base font-semibold", overdueCount > 0 ? "text-red-700" : "text-slate-900")}>
-                {formatCurrency(totalOutstanding, outCurrency)} outstanding
+                {formatCurrency(totalOutstanding, outCurrency)} {L.outstanding_suffix}
               </div>
               <div className={cn("mt-0.5 text-xs", overdueCount > 0 ? "font-medium text-red-600" : "text-slate-500")}>
                 {overdueCount > 0
-                  ? `${overdueCount} overdue · please settle soon`
-                  : `${unpaid} invoice${unpaid > 1 ? "s" : ""} — settle whenever it's convenient`}
+                  ? `${overdueCount} ${L.overdue_settle}`
+                  : `${unpaid} invoice${unpaid > 1 ? "s" : ""} ${L.invoice_whenever}`}
               </div>
             </div>
             <span
@@ -314,12 +316,12 @@ export default async function ParentDashboard() {
                   : "border-emerald-600 text-emerald-700 hover:bg-emerald-50",
               )}
             >
-              {overdueCount > 0 ? "Pay now" : "View & pay"}
+              {overdueCount > 0 ? L.pay_now : L.view_and_pay}
             </span>
           </Link>
         ) : (
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">
-            You&apos;re all paid up — thank you!
+            {L.all_paid_up}
           </div>
         )}
       </div>

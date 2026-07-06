@@ -3,11 +3,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Section, Collapsible, EmptyState } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { ParentSessionList, type SessionItem } from "@/components/parent-session-list";
+import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function ParentSchedulePage() {
   const me = await requireParent();
+  const L = dict(me.locale);
   const supabase = createAdminClient();
   const today = new Date().toLocaleDateString("en-CA");
   const since = new Date(Date.now() - 30 * 86400000).toLocaleDateString("en-CA");
@@ -23,8 +25,8 @@ export default async function ParentSchedulePage() {
   if (!childIds.length) {
     return (
       <div>
-        <PageHeader title="Schedule" />
-        <EmptyState message="No children linked to your account." />
+        <PageHeader title={L.schedule} />
+        <EmptyState message={L.no_children} />
       </div>
     );
   }
@@ -162,10 +164,10 @@ export default async function ParentSchedulePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Schedule" />
+      <PageHeader title={L.schedule} />
 
       {upcomingHols.length > 0 && (
-        <Section title="School holidays — no class" flush>
+        <Section title={L.school_holidays} flush>
           <ul className="divide-y divide-slate-100">
             {upcomingHols.map((h, i) => (
               <li key={i} className="px-5 py-3">
@@ -180,16 +182,16 @@ export default async function ParentSchedulePage() {
       )}
 
       {upcomingItems.length ? (
-        <Section title="Upcoming sessions" description="Tap a session for coach, court & who's going" flush>
-          <ParentSessionList sessions={upcomingItems} />
+        <Section title={L.upcoming_sessions} description={L.tap_session_hint} flush>
+          <ParentSessionList sessions={upcomingItems} locale={me.locale} />
         </Section>
       ) : (
-        <EmptyState message="No upcoming sessions scheduled." />
+        <EmptyState message={L.no_upcoming} />
       )}
 
       {pastItems.length > 0 && (
-        <Collapsible title="Recent sessions" count={pastItems.length} defaultOpen={false}>
-          <ParentSessionList sessions={pastItems} />
+        <Collapsible title={L.recent_sessions} count={pastItems.length} defaultOpen={false}>
+          <ParentSessionList sessions={pastItems} locale={me.locale} />
         </Collapsible>
       )}
     </div>

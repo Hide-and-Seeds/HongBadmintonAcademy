@@ -64,6 +64,7 @@ export function AppShell({
   accountHref,
   bell,
   switcher,
+  labels,
   children,
 }: {
   groups: NavGroup[];
@@ -72,6 +73,7 @@ export function AppShell({
   accountHref?: string;
   bell?: React.ReactNode;
   switcher?: React.ReactNode;
+  labels?: { dashboard?: string; account?: string; home?: string };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -166,7 +168,7 @@ export function AppShell({
     role === "admin"
       ? []
       : [
-          { href: home, short: "Home", Icon: Home },
+          { href: home, short: labels?.home ?? "Home", Icon: Home },
           ...groups
             .flatMap((g) => g.items)
             .slice(0, 5)
@@ -187,7 +189,7 @@ export function AppShell({
       )}
     >
       <Home className="h-4 w-4 shrink-0" />
-      Dashboard
+      {labels?.dashboard ?? "Dashboard"}
     </Link>
   );
   const brand = (
@@ -260,7 +262,7 @@ export function AppShell({
                 className="mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
                 <Settings className="h-4 w-4 shrink-0 text-slate-400" />
-                Account
+                {labels?.account ?? "Account"}
               </Link>
             )}
             <SignOutButton role={role} />

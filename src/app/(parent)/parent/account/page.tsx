@@ -1,6 +1,8 @@
 import { requireParent } from "@/lib/parent-auth";
-import { PageHeader, Card, Field, Input, Button } from "@/components/ui";
+import { PageHeader, Card, Field, Input, Button, Select } from "@/components/ui";
 import { changeParentPassword, updateParentContact } from "./actions";
+import { setParentLocale } from "./locale-actions";
+import { dict } from "@/lib/i18n";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
 import { PushPanel } from "@/components/push-panel";
 import { saveParentPush, removeParentPush, sendTestParentPush } from "./push-actions";
@@ -14,19 +16,34 @@ export default async function ParentAccountPage({
 }) {
   const me = await requireParent();
   const { saved, error } = await searchParams;
+  const L = dict(me.locale);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Account" description={me.email ?? undefined} />
+      <PageHeader title={L.my_account} description={me.email ?? undefined} />
 
       {saved && (
         <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          {saved === "contact" ? "Contact details updated." : "Password updated."}
+          {saved === "contact" ? "Contact details updated." : saved === "locale" ? L.saved : "Password updated."}
         </p>
       )}
       {error && (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
       )}
+
+      <Card className="max-w-md p-6">
+        <h2 className="text-base font-semibold text-slate-900">{L.language}</h2>
+        <p className="mt-1 text-sm text-slate-500">{L.language_hint}</p>
+        <form action={setParentLocale} className="mt-4 flex items-end gap-2">
+          <Field label={L.language}>
+            <Select name="locale" defaultValue={me.locale ?? "en"} className="w-44">
+              <option value="en">English</option>
+              <option value="zh">中文 (Chinese)</option>
+            </Select>
+          </Field>
+          <Button type="submit">{L.save}</Button>
+        </form>
+      </Card>
 
       <Card className="max-w-md p-6">
         <h2 className="text-base font-semibold text-slate-900">Contact details</h2>
