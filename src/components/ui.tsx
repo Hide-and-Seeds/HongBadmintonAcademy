@@ -354,7 +354,16 @@ export function Badge({
 }
 
 // ─── Table ────────────────────────────────────────────────────────────────
-export function Table({ children }: { children: ReactNode }) {
+export function Table({ children, grid }: { children: ReactNode; grid?: boolean }) {
+  // Default: rows collapse into cards on phones (globals.css .rtable rules).
+  // grid: keep a real table grid on every screen — scroll sideways if narrow.
+  if (grid) {
+    return (
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table className="w-full min-w-[520px] text-sm">{children}</table>
+      </div>
+    );
+  }
   return (
     <div className="rtable-wrap overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
       <table className="rtable w-full text-sm">{children}</table>

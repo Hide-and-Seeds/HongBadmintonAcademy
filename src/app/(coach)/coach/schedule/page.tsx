@@ -140,7 +140,7 @@ export default async function CoachSchedulePage({
 
           {view === "table" ? (
             all.length ? (
-              <Table>
+              <Table grid>
                 <thead>
                   <tr>
                     <Th>{L.col_date}</Th><Th>{L.col_class}</Th><Th>{L.col_place}</Th><Th>{L.col_status}</Th><Th>{L.col_marked}</Th>
