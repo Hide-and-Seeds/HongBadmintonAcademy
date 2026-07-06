@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 
 // Record a tap without hardware (demo / manual). Mirrors the NFC endpoint logic.
 export async function simulateTap(formData: FormData) {
+  await requireRole("admin");
   const session_id = String(formData.get("session_id"));
   const student_id = String(formData.get("student_id"));
   const supabase = await createClient();
@@ -48,6 +50,7 @@ export async function simulateTap(formData: FormData) {
 }
 
 export async function setAttendanceStatus(formData: FormData) {
+  await requireRole("admin");
   const session_id = String(formData.get("session_id"));
   const student_id = String(formData.get("student_id"));
   const status = String(formData.get("status"));
@@ -64,6 +67,7 @@ export async function setAttendanceStatus(formData: FormData) {
 }
 
 export async function processFlags(formData: FormData) {
+  await requireRole("admin");
   const session_id = String(formData.get("session_id"));
   const supabase = await createClient();
   await supabase.rpc("process_session_attendance", { p_session_id: session_id });
@@ -72,6 +76,7 @@ export async function processFlags(formData: FormData) {
 
 // Undo a manually-set attendance row entirely (admin).
 export async function clearAttendanceStatus(formData: FormData) {
+  await requireRole("admin");
   const session_id = String(formData.get("session_id"));
   const student_id = String(formData.get("student_id"));
   const supabase = await createClient();

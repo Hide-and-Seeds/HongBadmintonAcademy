@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/auth";
 import { PageHeader, Card, Field, Input, Button } from "@/components/ui";
 import { changeAdminPassword, updateAdminPhone } from "./actions";
+import { PushPanel } from "@/components/push-panel";
+import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
+import { savePushSubscription, removePushSubscription, sendTestPushToSelf } from "../settings/push-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +57,22 @@ export default async function AdminAccountPage({
           <Button type="submit">Update password</Button>
         </form>
       </Card>
+
+      {/* Push opt-in — lives here (every admin) since Settings became super-only. */}
+      {isPushConfigured() && (
+        <Card className="max-w-md overflow-hidden p-0">
+          <div className="border-b border-slate-100 p-6 pb-4">
+            <h2 className="text-base font-semibold text-slate-900">Notifications</h2>
+            <p className="mt-1 text-sm text-slate-500">Get a push for leave requests, payments and system alerts on this device.</p>
+          </div>
+          <PushPanel
+            vapidPublicKey={getVapidPublicKey()}
+            save={savePushSubscription}
+            remove={removePushSubscription}
+            test={sendTestPushToSelf}
+          />
+        </Card>
+      )}
     </div>
   );
 }
