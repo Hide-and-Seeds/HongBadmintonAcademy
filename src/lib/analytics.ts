@@ -37,8 +37,10 @@ const ymd = (d: Date) => d.toISOString().slice(0, 10);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // Academy analytics for the month containing `month` (defaults to now). Pass an
-// authed/admin or service-role Supabase client.
-export async function computeAnalytics(supabase: any, month: Date = new Date()): Promise<Analytics> {
+// authed/admin or service-role Supabase client. `branchId` narrows every metric
+// to one branch (super-admin switcher); branch-admins are already RLS-scoped so
+// they pass null and still only see their own branch.
+export async function computeAnalytics(supabase: any, month: Date = new Date(), branchId: string | null = null): Promise<Analytics> {
   const now = month;
   const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1); // exclusive
@@ -55,6 +57,8 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     if (filter) q = filter(q);
     return q;
   };
+  // Apply a direct branch_id filter when scoping to one branch.
+  const B = (q: any) => (branchId ? q.eq("branch_id", branchId) : q);
 
   const [
     coaches, parents,
@@ -73,22 +77,38 @@ export async function computeAnalytics(supabase: any, month: Date = new Date()):
     { data: classCoaches },
     { data: coachRows },
   ] = await Promise.all([
-    head("profiles", (q: any) => q.eq("role", "coach")),
+    head("profiles", (q: any) => B(q.eq("role", "coach"))),
     head("profiles", (q: any) => q.eq("role", "parent")),
-    supabase.from("payments").select("amount, status, created_at").gte("created_at", monthStartISO).lt("created_at", mEnd.toISOString()).eq("status", "succeeded"),
-    supabase.from("payments").select("amount, created_at").gte("created_at", trendStart.toISOString()).eq("status", "succeeded").limit(10000),
-    supabase.from("invoices").select("amount, status, period_month, due_date"),
-    supabase.from("attendance").select("student_id, status, sessions(session_date, class_id)").limit(20000),
-    supabase.from("level_exams").select("coach_id, total, technical, footwork, tactical, physical").gte("exam_date", `${now.getFullYear()}-01-01`).lt("exam_date", `${now.getFullYear() + 1}-01-01`).limit(10000),
-    supabase.from("level_exams").select("total").gte("exam_date", `${now.getFullYear() - 1}-01-01`).lt("exam_date", `${now.getFullYear()}-01-01`).limit(10000),
-    supabase.from("reward_ledger").select("points, student_id, students(full_name)").gte("awarded_at", monthStartISO).lt("awarded_at", mEnd.toISOString()).limit(10000),
+    branchId
+      ? supabase.from("payments").select("amount, status, created_at, invoices!inner(branch_id)").eq("invoices.branch_id", branchId).gte("created_at", monthStartISO).lt("created_at", mEnd.toISOString()).eq("status", "succeeded")
+      : supabase.from("payments").select("amount, status, created_at").gte("created_at", monthStartISO).lt("created_at", mEnd.toISOString()).eq("status", "succeeded"),
+    branchId
+      ? supabase.from("payments").select("amount, created_at, invoices!inner(branch_id)").eq("invoices.branch_id", branchId).gte("created_at", trendStart.toISOString()).eq("status", "succeeded").limit(10000)
+      : supabase.from("payments").select("amount, created_at").gte("created_at", trendStart.toISOString()).eq("status", "succeeded").limit(10000),
+    B(supabase.from("invoices").select("amount, status, period_month, due_date")),
+    branchId
+      ? supabase.from("attendance").select("student_id, status, sessions!inner(session_date, class_id, branch_id)").eq("sessions.branch_id", branchId).limit(20000)
+      : supabase.from("attendance").select("student_id, status, sessions(session_date, class_id)").limit(20000),
+    branchId
+      ? supabase.from("level_exams").select("coach_id, total, technical, footwork, tactical, physical, students!inner(branch_id)").eq("students.branch_id", branchId).gte("exam_date", `${now.getFullYear()}-01-01`).lt("exam_date", `${now.getFullYear() + 1}-01-01`).limit(10000)
+      : supabase.from("level_exams").select("coach_id, total, technical, footwork, tactical, physical").gte("exam_date", `${now.getFullYear()}-01-01`).lt("exam_date", `${now.getFullYear() + 1}-01-01`).limit(10000),
+    branchId
+      ? supabase.from("level_exams").select("total, students!inner(branch_id)").eq("students.branch_id", branchId).gte("exam_date", `${now.getFullYear() - 1}-01-01`).lt("exam_date", `${now.getFullYear()}-01-01`).limit(10000)
+      : supabase.from("level_exams").select("total").gte("exam_date", `${now.getFullYear() - 1}-01-01`).lt("exam_date", `${now.getFullYear()}-01-01`).limit(10000),
+    branchId
+      ? supabase.from("reward_ledger").select("points, student_id, students!inner(full_name, branch_id)").eq("students.branch_id", branchId).gte("awarded_at", monthStartISO).lt("awarded_at", mEnd.toISOString()).limit(10000)
+      : supabase.from("reward_ledger").select("points, student_id, students(full_name)").gte("awarded_at", monthStartISO).lt("awarded_at", mEnd.toISOString()).limit(10000),
     supabase.from("messages").select("status").limit(10000),
-    supabase.from("enrollments").select("student_id, class_id, classes(name, level, capacity)").eq("active", true).limit(10000),
-    supabase.from("students").select("id, level").eq("status", "active").limit(10000),
-    supabase.from("students").select("id, status, created_at").limit(10000),
-    supabase.from("classes").select("id, name, capacity, coach_id").eq("is_active", true),
-    supabase.from("class_coaches").select("class_id, coach_id"),
-    supabase.from("profiles").select("id, full_name").eq("role", "coach").eq("is_active", true),
+    branchId
+      ? supabase.from("enrollments").select("student_id, class_id, classes!inner(name, level, capacity, branch_id)").eq("classes.branch_id", branchId).eq("active", true).limit(10000)
+      : supabase.from("enrollments").select("student_id, class_id, classes(name, level, capacity)").eq("active", true).limit(10000),
+    B(supabase.from("students").select("id, level").eq("status", "active").limit(10000)),
+    B(supabase.from("students").select("id, status, created_at").limit(10000)),
+    B(supabase.from("classes").select("id, name, capacity, coach_id").eq("is_active", true)),
+    branchId
+      ? supabase.from("class_coaches").select("class_id, coach_id, classes!inner(branch_id)").eq("classes.branch_id", branchId)
+      : supabase.from("class_coaches").select("class_id, coach_id"),
+    B(supabase.from("profiles").select("id, full_name").eq("role", "coach").eq("is_active", true)),
   ]);
 
   const activeStudentIds = new Set<string>((activeStudents ?? []).map((s: any) => String(s.id)));

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import { getViewBranchId, listBranches } from "@/lib/branch";
 import { PageHeader, StatCard, Section, Collapsible, Table, Th, Td, EmptyState, LinkButton, Badge, cn } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
@@ -22,12 +24,17 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
+  const me = await requireRole("admin");
   const supabase = await createClient();
   const { month } = await searchParams;
   const nowD = new Date();
   const monthStr = /^\d{4}-\d{2}$/.test(month ?? "") ? month! : `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
   const [my, mm] = monthStr.split("-").map(Number);
-  const a = await computeAnalytics(supabase, new Date(my, mm - 1, 1));
+  // Super-admin: scope to the branch they're viewing (null = all). Branch-admin:
+  // RLS already restricts every table, so null still shows only their branch.
+  const bf = await getViewBranchId(me);
+  const branchLabel = bf ? (await listBranches(false)).find((b) => b.id === bf)?.name ?? null : null;
+  const a = await computeAnalytics(supabase, new Date(my, mm - 1, 1), bf);
   const prevM = `${mm === 1 ? my - 1 : my}-${String(mm === 1 ? 12 : mm - 1).padStart(2, "0")}`;
   const nextM = `${mm === 12 ? my + 1 : my}-${String(mm === 12 ? 1 : mm + 1).padStart(2, "0")}`;
   const thisM = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
@@ -43,7 +50,7 @@ export default async function AnalyticsPage({
     <div className="space-y-5">
       <PageHeader
         title="Analytics"
-        description="The headline numbers first — open a section below for detail."
+        description={branchLabel ? `${branchLabel} branch — open a section below for detail.` : "The headline numbers first — open a section below for detail."}
         action={
           <div className="flex flex-wrap items-center gap-1.5">
             <LinkButton href={`/api/analytics/pdf?month=${monthStr}`} target="_blank" rel="noopener" variant="secondary">PDF</LinkButton>
