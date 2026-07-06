@@ -40,8 +40,10 @@ export function LinkButton({
 }
 
 // ─── Form controls ──────────────────────────────────────────────────────────
+// text-base on phones (≥16px) stops iOS Safari auto-zooming on focus; back to
+// text-sm from sm: up.
 const fieldBase =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/30";
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/30";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(fieldBase, className)} {...props} />;

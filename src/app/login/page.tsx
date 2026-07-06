@@ -1,7 +1,8 @@
 import { Feather } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/env";
-import { Button, Card, Field, Input } from "@/components/ui";
+import { Card, Field, Input } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { signIn } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -41,15 +42,17 @@ export default async function LoginPage({
             <Input type="password" name="password" required autoComplete="current-password" />
           </Field>
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <Button type="submit" className="w-full" disabled={!configured}>
+          <SubmitButton className="w-full" pendingText="Signing in…" disabled={!configured}>
             Sign in
-          </Button>
+          </SubmitButton>
         </form>
 
-        <p className="mt-6 text-center text-xs">
+        <p className="mt-6 text-center text-xs text-slate-500">
           <a href="/parent-login/forgot" className="font-medium text-green-700 hover:underline">
-            Forgot password?
+            Parent — forgot password?
           </a>
+          <br />
+          <span className="text-slate-400">Coaches &amp; admins: contact the academy to reset.</span>
         </p>
       </Card>
     </main>

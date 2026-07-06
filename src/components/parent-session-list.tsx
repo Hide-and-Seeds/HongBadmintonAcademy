@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Clock, MapPin, User, Users, ChevronDown, Star, CalendarCheck, CalendarX, Paperclip } from "lucide-react";
 import { Badge, cn } from "@/components/ui";
 import { requestLeave, cancelLeave } from "@/app/(parent)/parent/schedule/leave-actions";
+import { useFlash } from "@/components/flash";
 import { dict } from "@/lib/i18n";
 
 export type SessionKid = { name: string; status: string | null; tapIn: string | null; rating: number | null };
@@ -47,6 +48,7 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
   const [file, setFile] = useState<File | null>(null);
   const [makeupSel, setMakeupSel] = useState("");
   const [busy, setBusy] = useState(false);
+  const { flash, node } = useFlash();
   const [, startTransition] = useTransition();
 
   function patchKid(sessionId: string, kidId: string, leave: UpcomingKid["leave"]) {
@@ -68,7 +70,8 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
     const proposed = makeupSel || null;
     startTransition(async () => {
       const r = await requestLeave({ session_id: sessionId, student_id: kidId, reason, file: attach, proposed_makeup_session_id: proposed });
-      if (!r.ok) setItems(prev);
+      if (!r.ok) { setItems(prev); flash("Couldn't send — please try again"); }
+      else flash("Leave request sent", "success");
       setReason("");
       setFile(null);
       setMakeupSel("");
@@ -82,12 +85,14 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
     patchKid(sessionId, kidId, null);
     startTransition(async () => {
       const r = await cancelLeave({ session_id: sessionId, student_id: kidId });
-      if (!r.ok) setItems(prev);
+      if (!r.ok) { setItems(prev); flash("Couldn't withdraw — please try again"); }
       setBusy(false);
     });
   }
 
   return (
+    <>
+    {node}
     <ul className="divide-y divide-slate-100">
       {items.map((s) => {
         const isOpen = open === s.id;
@@ -243,5 +248,6 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
         );
       })}
     </ul>
+    </>
   );
 }

@@ -8,6 +8,11 @@ export const dynamic = "force-dynamic";
 const DOT: Record<string, string> = {
   present: "bg-green-500", late: "bg-amber-500", absent: "bg-red-500", excused: "bg-slate-400",
 };
+const LETTER: Record<string, string> = { present: "P", late: "L", absent: "A", excused: "E" };
+const LEGEND: [string, string, string][] = [
+  ["Present", "P", "bg-green-500"], ["Late", "L", "bg-amber-500"],
+  ["Absent", "A", "bg-red-500"], ["Excused", "E", "bg-slate-400"],
+];
 
 function shortDate(d: string) {
   const dt = new Date(d);
@@ -75,9 +80,18 @@ export default async function MatrixPage({
     <div className="space-y-4">
       <PageHeader
         title="Attendance grid"
-        description="Last 16 lessons, oldest → newest. Hover a dot for status."
+        description="Last 16 lessons, oldest → newest."
         action={<LinkButton href="/admin" variant="ghost">← Dashboard</LinkButton>}
       />
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+        {LEGEND.map(([label, letter, bg]) => (
+          <span key={letter} className="inline-flex items-center gap-1.5">
+            <span className={cn("inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white", bg)}>{letter}</span>
+            {label}
+          </span>
+        ))}
+      </div>
 
       {classes && classes.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -117,7 +131,7 @@ export default async function MatrixPage({
                     </th>
                   );
                 })}
-                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Came</th>
+                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Attended</th>
                 <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Rate</th>
                 <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Streak</th>
               </tr>
@@ -134,9 +148,13 @@ export default async function MatrixPage({
                   {r.cells.map((c, i) => (
                     <td key={i} className="border-b border-slate-100 px-1.5 py-2 text-center">
                       <span
+                        aria-label={c ?? "no record"}
                         title={c ?? "no record"}
-                        className={cn("inline-block h-3 w-3 rounded-full", c ? DOT[c] : "bg-slate-100 ring-1 ring-inset ring-slate-200")}
-                      />
+                        className={cn(
+                          "inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white",
+                          c ? DOT[c] : "bg-slate-100 text-transparent ring-1 ring-inset ring-slate-200",
+                        )}
+                      >{c ? LETTER[c] : ""}</span>
                     </td>
                   ))}
                   <td className="border-b border-slate-100 px-2 py-2 text-center font-medium text-slate-700">{r.attended}</td>

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Avatar, cn } from "@/components/ui";
+import { useFlash } from "@/components/flash";
 import { setMonthlyScore, setMonthlyComment, type Dim } from "./actions";
 
 export interface AssessRow {
@@ -30,6 +31,7 @@ export function AssessBoard({
   initialRows: AssessRow[];
 }) {
   const [rows, setRows] = useState<AssessRow[]>(initialRows);
+  const { flash: toast, node } = useFlash();
   const [, startTransition] = useTransition();
   const savedFlash = useRef<Record<string, number>>({});
   const [, force] = useState(0);
@@ -45,7 +47,7 @@ export function AssessBoard({
     setRows((rs) => rs.map((r) => (r.student.id !== studentId ? r : { ...r, [dim]: value })));
     startTransition(async () => {
       const r = await setMonthlyScore({ student_id: studentId, class_id: classId, period_month: period, dim, value });
-      if (!r.ok) setRows(prev);
+      if (!r.ok) { setRows(prev); toast("Couldn't save — tap again"); }
       else flash(studentId);
     });
   }
@@ -55,12 +57,14 @@ export function AssessBoard({
     setRows((rs) => rs.map((r) => (r.student.id !== studentId ? r : { ...r, comment })));
     startTransition(async () => {
       const r = await setMonthlyComment({ student_id: studentId, class_id: classId, period_month: period, comment });
-      if (!r.ok) setRows(prev);
+      if (!r.ok) { setRows(prev); toast("Couldn't save — tap again"); }
       else flash(studentId);
     });
   }
 
   return (
+    <>
+    {node}
     <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {rows.map((r) => {
         const justSaved = Date.now() - (savedFlash.current[r.student.id] ?? 0) < 1400;
@@ -117,5 +121,6 @@ export function AssessBoard({
       })}
       {rows.length === 0 && <li className="px-5 py-4 text-sm text-slate-400">No students enrolled.</li>}
     </ul>
+    </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Avatar, Badge, Section, cn } from "@/components/ui";
+import { useFlash } from "@/components/flash";
 import { Check, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { formatTime } from "@/lib/format";
 import type { AttendanceStatus } from "@/lib/types";
@@ -45,6 +46,7 @@ const MARKS: { status: AttendanceStatus; label: string; on: string }[] = [
 
 export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
+  const { flash, node } = useFlash();
   const [, startTransition] = useTransition();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -80,7 +82,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
     patchRow(sId, stId, { att: { status, tap_in_at: null } });
     startTransition(async () => {
       const r = await setAttendanceAction({ session_id: sId, student_id: stId, status });
-      if (!r.ok) setBlocks(snapshot);
+      if (!r.ok) { setBlocks(snapshot); flash("Couldn't save — tap again"); }
       setBusy((b) => {
         const next = { ...b };
         delete next[key];
@@ -96,7 +98,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
     patchRow(sId, stId, { att: null });
     startTransition(async () => {
       const r = await clearAttendanceAction({ session_id: sId, student_id: stId });
-      if (!r.ok) setBlocks(snapshot);
+      if (!r.ok) { setBlocks(snapshot); flash("Couldn't save — tap again"); }
       setBusy((b) => {
         const next = { ...b };
         delete next[key];
@@ -112,7 +114,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
       const r = await setCoachCheckin({ session_id: sId, on });
       if (!r.ok) {
         setBlocks(snapshot);
-        if (r.error) alert(r.error);
+        flash(r.error ?? "Couldn't update your check-in");
       }
     });
   }
@@ -122,7 +124,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
     patchRow(sId, stId, { mark: rating });
     startTransition(async () => {
       const r = await setPerfAction({ session_id: sId, student_id: stId, rating });
-      if (!r.ok) setBlocks(snapshot);
+      if (!r.ok) { setBlocks(snapshot); flash("Couldn't save — tap again"); }
     });
   }
 
@@ -148,7 +150,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
     );
     startTransition(async () => {
       const r = await markAllPresentAction({ session_id: sId, student_ids: unmarked });
-      if (!r.ok) setBlocks(snapshot);
+      if (!r.ok) { setBlocks(snapshot); flash("Couldn't save — tap again"); }
     });
   }
 
@@ -206,6 +208,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
             b.session.id !== sId ? b : { ...b, roster: b.roster.filter((x) => x.student.id !== student.id) },
           ),
         );
+        flash("Couldn't add the student");
       }
     });
   }
@@ -215,6 +218,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
 
   return (
     <div className="space-y-4">
+      {node}
       {blocks.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
           {blocks.map((b, i) => (
@@ -250,7 +254,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
             >
               {/* Toolbar — coach status on the left, roster actions on the right,
                   full width so the buttons don't cram the title row on a phone. */}
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5">
+              <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -332,7 +336,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                   const isExpanded = !!expanded[key];
                   const isBusy = !!busy[key];
                   return (
-                    <li key={r.student.id} className="px-4 py-2.5">
+                    <li key={r.student.id} className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <Avatar name={r.student.full_name} src={r.student.photo_url} size={36} />
                         <div className="min-w-0 flex-1">
@@ -367,7 +371,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                           disabled={isBusy}
                           aria-label="Mark present"
                           className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
                             cur === "present"
                               ? "border-green-600 bg-green-600 text-white"
                               : "border-slate-300 text-transparent hover:border-green-400 hover:text-green-300",
@@ -382,7 +386,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                           aria-expanded={isExpanded}
                           aria-label="More options"
                           className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                            "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border transition-colors",
                             isExpanded ? "border-green-300 bg-green-50 text-green-600" : "border-slate-200 text-slate-400 hover:bg-slate-50",
                             Boolean(r.mark) && !isExpanded && "text-amber-500",
                           )}
@@ -400,7 +404,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                                 onClick={() => setStatus(session.id, r.student.id, m.status)}
                                 disabled={isBusy}
                                 className={cn(
-                                  "rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors",
+                                  "rounded-md px-3 py-2 text-xs font-medium ring-1 ring-inset transition-colors",
                                   cur === m.status ? `${m.on} ring-transparent` : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50",
                                 )}
                               >
@@ -412,7 +416,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                                 type="button"
                                 onClick={() => clearStatus(session.id, r.student.id)}
                                 disabled={isBusy}
-                                className="rounded-md px-2.5 py-1 text-xs font-medium text-red-600 ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-50"
+                                className="rounded-md px-3 py-2 text-xs font-medium text-red-600 ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-50"
                                 title="Remove this attendance mark"
                               >
                                 Clear
@@ -427,7 +431,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                                 type="button"
                                 onClick={() => setPerf(session.id, r.student.id, n)}
                                 className={cn(
-                                  "flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ring-1 ring-inset transition-colors",
+                                  "flex h-9 w-9 items-center justify-center rounded-md text-xs font-bold ring-1 ring-inset transition-colors",
                                   r.mark === n ? "bg-green-600 text-white ring-transparent" : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50",
                                 )}
                               >

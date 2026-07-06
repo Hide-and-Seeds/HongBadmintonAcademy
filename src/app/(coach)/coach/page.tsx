@@ -12,7 +12,9 @@ export default async function CoachDashboard() {
   const me = await requireRole("coach");
   const supabase = await createClient();
   const classIds = await coachClassIds(supabase, me.id);
-  const today = new Date().toLocaleDateString("en-CA");
+  // Malaysia time (server runs UTC on Vercel) so "today" doesn't roll over early
+  // and point the check-in CTA at the wrong day after ~4pm MYT.
+  const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 
   let sessions: any[] = [];
   if (classIds.length) {
