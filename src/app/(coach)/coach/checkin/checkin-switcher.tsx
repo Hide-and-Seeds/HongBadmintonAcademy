@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Hand, ClipboardList, Tablet, ScanLine, ChevronDown } from "lucide-react";
 import { Avatar, cn } from "@/components/ui";
 import { formatTime } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { CheckinBoard, type Block } from "./checkin-board";
 import { setAttendanceAction } from "./board-actions";
 
@@ -22,9 +23,10 @@ function lateOrPresent(session: Block["session"]): "present" | "late" {
 // One Check-in page, two modes: the coach board (NFC + manual marking) and a
 // court-side Kiosk where students tap their own name. Replaces the separate
 // Kiosk route.
-export function CheckinSwitcher({ blocks, nfc }: { blocks: Block[]; nfc?: ReactNode }) {
+export function CheckinSwitcher({ blocks, nfc, locale }: { blocks: Block[]; nfc?: ReactNode; locale?: string | null }) {
   const [mode, setMode] = useState<"board" | "kiosk">("board");
   const [showNfc, setShowNfc] = useState(false);
+  const L = dict(locale);
   return (
     <div className="space-y-4">
       <div className="inline-flex rounded-lg border border-slate-300 bg-white p-0.5 text-sm">
@@ -33,14 +35,14 @@ export function CheckinSwitcher({ blocks, nfc }: { blocks: Block[]; nfc?: ReactN
           onClick={() => setMode("board")}
           className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition-colors", mode === "board" ? "bg-green-600 text-white" : "text-slate-600 hover:bg-slate-50")}
         >
-          <ClipboardList className="h-4 w-4" /> Coach board
+          <ClipboardList className="h-4 w-4" /> {L.coach_board}
         </button>
         <button
           type="button"
           onClick={() => setMode("kiosk")}
           className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition-colors", mode === "kiosk" ? "bg-green-600 text-white" : "text-slate-600 hover:bg-slate-50")}
         >
-          <Tablet className="h-4 w-4" /> Kiosk mode
+          <Tablet className="h-4 w-4" /> {L.kiosk_mode}
         </button>
       </div>
 
@@ -53,23 +55,24 @@ export function CheckinSwitcher({ blocks, nfc }: { blocks: Block[]; nfc?: ReactN
                 onClick={() => setShowNfc((v) => !v)}
                 className="flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4 text-green-600" /> Scan NFC cards</span>
+                <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4 text-green-600" /> {L.scan_nfc}</span>
                 <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", showNfc && "rotate-180")} />
               </button>
               {showNfc && <div className="mt-3">{nfc}</div>}
             </div>
           )}
-          <CheckinBoard initialBlocks={blocks} />
+          <CheckinBoard initialBlocks={blocks} locale={locale} />
         </div>
       ) : (
-        <KioskMode blocks={blocks} />
+        <KioskMode blocks={blocks} locale={locale} />
       )}
     </div>
   );
 }
 
-function KioskMode({ blocks }: { blocks: Block[] }) {
+function KioskMode({ blocks, locale }: { blocks: Block[]; locale?: string | null }) {
   const router = useRouter();
+  const L = dict(locale);
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
 
@@ -92,7 +95,7 @@ function KioskMode({ blocks }: { blocks: Block[] }) {
   return (
     <div className="space-y-6">
       <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-        Leave this open on a court-side tablet — students tap their own name. Taps after the grace window are marked late automatically.
+        {L.kiosk_hint}
       </p>
       {blocks.map(({ session, roster }) => {
         const inCount = roster.filter((r) => isIn(r.att?.status)).length;
@@ -106,7 +109,7 @@ function KioskMode({ blocks }: { blocks: Block[] }) {
                 </div>
               </div>
               <span className="rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                {inCount} of {roster.length} in
+                {inCount}/{roster.length} {L.in_word}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -129,17 +132,17 @@ function KioskMode({ blocks }: { blocks: Block[] }) {
                     <span className="text-sm font-semibold text-slate-900">{r.student.full_name}</span>
                     {checked ? (
                       <span className={cn("text-xs font-medium", r.att?.status === "late" ? "text-amber-600" : "text-green-700")}>
-                        {r.att?.status === "late" ? "Late" : "Checked in"}
+                        {r.att?.status === "late" ? L.att_late : L.checked_in}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                        <Hand className="h-3.5 w-3.5" />{busy ? "Checking in…" : "Tap to check in"}
+                        <Hand className="h-3.5 w-3.5" />{busy ? L.checking_in : L.tap_to_checkin}
                       </span>
                     )}
                   </button>
                 );
               })}
-              {roster.length === 0 && <p className="col-span-full py-2 text-sm text-slate-400">No students enrolled.</p>}
+              {roster.length === 0 && <p className="col-span-full py-2 text-sm text-slate-400">{L.no_students_enrolled}</p>}
             </div>
           </div>
         );

@@ -4,12 +4,14 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, EmptyState, Badge } from "@/components/ui";
 import { formatTime } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { coachClassIds } from "./_data";
 
 export const dynamic = "force-dynamic";
 
 export default async function CoachDashboard() {
   const me = await requireRole("coach");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const classIds = await coachClassIds(supabase, me.id);
   // Malaysia time (server runs UTC on Vercel) so "today" doesn't roll over early
@@ -68,8 +70,8 @@ export default async function CoachDashboard() {
   return (
     <div>
       <PageHeader
-        title={`Welcome, ${me.full_name ?? "Coach"}`}
-        description="Your classes and today's sessions."
+        title={`${L.coach_welcome}, ${me.full_name ?? "Coach"}`}
+        description={L.coach_dash_desc}
       />
 
       {current ? (
@@ -79,7 +81,7 @@ export default async function CoachDashboard() {
         >
           <div className="min-w-0">
             <div className="text-xs font-semibold uppercase tracking-wide text-green-700">
-              {inProgress ? "In progress" : "Next today"}
+              {inProgress ? L.coach_in_progress : L.coach_next_today}
             </div>
             <div className="text-lg font-bold text-slate-900">{current.classes?.name ?? "Class"}</div>
             <div className="text-sm text-slate-600">
@@ -87,33 +89,33 @@ export default async function CoachDashboard() {
             </div>
           </div>
           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white">
-            <UserCheck className="h-4 w-4" /> Start check-in →
+            <UserCheck className="h-4 w-4" /> {L.start_checkin} →
           </span>
         </Link>
       ) : todaySessions.length > 0 ? (
         <Link href="/coach/checkin" className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm hover:bg-slate-50">
-          <span className="text-slate-600">Today's classes are done.</span>
-          <span className="font-medium text-green-700">Open check-in →</span>
+          <span className="text-slate-600">{L.today_done}</span>
+          <span className="font-medium text-green-700">{L.open_checkin} →</span>
         </Link>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">No class scheduled today.</div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">{L.no_class_today}</div>
       )}
 
-      <h2 className="mb-3 mt-8 text-lg font-semibold text-slate-900">My performance</h2>
+      <h2 className="mb-3 mt-8 text-lg font-semibold text-slate-900">{L.my_performance}</h2>
       <div className="grid grid-cols-2 gap-4">
         <Link href="/coach/schedule" className="rounded-2xl transition-transform hover:-translate-y-0.5">
-          <StatCard label="Lessons this month" value={lessonsThis} sub={`${lessonsLast} last month · view schedule →`} tone="blue" />
+          <StatCard label={L.lessons_this_month} value={lessonsThis} sub={`${lessonsLast} ${L.coach_last_month} · ${L.view_schedule} →`} tone="blue" />
         </Link>
-        <StatCard label="Attendance" value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub="your classes, this month" />
+        <StatCard label={L.attendance} value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub={L.your_classes_month} />
       </div>
 
       <div className="mt-8">
         <Section
-          title="Upcoming sessions"
+          title={L.upcoming_sessions}
           flush
           action={
             <Link href="/coach/schedule" className="text-sm font-medium text-emerald-700 hover:underline">
-              View all →
+              {L.view_all} →
             </Link>
           }
         >
@@ -146,7 +148,7 @@ export default async function CoachDashboard() {
               })}
             </ul>
           ) : (
-            <div className="p-5"><EmptyState message="No upcoming sessions scheduled." /></div>
+            <div className="p-5"><EmptyState message={L.no_upcoming} /></div>
           )}
         </Section>
       </div>

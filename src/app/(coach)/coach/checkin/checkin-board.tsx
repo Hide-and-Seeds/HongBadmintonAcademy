@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Avatar, Badge, Section, cn } from "@/components/ui";
 import { useFlash } from "@/components/flash";
+import { dict } from "@/lib/i18n";
 import { Check, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { formatTime } from "@/lib/format";
 import type { AttendanceStatus } from "@/lib/types";
@@ -44,9 +45,10 @@ const MARKS: { status: AttendanceStatus; label: string; on: string }[] = [
   { status: "excused", label: "Excused", on: "bg-slate-600 text-white" },
 ];
 
-export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
+export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]; locale?: string | null }) {
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   const { flash, node } = useFlash();
+  const L = dict(locale);
   const [, startTransition] = useTransition();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -82,7 +84,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
     patchRow(sId, stId, { att: { status, tap_in_at: null } });
     startTransition(async () => {
       const r = await setAttendanceAction({ session_id: sId, student_id: stId, status });
-      if (!r.ok) { setBlocks(snapshot); flash("Couldn't save — tap again"); }
+      if (!r.ok) { setBlocks(snapshot); flash(L.save_fail); }
       setBusy((b) => {
         const next = { ...b };
         delete next[key];
@@ -98,7 +100,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
     patchRow(sId, stId, { att: null });
     startTransition(async () => {
       const r = await clearAttendanceAction({ session_id: sId, student_id: stId });
-      if (!r.ok) { setBlocks(snapshot); flash("Couldn't save — tap again"); }
+      if (!r.ok) { setBlocks(snapshot); flash(L.save_fail); }
       setBusy((b) => {
         const next = { ...b };
         delete next[key];
@@ -114,7 +116,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
       const r = await setCoachCheckin({ session_id: sId, on });
       if (!r.ok) {
         setBlocks(snapshot);
-        flash(r.error ?? "Couldn't update your check-in");
+        flash(r.error ?? L.checkin_update_fail);
       }
     });
   }
@@ -124,7 +126,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
     patchRow(sId, stId, { mark: rating });
     startTransition(async () => {
       const r = await setPerfAction({ session_id: sId, student_id: stId, rating });
-      if (!r.ok) { setBlocks(snapshot); flash("Couldn't save — tap again"); }
+      if (!r.ok) { setBlocks(snapshot); flash(L.save_fail); }
     });
   }
 
@@ -150,7 +152,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
     );
     startTransition(async () => {
       const r = await markAllPresentAction({ session_id: sId, student_ids: unmarked });
-      if (!r.ok) { setBlocks(snapshot); flash("Couldn't save — tap again"); }
+      if (!r.ok) { setBlocks(snapshot); flash(L.save_fail); }
     });
   }
 
@@ -208,7 +210,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
             b.session.id !== sId ? b : { ...b, roster: b.roster.filter((x) => x.student.id !== student.id) },
           ),
         );
-        flash("Couldn't add the student");
+        flash(L.add_student_fail);
       }
     });
   }
@@ -265,10 +267,10 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                     )}
                     title="Record that you showed up to this session"
                   >
-                    {coachedIn ? "✓ I'm on court" : "I'm here"}
+                    {coachedIn ? L.im_on_court : L.im_here}
                   </button>
                   <Badge tone={roster.length && present === roster.length ? "green" : "blue"}>
-                    {present}/{roster.length} present
+                    {present}/{roster.length} {L.present_word}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -278,7 +280,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                       onClick={() => markAllRemaining(session.id)}
                       className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-green-700 active:bg-green-800"
                     >
-                      ✓ Mark {unmarked} present
+                      ✓ {L.mark_word} {unmarked} {L.present_word}
                     </button>
                   )}
                   <button
@@ -287,7 +289,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                     aria-expanded={addFor === session.id}
                     className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                   >
-                    <Plus className="h-3.5 w-3.5" /> Add student
+                    <Plus className="h-3.5 w-3.5" /> {L.add_student}
                   </button>
                 </div>
               </div>
@@ -299,7 +301,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                       autoFocus
                       value={query}
                       onChange={(e) => runSearch(session.id, e.target.value)}
-                      placeholder="Search a student to add as drop-in…"
+                      placeholder={L.search_add_placeholder}
                       className="h-9 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                     />
                     <button type="button" onClick={closeAdd} aria-label="Close" className="shrink-0 text-slate-400 hover:text-slate-600">
@@ -308,9 +310,9 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                   </div>
                   {query.trim().length >= 1 && (
                     <ul className="mt-2 max-h-56 divide-y divide-slate-100 overflow-auto rounded-lg border border-slate-200 bg-white">
-                      {searching && <li className="px-3 py-2 text-sm text-slate-400">Searching…</li>}
+                      {searching && <li className="px-3 py-2 text-sm text-slate-400">{L.searching}</li>}
                       {!searching && results.length === 0 && (
-                        <li className="px-3 py-2 text-sm text-slate-400">No matches.</li>
+                        <li className="px-3 py-2 text-sm text-slate-400">{L.no_matches}</li>
                       )}
                       {results.map((s) => (
                         <li key={s.id}>
@@ -321,7 +323,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                           >
                             <Avatar name={s.full_name} src={s.photo_url} size={32} />
                             <span className="truncate text-sm font-medium text-slate-800">{s.full_name}</span>
-                            <span className="ml-auto shrink-0 text-xs font-semibold text-green-600">Add →</span>
+                            <span className="ml-auto shrink-0 text-xs font-semibold text-green-600">{L.add_arrow} →</span>
                           </button>
                         </li>
                       ))}
@@ -344,7 +346,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                             {r.student.full_name}
                             {r.dropIn && (
                               <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-emerald-700">
-                                drop-in
+                                {L.dropin_word}
                               </span>
                             )}
                           </div>
@@ -358,11 +360,11 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                                 : "text-slate-400",
                             )}
                           >
-                            {cur === "present" ? "Present"
-                              : cur === "late" ? "Late"
-                              : cur === "absent" ? "Absent"
-                              : cur === "excused" ? "Excused"
-                              : "Tap to mark present"}
+                            {cur === "present" ? L.att_present
+                              : cur === "late" ? L.att_late
+                              : cur === "absent" ? L.att_absent
+                              : cur === "excused" ? L.att_excused
+                              : L.tap_mark_present}
                           </div>
                         </div>
                         <button
@@ -408,7 +410,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                                   cur === m.status ? `${m.on} ring-transparent` : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50",
                                 )}
                               >
-                                {m.label}
+                                {m.status === "late" ? L.att_late : m.status === "absent" ? L.att_absent : L.att_excused}
                               </button>
                             ))}
                             {cur && (
@@ -419,12 +421,12 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                                 className="rounded-md px-3 py-2 text-xs font-medium text-red-600 ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-50"
                                 title="Remove this attendance mark"
                               >
-                                Clear
+                                {L.clear_word}
                               </button>
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Rate</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{L.rate_word}</span>
                             {[1, 2, 3, 4, 5].map((n) => (
                               <button
                                 key={n}
@@ -438,7 +440,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                                 {n}
                               </button>
                             ))}
-                            <span className="ml-1 text-xs text-slate-400">1 = needs work · 5 = excellent</span>
+                            <span className="ml-1 text-xs text-slate-400">{L.rate_hint}</span>
                           </div>
                         </div>
                       )}
@@ -446,7 +448,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                   );
                 })}
                 {roster.length === 0 && (
-                  <li className="px-5 py-3 text-sm text-slate-400">No students enrolled.</li>
+                  <li className="px-5 py-3 text-sm text-slate-400">{L.no_students_enrolled}</li>
                 )}
               </ul>
             </Section>

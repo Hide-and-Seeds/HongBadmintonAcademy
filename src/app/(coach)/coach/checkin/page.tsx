@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui";
+import { dict } from "@/lib/i18n";
 import { coachClassIds } from "../_data";
 import { NfcScanner } from "@/components/nfc-scanner";
 import { scanTap } from "./actions";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function CheckinPage() {
   const me = await requireRole("coach");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const classIds = await coachClassIds(supabase, me.id);
   const today = new Date().toLocaleDateString("en-CA");
@@ -81,14 +83,14 @@ export default async function CheckinPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Check-in"
-        description="Tap a name to mark present. Use ⋯ for late / absent or to rate, or + Add student for a drop-in."
+        title={L.coach_checkin_title}
+        description={L.coach_checkin_desc}
       />
 
       {blocks.length === 0 ? (
-        <EmptyState message="No sessions scheduled today." />
+        <EmptyState message={L.no_sessions_today} />
       ) : (
-        <CheckinSwitcher blocks={blocks} nfc={<NfcScanner action={scanTap} />} />
+        <CheckinSwitcher blocks={blocks} locale={me.locale} nfc={<NfcScanner action={scanTap} />} />
       )}
     </div>
   );

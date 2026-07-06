@@ -6,6 +6,7 @@ import { Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatTime } from "@/lib/format";
 import { MonthCalendar } from "@/components/month-calendar";
 import { loadHolidayMap } from "@/lib/holidays-server";
+import { dict } from "@/lib/i18n";
 import { coachClassIds } from "../_data";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ function todayMYT(): string {
 // One tappable row → the session detail page. Used for both upcoming and past.
 // Upcoming, non-canceled rows also get a "Leave" link that deep-links to the
 // leave form on the detail page (coaches kept missing it buried down that page).
-function CoachSessionRow({ s }: { s: any }) {
+function CoachSessionRow({ s, leaveLabel }: { s: any; leaveLabel: string }) {
   const d = new Date(`${s.session_date}T00:00:00`);
   const upcoming = s.session_date >= todayMYT();
   const canLeave = upcoming && s.status !== "canceled";
@@ -45,7 +46,7 @@ function CoachSessionRow({ s }: { s: any }) {
           href={`/coach/sessions/${s.id}#leave`}
           className="flex shrink-0 items-center border-l border-slate-100 px-3.5 text-xs font-semibold text-amber-700 hover:bg-amber-50"
         >
-          Leave
+          {leaveLabel}
         </Link>
       )}
     </li>
@@ -58,6 +59,7 @@ export default async function CoachSchedulePage({
   searchParams: Promise<{ month?: string }>;
 }) {
   const me = await requireRole("coach");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const classIds = await coachClassIds(supabase, me.id);
 
@@ -92,9 +94,9 @@ export default async function CoachSchedulePage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My schedule" description="Your classes' sessions, month by month. Tap a session for its roster, or 'Leave' to request time off." />
+      <PageHeader title={L.coach_my_schedule} description={L.coach_sched_desc} />
       {classIds.length === 0 ? (
-        <EmptyState message="You're not assigned to any classes yet." />
+        <EmptyState message={L.not_assigned_classes} />
       ) : (
         <>
         {/* Month nav — browse past + future months on any device. */}
@@ -105,7 +107,7 @@ export default async function CoachSchedulePage({
           <div className="text-center">
             <div className="text-sm font-semibold text-slate-900">{monthLabelStr}</div>
             {monthStr !== thisM && (
-              <Link href={`/coach/schedule?month=${thisM}`} className="text-xs font-medium text-green-700 hover:underline">Back to this month</Link>
+              <Link href={`/coach/schedule?month=${thisM}`} className="text-xs font-medium text-green-700 hover:underline">{L.back_to_this_month}</Link>
             )}
           </div>
           <Link href={`/coach/schedule?month=${nextM}`} aria-label="Next month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
@@ -119,24 +121,24 @@ export default async function CoachSchedulePage({
               <div className="space-y-4">
                 <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
                   {(upcoming.length ? upcoming : all).map((s: any) => (
-                    <CoachSessionRow key={s.id} s={s} />
+                    <CoachSessionRow key={s.id} s={s} leaveLabel={L.leave_word} />
                   ))}
                 </ul>
                 {upcoming.length > 0 && past.length > 0 && (
                   <details className="group">
                     <summary className="cursor-pointer list-none text-sm font-medium text-slate-600 hover:text-slate-900">
-                      <span className="select-none">▸ Earlier this month ({past.length})</span>
+                      <span className="select-none">▸ {L.earlier_this_month} ({past.length})</span>
                     </summary>
                     <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
                       {past.map((s: any) => (
-                        <CoachSessionRow key={s.id} s={s} />
+                        <CoachSessionRow key={s.id} s={s} leaveLabel={L.leave_word} />
                       ))}
                     </ul>
                   </details>
                 )}
               </div>
             ) : (
-              <EmptyState message="No sessions this month." />
+              <EmptyState message={L.no_sessions_month} />
             )}
           </div>
 
