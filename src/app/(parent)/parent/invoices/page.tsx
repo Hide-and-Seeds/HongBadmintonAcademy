@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, Badge, EmptyState, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import type { InvoiceStatus } from "@/lib/types";
 import { payInvoice } from "./actions";
 
@@ -21,6 +22,7 @@ export default async function ParentInvoicesPage({
 }) {
   const me = await requireParent();
   const { paid, error } = await searchParams;
+  const L = dict(me.locale);
   const supabase = createAdminClient();
 
   const [{ data: invoices }, { data: kids }] = await Promise.all([
@@ -66,7 +68,7 @@ export default async function ParentInvoicesPage({
 
   return (
     <div>
-      <PageHeader title="Fees & Payments" />
+      <PageHeader title={L.fees_payments} />
 
       {paid && (
         <p className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">

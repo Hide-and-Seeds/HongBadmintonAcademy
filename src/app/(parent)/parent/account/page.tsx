@@ -46,7 +46,7 @@ export default async function ParentAccountPage({
       </Card>
 
       <Card className="max-w-md p-6">
-        <h2 className="text-base font-semibold text-slate-900">Contact details</h2>
+        <h2 className="text-base font-semibold text-slate-900">{L.contact_details}</h2>
         <p className="mt-1 text-sm text-slate-500">
           You sign in with this email; we use your phone for WhatsApp updates.
         </p>
@@ -65,7 +65,7 @@ export default async function ParentAccountPage({
       </Card>
 
       <Card className="max-w-md p-6">
-        <h2 className="text-base font-semibold text-slate-900">Change password</h2>
+        <h2 className="text-base font-semibold text-slate-900">{L.change_password}</h2>
         <p className="mt-1 text-sm text-slate-500">Update the password you use to sign in.</p>
         <form action={changeParentPassword} className="mt-4 space-y-4">
           <Field label="Current password" required>
@@ -84,7 +84,7 @@ export default async function ParentAccountPage({
       {isPushConfigured() && (
         <Card className="max-w-md overflow-hidden p-0">
           <div className="border-b border-slate-100 p-6 pb-4">
-            <h2 className="text-base font-semibold text-slate-900">Notifications</h2>
+            <h2 className="text-base font-semibold text-slate-900">{L.notifications}</h2>
             <p className="mt-1 text-sm text-slate-500">Get a push for new exam results and fee reminders.</p>
           </div>
           <PushPanel

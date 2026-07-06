@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createNotifications } from "@/lib/notifications";
+import { pushToUsers } from "@/lib/push";
 
 // Admin self-service is phone + password only. The login EMAIL is intentionally
 // NOT editable here: admins are the top recovery role, so a mistyped email would
@@ -43,5 +45,7 @@ export async function changeAdminPassword(formData: FormData) {
   const { error } = await db.auth.admin.updateUserById(me.id, { password: newPassword });
   if (error) fail(error.message);
 
+  await createNotifications([me.id], { type: "security", title: "Password changed", body: "Your admin password was just changed. If this wasn't you, secure the account now.", url: "/admin/account" });
+  try { await pushToUsers([me.id], { title: "Password changed", body: "If this wasn't you, secure your admin account now.", url: "/admin/account", tag: "security" }); } catch { /* best-effort */ }
   redirect("/admin/account?saved=1");
 }

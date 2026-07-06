@@ -4,6 +4,15 @@ import { redirect } from "next/navigation";
 import { requireParent } from "@/lib/parent-auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createNotifications } from "@/lib/notifications";
+import { pushToUsers } from "@/lib/push";
+
+// Alert the account owner whenever a credential changes — the main defence if a
+// password is stolen: the victim gets an immediate in-app + push notice.
+async function securityAlert(profileId: string, title: string, body: string, url: string) {
+  await createNotifications([profileId], { type: "security", title, body, url });
+  try { await pushToUsers([profileId], { title, body, url, tag: "security" }); } catch { /* best-effort */ }
+}
 
 // Parent self-service password change. Verifies the current password against
 // Supabase Auth (a throwaway session we immediately drop — the parent stays
@@ -34,6 +43,7 @@ export async function changeParentPassword(formData: FormData) {
   const { error } = await db.auth.admin.updateUserById(me.id, { password: newPassword });
   if (error) fail(error.message);
 
+  await securityAlert(me.id, "Password changed", "Your account password was just changed. If this wasn't you, contact the academy immediately.", "/parent/account");
   redirect("/parent/account?saved=1");
 }
 
@@ -72,5 +82,8 @@ export async function updateParentContact(formData: FormData) {
   const { error } = await db.from("profiles").update({ email, phone: phone || null }).eq("id", me.id);
   if (error) fail(error.message);
 
+  if (emailChanged) {
+    await securityAlert(me.id, "Sign-in email changed", `Your login email was changed to ${email}. If this wasn't you, contact the academy immediately.`, "/parent/account");
+  }
   redirect("/parent/account?saved=contact");
 }

@@ -108,15 +108,15 @@ export default async function ChildDetailPage({
   const subtitle = [age != null ? `${age} yrs` : null, cls?.name ?? null, branchName ? `${L.branch}: ${branchName}` : null].filter(Boolean).join(" · ") || "No class enrolment yet";
 
   const LINKS = [
-    { href: "/parent/scorecards", label: "View progress card", Icon: TrendingUp },
-    { href: "/parent/schedule", label: "All sessions & attendance", Icon: Calendar },
-    { href: "/parent/invoices", label: "Fees & payments", Icon: CreditCard },
+    { href: "/parent/scorecards", label: L.view_progress, Icon: TrendingUp },
+    { href: "/parent/schedule", label: L.all_sessions, Icon: Calendar },
+    { href: "/parent/invoices", label: L.fees_payments, Icon: CreditCard },
   ];
 
   return (
     <div className="space-y-4">
       <Link href="/parent" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900">
-        <ArrowLeft className="h-4 w-4" /> Back to dashboard
+        <ArrowLeft className="h-4 w-4" /> {L.back_to_dashboard}
       </Link>
 
       {/* ── Header + rank ladder ─────────────────────────────────────────── */}

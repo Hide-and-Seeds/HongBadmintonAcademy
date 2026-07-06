@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Clock, MapPin, User, Users, ChevronDown, Star, CalendarCheck, CalendarX } from "lucide-react";
+import { Clock, MapPin, User, Users, ChevronDown, Star, CalendarCheck, CalendarX, Paperclip } from "lucide-react";
 import { Badge, cn } from "@/components/ui";
 import { requestLeave, cancelLeave } from "@/app/(parent)/parent/schedule/leave-actions";
 import { dict } from "@/lib/i18n";
@@ -180,13 +180,17 @@ export function ParentSessionList({ sessions, locale }: { sessions: SessionItem[
                                       {L.send_request}
                                     </button>
                                   </div>
-                                  <label className="flex items-center gap-2 text-xs text-slate-500">
-                                    <span className="shrink-0">{L.attachment}</span>
+                                  <label className={cn(
+                                    "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                                    file ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50",
+                                  )}>
+                                    <Paperclip className="h-3.5 w-3.5" />
+                                    {file ? file.name : L.attachment}
                                     <input
                                       type="file"
                                       accept="image/jpeg,image/png,image/webp,application/pdf"
                                       onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                                      className="min-w-0 flex-1 text-xs text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-slate-600"
+                                      className="hidden"
                                     />
                                   </label>
                                 </div>

@@ -98,6 +98,15 @@ const en = {
   coach_monthly: "Monthly Marks",
   coach_assess: "Assessments",
   coach_payroll: "My Payroll",
+
+  // more parent copy
+  contact_details: "Contact details",
+  change_password: "Change password",
+  notifications: "Notifications",
+  training_level: "Training level",
+  view_progress: "View progress card",
+  all_sessions: "All sessions & attendance",
+  back_to_dashboard: "Back to dashboard",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -182,6 +191,14 @@ const zh: Dict = {
   coach_monthly: "每月评分",
   coach_assess: "考核",
   coach_payroll: "我的薪酬",
+
+  contact_details: "联系方式",
+  change_password: "修改密码",
+  notifications: "通知",
+  training_level: "训练等级",
+  view_progress: "查看进度卡",
+  all_sessions: "所有课程与出勤",
+  back_to_dashboard: "返回主页",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };
