@@ -185,6 +185,14 @@ export default async function InvoicesPage({
                       <Td label="Status"><Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge></Td>
                       <Td className="text-right">
                         <div className="flex justify-end gap-2">
+                          <a
+                            href={`/api/invoices/${i.id}/pdf`}
+                            target="_blank"
+                            rel="noopener"
+                            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            PDF
+                          </a>
                           {i.status !== "paid" && (
                             <form action={markPaid}>
                               <input type="hidden" name="id" value={i.id} />

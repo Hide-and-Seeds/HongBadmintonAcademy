@@ -25,6 +25,8 @@ export interface Analytics {
   studentsPerClass: { name: string; count: number }[];
   rankDistribution: Record<string, number>;
   collection: { billed: number; collected: number; rate: number | null };
+  courtRentalCost: number; // what the academy paid to rent courts this month
+  netRevenue: number; // revenue collected − court rental cost
   retention: { rate: number | null; avgAttendancePct: number | null; inactive30: number };
   coachPerformance: { id: string; name: string; students: number; attendancePct: number | null; avgSkill: number | null }[];
   classOccupancy: { id: string; name: string; enrolled: number; capacity: number; pct: number }[];
@@ -76,6 +78,7 @@ export async function computeAnalytics(supabase: any, month: Date = new Date(), 
     { data: classesFull },
     { data: classCoaches },
     { data: coachRows },
+    { data: rentalRows },
   ] = await Promise.all([
     head("profiles", (q: any) => B(q.eq("role", "coach"))),
     head("profiles", (q: any) => q.eq("role", "parent")),
@@ -109,6 +112,9 @@ export async function computeAnalytics(supabase: any, month: Date = new Date(), 
       ? supabase.from("class_coaches").select("class_id, coach_id, classes!inner(branch_id)").eq("classes.branch_id", branchId)
       : supabase.from("class_coaches").select("class_id, coach_id"),
     B(supabase.from("profiles").select("id, full_name").eq("role", "coach").eq("is_active", true)),
+    // Court rental cost for the month (super-admin only via RLS — non-super
+    // callers just get 0 rows, so this stays 0 for them).
+    B(supabase.from("court_rentals").select("amount, branch_id").gte("rental_date", ymd(mStart)).lt("rental_date", ymd(mEnd))),
   ]);
 
   const activeStudentIds = new Set<string>((activeStudents ?? []).map((s: any) => String(s.id)));
@@ -288,6 +294,10 @@ export async function computeAnalytics(supabase: any, month: Date = new Date(), 
   }
   const collection = { billed: Math.round(billed), collected: Math.round(collected), rate: billed ? Math.round((collected / billed) * 100) : null };
 
+  // Court rental cost (an operating expense) → net of what was collected.
+  const courtRentalCost = Math.round((rentalRows ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0));
+  const netRevenue = Math.round(collection.collected - courtRentalCost);
+
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
     return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString("en-MY", { month: "short" }), amount: 0, count: 0 };
@@ -333,6 +343,8 @@ export async function computeAnalytics(supabase: any, month: Date = new Date(), 
     studentsPerClass,
     rankDistribution,
     collection,
+    courtRentalCost,
+    netRevenue,
     retention,
     coachPerformance,
     classOccupancy,

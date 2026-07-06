@@ -1,4 +1,4 @@
-import { formatDate, formatTime } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 
 export type MakeupOption = {
   id: string;
@@ -25,7 +25,7 @@ export async function getMakeupOptions(
     .neq("status", "canceled")
     .order("session_date")
     .order("start_time")
-    .limit(opts.limit ?? 40);
+    .limit(opts.limit ?? 12);
   if (opts.level) q = q.eq("classes.level", opts.level);
   if (opts.branchId) q = q.eq("classes.branch_id", opts.branchId);
 
@@ -52,9 +52,11 @@ export async function getMakeupOptions(
     const cap = s.classes?.capacity ?? null;
     const used = (enrolledBy.get(s.class_id) ?? 0) + (makeupBy.get(s.id) ?? 0);
     const spotsLeft = cap == null ? null : Math.max(0, Number(cap) - used);
+    const d = new Date(`${s.session_date}T00:00:00`);
+    const dateStr = d.toLocaleDateString("en-MY", { weekday: "short", day: "numeric", month: "short" });
     return {
       id: s.id,
-      label: `${s.classes?.name ?? "Class"} — ${formatDate(s.session_date)} ${formatTime(s.start_time)}`,
+      label: `${dateStr}, ${formatTime(s.start_time)} · ${s.classes?.name ?? "Class"}`,
       spotsLeft,
       full: spotsLeft != null && spotsLeft <= 0,
     };

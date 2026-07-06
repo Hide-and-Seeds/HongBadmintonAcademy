@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/auth";
 import { getViewBranchId, listBranches } from "@/lib/branch";
 import { PageHeader, StatCard, Section, Collapsible, Table, Th, Td, EmptyState, LinkButton, Badge, cn } from "@/components/ui";
+import { FilterSelect } from "@/components/filter-controls";
 import { formatCurrency } from "@/lib/format";
 import { rankBadgeClass } from "@/lib/ranks";
 import { LEVEL_NAMES } from "@/lib/training";
@@ -22,20 +23,23 @@ function recordToBars(data: Record<string, number>, colors: Record<string, strin
 export default async function AnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; branch?: string }>;
 }) {
   // Revenue-heavy academy analytics are super-admin only; branch admins are
   // scoped to follow-up collections (see /admin/collections).
   const me = await requireSuperAdmin();
   const supabase = await createClient();
-  const { month } = await searchParams;
+  const { month, branch } = await searchParams;
   const nowD = new Date();
   const monthStr = /^\d{4}-\d{2}$/.test(month ?? "") ? month! : `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
   const [my, mm] = monthStr.split("-").map(Number);
-  // Super-admin: scope to the branch they're viewing (null = all). Branch-admin:
-  // RLS already restricts every table, so null still shows only their branch.
-  const bf = await getViewBranchId(me);
-  const branchLabel = bf ? (await listBranches(false)).find((b) => b.id === bf)?.name ?? null : null;
+  // Branch filter: an explicit ?branch= wins, else the super-admin's global
+  // branch-view switcher (null = all branches).
+  const branches = await listBranches(false);
+  const branchParam = branch && branch !== "all" && branches.some((b) => b.id === branch) ? branch : null;
+  const bf = branchParam ?? await getViewBranchId(me);
+  const branchLabel = bf ? branches.find((b) => b.id === bf)?.name ?? null : null;
+  const bq = branchParam ? `&branch=${branchParam}` : "";
   const a = await computeAnalytics(supabase, new Date(my, mm - 1, 1), bf);
   const prevM = `${mm === 1 ? my - 1 : my}-${String(mm === 1 ? 12 : mm - 1).padStart(2, "0")}`;
   const nextM = `${mm === 12 ? my + 1 : my}-${String(mm === 12 ? 1 : mm + 1).padStart(2, "0")}`;
@@ -61,18 +65,31 @@ export default async function AnalyticsPage({
         }
       />
 
+      {/* Branch filter (super-admin) — pick one branch or all. */}
+      {branches.length > 1 && (
+        <label className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-slate-600">Branch</span>
+          <FilterSelect name="branch" defaultValue={branchParam ?? ""} className="h-9 w-52">
+            <option value="">All branches</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </FilterSelect>
+        </label>
+      )}
+
       {/* Period control — the one filter, made obvious. */}
       <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-        <Link href={`/admin/analytics?month=${prevM}`} aria-label="Previous month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+        <Link href={`/admin/analytics?month=${prevM}${bq}`} aria-label="Previous month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <div className="text-center">
           <div className="text-sm font-semibold text-slate-900">{a.monthLabel}</div>
           {monthStr !== thisM && (
-            <Link href={`/admin/analytics?month=${thisM}`} className="text-xs font-medium text-green-700 hover:underline">Jump to this month</Link>
+            <Link href={`/admin/analytics?month=${thisM}${bq}`} className="text-xs font-medium text-green-700 hover:underline">Jump to this month</Link>
           )}
         </div>
-        <Link href={`/admin/analytics?month=${nextM}`} aria-label="Next month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+        <Link href={`/admin/analytics?month=${nextM}${bq}`} aria-label="Next month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
           <ChevronRight className="h-5 w-5" />
         </Link>
       </div>
@@ -98,6 +115,11 @@ export default async function AnalyticsPage({
             <StatCard label="Collected" value={formatCurrency(a.collection.collected, a.currency)} tone="green" />
             <StatCard label="Outstanding" value={formatCurrency(a.outstanding, a.currency)} tone={a.outstanding > 0 ? "red" : "slate"} />
             <StatCard label="90+ days late" value={formatCurrency(a.feeAging.d90, a.currency)} tone={a.feeAging.d90 > 0 ? "red" : "slate"} />
+          </div>
+          {/* Court rental cost folded in → net of what was collected. */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <StatCard label="Court rental cost" value={formatCurrency(a.courtRentalCost, a.currency)} tone={a.courtRentalCost > 0 ? "amber" : "slate"} />
+            <StatCard label="Net (collected − rentals)" value={formatCurrency(a.netRevenue, a.currency)} tone={a.netRevenue >= 0 ? "green" : "red"} />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
             <Section title="Revenue trend" description="Succeeded payments, last 6 months">
@@ -243,34 +265,6 @@ export default async function AnalyticsPage({
         </div>
       </Collapsible>
 
-      {/* ── Engagement ────────────────────────────────────────────────────── */}
-      <Collapsible title="Engagement" defaultOpen={false}>
-        <div className="grid gap-6 p-5 lg:grid-cols-2">
-          <Section title={`Reward leaderboard · ${a.rewardPeriod}`} flush>
-            {a.topStudents.length ? (
-              <Table>
-                <thead><tr><Th>#</Th><Th>Student</Th><Th className="text-right">Points</Th></tr></thead>
-                <tbody>
-                  {a.topStudents.map((s, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
-                      <Td className="text-slate-400">{i + 1}</Td>
-                      <Td className="font-medium">
-                        <Link href={`/admin/students/${s.id}`} className="text-slate-900 hover:text-green-700 hover:underline">{s.name}</Link>
-                      </Td>
-                      <Td className="text-right"><Badge tone="green">{s.points}</Badge></Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            ) : <div className="p-5"><EmptyState message="No rewards awarded this month." /></div>}
-          </Section>
-          <Section title="WhatsApp delivery">
-            {Object.keys(a.messageStatus).length ? (
-              <CategoryBarChart data={recordToBars(a.messageStatus, MSG_COLOR)} />
-            ) : <EmptyState message="No messages yet." />}
-          </Section>
-        </div>
-      </Collapsible>
     </div>
   );
 }
