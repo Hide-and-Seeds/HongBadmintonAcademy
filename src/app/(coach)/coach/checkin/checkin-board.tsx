@@ -8,6 +8,7 @@ import type { AttendanceStatus } from "@/lib/types";
 import {
   setAttendanceAction, setPerfAction, markAllPresentAction,
   searchAddableStudentsAction, addDropInAction,
+  clearAttendanceAction, setCoachCheckin,
 } from "./board-actions";
 
 export interface Roster {
@@ -29,6 +30,7 @@ export interface Block {
     classes?: { name: string | null } | null;
   };
   roster: Roster[];
+  coachedIn?: boolean;
 }
 
 type AddableStudent = { id: string; full_name: string; photo_url: string | null };
@@ -84,6 +86,31 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
         delete next[key];
         return next;
       });
+    });
+  }
+
+  function clearStatus(sId: string, stId: string) {
+    const key = rowKey(sId, stId);
+    const snapshot = blocks;
+    setBusy((b) => ({ ...b, [key]: true }));
+    patchRow(sId, stId, { att: null });
+    startTransition(async () => {
+      const r = await clearAttendanceAction({ session_id: sId, student_id: stId });
+      if (!r.ok) setBlocks(snapshot);
+      setBusy((b) => {
+        const next = { ...b };
+        delete next[key];
+        return next;
+      });
+    });
+  }
+
+  function setCoach(sId: string, on: boolean) {
+    const snapshot = blocks;
+    setBlocks((prev) => prev.map((b) => (b.session.id !== sId ? b : { ...b, coachedIn: on })));
+    startTransition(async () => {
+      const r = await setCoachCheckin({ session_id: sId, on });
+      if (!r.ok) setBlocks(snapshot);
     });
   }
 
@@ -204,7 +231,7 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
       )}
 
       <div className="space-y-6">
-        {visible.map(({ session, roster }) => {
+        {visible.map(({ session, roster, coachedIn }) => {
           const present = roster.filter(
             (r) => r.att && (r.att.status === "present" || r.att.status === "late"),
           ).length;
@@ -218,6 +245,17 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
               }`}
               action={
                 <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCoach(session.id, !coachedIn)}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold ring-1 ring-inset transition-colors",
+                      coachedIn ? "bg-emerald-600 text-white ring-transparent" : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50",
+                    )}
+                    title="Record that you showed up to this session"
+                  >
+                    {coachedIn ? "✓ I'm on court" : "I'm here"}
+                  </button>
                   <Badge tone={roster.length && present === roster.length ? "green" : "blue"}>
                     {present}/{roster.length} present
                   </Badge>
@@ -362,6 +400,17 @@ export function CheckinBoard({ initialBlocks }: { initialBlocks: Block[] }) {
                                 {m.label}
                               </button>
                             ))}
+                            {cur && (
+                              <button
+                                type="button"
+                                onClick={() => clearStatus(session.id, r.student.id)}
+                                disabled={isBusy}
+                                className="rounded-md px-2.5 py-1 text-xs font-medium text-red-600 ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-50"
+                                title="Remove this attendance mark"
+                              >
+                                Clear
+                              </button>
+                            )}
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Rate</span>

@@ -13,23 +13,27 @@ export const dynamic = "force-dynamic";
 export default async function ClassesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; rank?: string; active?: string }>;
+  searchParams: Promise<{ q?: string; rank?: string; active?: string; coach?: string }>;
 }) {
-  const { q, rank, active } = await searchParams;
+  const { q, rank, active, coach } = await searchParams;
   const me = await requireRole("admin");
   const supabase = await createClient();
   const bf = await getViewBranchId(me);
+  const { data: coaches } = await supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name");
+  const coachFilter = coach && (coaches ?? []).some((c) => c.id === coach) ? coach : "";
+
   let classQuery = supabase
     .from("classes")
     .select("*, coach:profiles!classes_coach_id_fkey(full_name), enrollments(count)")
     .order("name");
   if (bf) classQuery = classQuery.eq("branch_id", bf);
+  if (coachFilter) classQuery = classQuery.eq("coach_id", coachFilter);
   const { data: classes } = await classQuery;
 
   const search = (q ?? "").trim().toLowerCase();
   const rankFilter = rank && (CLASS_RANKS as readonly string[]).includes(rank) ? rank : "";
   const activeFilter = active === "active" || active === "inactive" ? active : "";
-  const filtered = Boolean(search || rankFilter || activeFilter);
+  const filtered = Boolean(search || rankFilter || activeFilter || coachFilter);
 
   const rows = (classes ?? []).filter((c: any) => {
     if (search && !c.name.toLowerCase().includes(search)) return false;
@@ -68,6 +72,15 @@ export default async function ClassesPage({
             <option value="">All</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+          </FilterSelect>
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-slate-600">Coach</span>
+          <FilterSelect name="coach" defaultValue={coachFilter} className="h-9 w-44">
+            <option value="">All coaches</option>
+            {(coaches ?? []).map((c) => (
+              <option key={c.id} value={c.id}>{c.full_name ?? c.id}</option>
+            ))}
           </FilterSelect>
         </label>
         {filtered && <LinkButton href="/admin/classes" variant="ghost">Clear</LinkButton>}

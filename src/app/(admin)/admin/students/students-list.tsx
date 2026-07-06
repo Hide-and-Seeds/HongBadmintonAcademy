@@ -33,6 +33,7 @@ export async function StudentsList({
   q,
   status,
   rank,
+  coach,
   sort,
   dir,
   page = 1,
@@ -40,6 +41,7 @@ export async function StudentsList({
   q?: string;
   status?: string;
   rank?: string;
+  coach?: string;
   sort?: SortKey;
   dir?: "asc" | "desc";
   page?: number;
@@ -63,6 +65,7 @@ export async function StudentsList({
   const search = (q ?? "").trim();
   if (search) base = base.ilike("full_name", `%${search}%`);
   if (status === "active" || status === "inactive") base = base.eq("status", status);
+  if (coach) base = base.eq("coach_id", coach);
   if (bf) base = base.eq("branch_id", bf);
   base = base.order(SORT_COLUMN[sortKey], { ascending });
 
@@ -82,7 +85,7 @@ export async function StudentsList({
   const start = (currentPage - 1) * PAGE_SIZE;
   const rows = filteredAll.slice(start, start + PAGE_SIZE);
 
-  const filtered = Boolean(search || status || rank);
+  const filtered = Boolean(search || status || rank || coach);
   if (total === 0) {
     return filtered ? (
       <EmptyState message="No students match these filters." />

@@ -24,6 +24,13 @@ export default async function CheckinPage() {
         .order("start_time")
     : { data: [] as any[] };
 
+  // Which of today's sessions the coach has checked into (showed up for).
+  const sessIds = (sessions ?? []).map((s: any) => s.id);
+  const { data: coachIns } = sessIds.length
+    ? await supabase.from("coach_checkins").select("session_id").eq("coach_id", me.id).in("session_id", sessIds)
+    : { data: [] as any[] };
+  const coachedSet = new Set((coachIns ?? []).map((c: any) => c.session_id));
+
   const blocks: Block[] = [];
   for (const s of sessions ?? []) {
     const [{ data: enr }, { data: att }, { data: marks }] = await Promise.all([
@@ -50,7 +57,7 @@ export default async function CheckinPage() {
         mark: markMap.get(e.students?.id) ?? null,
       }))
       .filter((r: any) => r.student);
-    blocks.push({ session: s as any, roster: roster as any });
+    blocks.push({ session: s as any, roster: roster as any, coachedIn: coachedSet.has(s.id) });
   }
 
   return (

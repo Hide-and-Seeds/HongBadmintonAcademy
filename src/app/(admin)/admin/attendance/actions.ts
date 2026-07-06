@@ -69,3 +69,12 @@ export async function processFlags(formData: FormData) {
   await supabase.rpc("process_session_attendance", { p_session_id: session_id });
   revalidatePath(`/admin/attendance/${session_id}`);
 }
+
+// Undo a manually-set attendance row entirely (admin).
+export async function clearAttendanceStatus(formData: FormData) {
+  const session_id = String(formData.get("session_id"));
+  const student_id = String(formData.get("student_id"));
+  const supabase = await createClient();
+  await supabase.from("attendance").delete().eq("session_id", session_id).eq("student_id", student_id);
+  revalidatePath(`/admin/attendance/${session_id}`);
+}

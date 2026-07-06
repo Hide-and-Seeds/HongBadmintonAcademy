@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, cn } from "@/components/ui";
 import { FilterSelect, FilterSearch } from "@/components/filter-controls";
 import { CLASS_RANKS } from "@/lib/ranks";
@@ -26,19 +27,24 @@ export default async function DirectoryPage({
     q?: string;
     status?: string;
     rank?: string;
+    coach?: string;
     sort?: string;
     dir?: string;
     page?: string;
   }>;
 }) {
-  const { tab, q, status, rank, sort, dir, page } = await searchParams;
+  const { tab, q, status, rank, coach, sort, dir, page } = await searchParams;
   const me = await requireRole("admin");
   const isSuper = me.role === "super_admin";
   const active: Tab = TABS.some((t) => t.key === tab) ? (tab as Tab) : "students";
 
+  const supabase = await createClient();
+  const { data: coaches } = await supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name");
+
   const statusFilter = status === "active" || status === "inactive" ? status : "";
   const rankFilter = rank && (CLASS_RANKS as readonly string[]).includes(rank) ? rank : "";
-  const filtered = Boolean((q ?? "").trim() || statusFilter || rankFilter);
+  const coachFilter = coach && (coaches ?? []).some((c) => c.id === coach) ? coach : "";
+  const filtered = Boolean((q ?? "").trim() || statusFilter || rankFilter || coachFilter);
   const dirParam: "asc" | "desc" = dir === "desc" ? "desc" : "asc";
   const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
@@ -115,6 +121,15 @@ export default async function DirectoryPage({
                 <option value="inactive">Inactive</option>
               </FilterSelect>
             </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-slate-600">Assigned coach</span>
+              <FilterSelect name="coach" defaultValue={coachFilter} className="h-9 w-44">
+                <option value="">All coaches</option>
+                {(coaches ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>{c.full_name ?? c.id}</option>
+                ))}
+              </FilterSelect>
+            </label>
           </>
         )}
         {filtered && <LinkButton href={`/admin/people?tab=${active}`} variant="ghost">Clear</LinkButton>}
@@ -125,6 +140,7 @@ export default async function DirectoryPage({
           q={q}
           status={statusFilter}
           rank={rankFilter}
+          coach={coachFilter}
           sort={(sort as any) ?? undefined}
           dir={dirParam}
           page={pageNum}

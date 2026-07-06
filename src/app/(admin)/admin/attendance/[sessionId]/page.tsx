@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, Button, LinkButton, cn } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import type { AttendanceStatus } from "@/lib/types";
-import { simulateTap, setAttendanceStatus, processFlags } from "../actions";
+import { simulateTap, setAttendanceStatus, processFlags, clearAttendanceStatus } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -43,14 +43,24 @@ export default async function RosterPage({
     .maybeSingle();
   if (!session) notFound();
 
-  const [{ data: enrollments }, { data: attendance }] = await Promise.all([
+  const [{ data: enrollments }, { data: attendance }, { data: coCoaches }, { data: primaryCls }, { data: coachIns }] = await Promise.all([
     supabase
       .from("enrollments")
       .select("student_id, students(id, full_name, nfc_tag_uid)")
       .eq("class_id", session.class_id)
       .eq("active", true),
     supabase.from("attendance").select("*").eq("session_id", sessionId),
+    supabase.from("class_coaches").select("coach_id, profiles(full_name)").eq("class_id", session.class_id),
+    supabase.from("classes").select("coach_id, coach:profiles!classes_coach_id_fkey(full_name)").eq("id", session.class_id).maybeSingle(),
+    supabase.from("coach_checkins").select("coach_id").eq("session_id", sessionId),
   ]);
+
+  // Coach coverage: who is meant to run this class + did they check in?
+  const coachMap = new Map<string, string>();
+  if ((primaryCls as any)?.coach_id) coachMap.set((primaryCls as any).coach_id, (primaryCls as any).coach?.full_name ?? "Coach");
+  for (const cc of (coCoaches ?? []) as any[]) coachMap.set(cc.coach_id, cc.profiles?.full_name ?? "Coach");
+  const checkedSet = new Set((coachIns ?? []).map((c: any) => c.coach_id));
+  const coachList = [...coachMap.entries()].map(([id, name]) => ({ id, name, in: checkedSet.has(id) }));
 
   const byStudent = new Map((attendance ?? []).map((a: any) => [a.student_id, a]));
   const roster = (enrollments ?? [])
@@ -88,6 +98,18 @@ export default async function RosterPage({
         </form>
       </Card>
 
+      {/* Coach coverage — did the assigned coach(es) show up + is the roster marked? */}
+      {coachList.length > 0 && (
+        <Card className="flex flex-wrap items-center gap-x-4 gap-y-1 p-3 text-sm">
+          <span className="font-medium text-slate-500">Coach on court:</span>
+          {coachList.map((c) => (
+            <span key={c.id} className={cn("inline-flex items-center gap-1 font-medium", c.in ? "text-emerald-700" : "text-slate-400")}>
+              {c.in ? "✓" : "○"} {c.name}{c.in ? "" : " (not checked in)"}
+            </span>
+          ))}
+        </Card>
+      )}
+
       {/* One tap sets the status. Big targets, no dropdowns. */}
       <div className="space-y-2">
         {roster.map((r) => {
@@ -117,6 +139,15 @@ export default async function RosterPage({
                       {r.att && !r.att.tap_out_at ? "tap out" : "tap in"}
                     </button>
                   </form>
+                  {r.att && (
+                    <form action={clearAttendanceStatus} className="inline">
+                      <input type="hidden" name="session_id" value={sessionId} />
+                      <input type="hidden" name="student_id" value={r.student.id} />
+                      <button type="submit" className="text-red-500 underline-offset-2 hover:text-red-700 hover:underline">
+                        clear
+                      </button>
+                    </form>
+                  )}
                 </div>
               </div>
 

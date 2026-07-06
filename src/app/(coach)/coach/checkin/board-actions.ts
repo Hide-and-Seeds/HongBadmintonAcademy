@@ -32,6 +32,52 @@ export async function setAttendanceAction(input: {
   return { ok: true };
 }
 
+// Clear a manually-set attendance row entirely (undo). RLS lets a coach delete
+// rows for students in their own classes; admins can delete any.
+export async function clearAttendanceAction(input: {
+  session_id: string;
+  student_id: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!input?.session_id || !input?.student_id) return { ok: false, error: "missing" };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("attendance")
+    .delete()
+    .eq("session_id", input.session_id)
+    .eq("student_id", input.student_id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/coach/checkin");
+  return { ok: true };
+}
+
+// Coach self-check-in: record (or undo) that the coach showed up to a session.
+export async function setCoachCheckin(input: {
+  session_id: string;
+  on: boolean;
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!input?.session_id) return { ok: false, error: "missing" };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "unauthenticated" };
+
+  if (input.on) {
+    const { error } = await supabase.from("coach_checkins").upsert(
+      { session_id: input.session_id, coach_id: user.id, method: "self" },
+      { onConflict: "session_id,coach_id" },
+    );
+    if (error) return { ok: false, error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("coach_checkins")
+      .delete()
+      .eq("session_id", input.session_id)
+      .eq("coach_id", user.id);
+    if (error) return { ok: false, error: error.message };
+  }
+  revalidatePath("/coach/checkin");
+  return { ok: true };
+}
+
 export async function setPerfAction(input: {
   session_id: string;
   student_id: string;

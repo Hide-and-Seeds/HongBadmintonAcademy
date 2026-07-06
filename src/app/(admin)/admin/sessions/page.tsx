@@ -63,6 +63,9 @@ export default async function SessionsPage({
         action={
           <>
             <AddSessionModal classes={classes ?? []} monthStr={monthStr} today={todayMYT()} />
+            <LinkButton href="/admin/attendance/coverage" variant="secondary">
+              Coach coverage
+            </LinkButton>
             <LinkButton href="/admin/classes" variant="secondary">
               Generate (per class) →
             </LinkButton>
