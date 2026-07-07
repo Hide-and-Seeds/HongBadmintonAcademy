@@ -276,17 +276,21 @@ app.get("/groups", async (_req, res) => {
 // QR for a NEW number to scan. The 'disconnected' handler re-initializes via
 // safeInit. Called by the app's Settings → "Disconnect & re-link".
 app.post("/logout", async (_req, res) => {
+  // Respond first so the UI isn't left hanging. Then tell WhatsApp to drop this
+  // linked device and EXIT — the process supervisor (NSSM / forever.bat / pm2)
+  // restarts us clean, and a fresh boot with no session emits a new QR. This
+  // exit-and-restart is far more reliable than an in-process re-init, which can
+  // hang half-way (not-ready, no QR) on Windows/Chromium.
+  ready = false;
+  lastQr = null;
+  res.json({ status: "ok" });
   try {
-    ready = false;
-    lastQr = null;
-    await client.logout(); // fires 'disconnected' (LOGOUT) → safeInit → new QR
-    return res.json({ status: "ok" });
+    await client.logout(); // best-effort: unlink the current number server-side
   } catch (e) {
-    // logout() can throw if the session is already gone / the page closed. Force
-    // a re-init so a QR still comes back, and report ok so the UI proceeds.
-    safeInit();
-    return res.json({ status: "ok", note: String(e?.message || e) });
+    console.error("logout error (continuing to restart):", e?.message || e);
   }
+  console.log("Logout requested — exiting for a clean re-link (supervisor restarts → fresh QR).");
+  setTimeout(() => process.exit(0), 500);
 });
 
 app.listen(PORT, () => console.log(`WA worker listening on :${PORT}`));
