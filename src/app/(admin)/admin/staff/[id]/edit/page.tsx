@@ -2,9 +2,10 @@ import { notFound } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { listBranches } from "@/lib/branch";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, Section } from "@/components/ui";
+import { ConfirmButton } from "@/components/confirm-button";
 import { PersonForm } from "../../../_people/person-form";
-import { updateStaff } from "../../../_people/actions";
+import { updateStaff, resetStaffTwoFactor } from "../../../_people/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,15 @@ export default async function EditStaffPage({
         submitLabel="Save changes"
         error={error}
       />
+
+      <Section title="Two-factor authentication" description="If this staff member lost their authenticator device, reset it — they'll set up 2FA again on next login.">
+        <div className="p-5">
+          <form action={resetStaffTwoFactor}>
+            <input type="hidden" name="id" value={id} />
+            <ConfirmButton label="Reset 2FA" variant="secondary" confirmText="Remove this staff member's 2FA? They'll sign in with just their password until they set it up again." />
+          </form>
+        </div>
+      </Section>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import { requireRole } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Field, Input } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { FlashClear } from "@/components/flash-clear";
+import { TwoFactorSetup } from "@/components/two-factor-setup";
 import { dict } from "@/lib/i18n";
 import { changeCoachPassword, updateCoachContact } from "./actions";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
@@ -18,6 +20,9 @@ export default async function CoachAccountPage({
   const me = await requireRole("coach");
   const L = dict(me.locale);
   const { saved, error } = await searchParams;
+  const supabase = await createClient();
+  const { data: factors } = await supabase.auth.mfa.listFactors();
+  const totp = (factors?.totp ?? []).find((f) => f.status === "verified") ?? null;
 
   return (
     <div className="space-y-6">
@@ -67,6 +72,12 @@ export default async function CoachAccountPage({
           </Field>
           <SubmitButton pendingText="…">{L.update_password}</SubmitButton>
         </form>
+      </Card>
+
+      <Card className="max-w-md p-6">
+        <h2 className="text-base font-semibold text-slate-900">{L.two_factor}</h2>
+        <p className="mb-4 mt-1 text-sm text-slate-500">{L.two_factor_hint}</p>
+        <TwoFactorSetup enrolled={!!totp} factorId={totp?.id ?? null} />
       </Card>
 
       {isPushConfigured() && (

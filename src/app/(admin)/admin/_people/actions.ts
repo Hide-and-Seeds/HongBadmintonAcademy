@@ -184,6 +184,21 @@ export async function updateStaff(formData: FormData) {
   redirect("/admin/staff");
 }
 
+// Super-admin recovery: wipe a staff member's 2FA factors (lost phone). They
+// then re-enrol next login. The only in-app path to unlock a locked-out staffer.
+export async function resetStaffTwoFactor(formData: FormData) {
+  await requireSuperAdmin();
+  const id = String(formData.get("id"));
+  if (!id) return;
+  const db = createAdminClient();
+  const { data } = await db.auth.admin.mfa.listFactors({ userId: id });
+  for (const f of (data as any)?.factors ?? []) {
+    await db.auth.admin.mfa.deleteFactor({ id: f.id, userId: id });
+  }
+  revalidatePath(`/admin/staff/${id}/edit`);
+  redirect("/admin/staff");
+}
+
 export async function deletePerson(role: Role, formData: FormData) {
   await guardForRole(role);
   const id = String(formData.get("id"));

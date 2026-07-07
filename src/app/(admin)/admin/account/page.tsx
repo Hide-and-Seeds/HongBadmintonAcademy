@@ -1,8 +1,10 @@
 import { requireRole } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Field, Input } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { FlashClear } from "@/components/flash-clear";
 import { changeAdminPassword, updateAdminPhone } from "./actions";
+import { TwoFactorSetup } from "@/components/two-factor-setup";
 import { PushPanel } from "@/components/push-panel";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
 import { savePushSubscription, removePushSubscription, sendTestPushToSelf } from "../settings/push-actions";
@@ -16,6 +18,9 @@ export default async function AdminAccountPage({
 }) {
   const me = await requireRole("admin");
   const { saved, error } = await searchParams;
+  const supabase = await createClient();
+  const { data: factors } = await supabase.auth.mfa.listFactors();
+  const totp = (factors?.totp ?? []).find((f) => f.status === "verified") ?? null;
 
   return (
     <div className="space-y-6">
@@ -59,6 +64,12 @@ export default async function AdminAccountPage({
           </Field>
           <SubmitButton pendingText="…">Update password</SubmitButton>
         </form>
+      </Card>
+
+      <Card className="max-w-md p-6">
+        <h2 className="text-base font-semibold text-slate-900">Two-factor authentication</h2>
+        <p className="mb-4 mt-1 text-sm text-slate-500">Require an authenticator-app code when you sign in.</p>
+        <TwoFactorSetup enrolled={!!totp} factorId={totp?.id ?? null} />
       </Card>
 
       {/* Push opt-in — lives here (every admin) since Settings became super-only. */}

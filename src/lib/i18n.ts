@@ -248,6 +248,8 @@ const en = {
   view_progress: "View progress card",
   all_sessions: "All sessions & attendance",
   back_to_dashboard: "Back to dashboard",
+  two_factor: "Two-factor authentication",
+  two_factor_hint: "Require an authenticator-app code when you sign in.",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -477,6 +479,8 @@ const zh: Dict = {
   view_progress: "查看进度卡",
   all_sessions: "所有课程与出勤",
   back_to_dashboard: "返回主页",
+  two_factor: "双重验证",
+  two_factor_hint: "登录时需要输入验证器应用的动态码。",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

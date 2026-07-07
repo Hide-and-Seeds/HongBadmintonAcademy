@@ -39,6 +39,14 @@ export async function signIn(formData: FormData) {
     redirect(next || "/parent");
   }
   if (role && (isAdminRole(role) || role === "coach")) {
+    // If they have 2FA on, the password only got them to aal1 — finish the
+    // second factor before landing anywhere.
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal && aal.currentLevel === "aal1" && aal.nextLevel === "aal2") {
+      const p = new URLSearchParams();
+      if (next) p.set("next", next);
+      redirect(`/login/2fa${p.toString() ? `?${p.toString()}` : ""}`);
+    }
     redirect(next || homeForRole(role));
   }
 
