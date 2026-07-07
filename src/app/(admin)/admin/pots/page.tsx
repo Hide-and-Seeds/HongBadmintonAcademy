@@ -134,7 +134,7 @@ export default async function PotsPage({
       </Card>
 
       <p className="px-1 text-xs text-slate-400">
-        &quot;Available to draw&quot; = collected − court cost − coach salaries. Court cost + salaries are academy-only for now; the club gains its own court/staff costs when court booking ships.
+        &quot;Available to draw&quot; = collected − court cost − coach salaries. Court cost is tagged per arm (log a club rental with Arm: Club in Court Rentals); coach salaries are academy-only.
       </p>
     </div>
   );

@@ -45,6 +45,34 @@ export async function payMemberInvoice(formData: FormData) {
   redirect(checkout.url);
 }
 
+// Member cancels their own booking. Scoped to the token's member; voids a
+// still-unpaid invoice (paid ones need the club to refund).
+export async function cancelMyBooking(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const memberId = verifyClubToken(token);
+  if (!memberId) redirect("/club");
+  const id = String(formData.get("booking_id") ?? "");
+
+  const db = createAdminClient();
+  const { data: bk } = await db
+    .from("court_bookings")
+    .select("id, invoice_id, status")
+    .eq("id", id)
+    .eq("club_member_id", memberId)
+    .maybeSingle();
+  if (!bk) backErr(token, "Booking not found.");
+  if ((bk as any).status === "canceled") redirect(`/club/me/${token}`);
+
+  await db.from("court_bookings").update({ status: "canceled" }).eq("id", id);
+  if ((bk as any).invoice_id) {
+    const { data: inv } = await db.from("invoices").select("status").eq("id", (bk as any).invoice_id).maybeSingle();
+    if (inv && ["unpaid", "overdue", "draft"].includes((inv as any).status)) {
+      await db.from("invoices").update({ status: "canceled" }).eq("id", (bk as any).invoice_id);
+    }
+  }
+  redirect(`/club/me/${token}?canceled=1`);
+}
+
 // Book a court: price = court.hourly_rate × hours. Creates a pending booking +
 // a business='club' invoice, then checkout. The webhook confirms the booking on
 // payment. Overlap is checked here; a unique slot index is the DB backstop.
@@ -61,6 +89,9 @@ export async function bookCourt(formData: FormData) {
   if (!courtId || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(start) || !(hours > 0)) {
     backErr(token, "Please choose a court, date, time and duration.");
   }
+  // No booking in the past (Malaysia day).
+  const todayMY = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+  if (date < todayMY) backErr(token, "Please pick a date from today onwards.");
 
   const db = createAdminClient();
   const { data: court } = await db

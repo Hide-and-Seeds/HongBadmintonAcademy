@@ -16,6 +16,9 @@ function err(message: string): never {
 // activates the member (see api/webhooks/stripe). No login needed to join;
 // member portal + renewals come in 2b-2.
 export async function joinClub(formData: FormData) {
+  // Honeypot: real users never fill the hidden "company" field; bots do. Drop
+  // silently (pretend success) so scripted spam never creates a member/invoice.
+  if (String(formData.get("company") ?? "").trim()) redirect("/club/thanks");
   if (!isStripeConfigured()) err("Online payment isn't set up yet — please contact the club.");
 
   const parsed = clubJoinSchema.safeParse(Object.fromEntries(formData));

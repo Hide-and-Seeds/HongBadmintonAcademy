@@ -36,6 +36,7 @@ export async function logRental(formData: FormData) {
   const hours = Math.max(0, Number(formData.get("hours") ?? 0) || 0);
   const amount = Math.max(0, Number(formData.get("amount") ?? 0) || 0);
   const note = String(formData.get("note") ?? "").trim().slice(0, 200) || null;
+  const business = String(formData.get("business") ?? "academy") === "club" ? "club" : "academy";
 
   const supabase = await createClient();
   // Inherit the court's branch so the report can be branch-scoped.
@@ -47,6 +48,7 @@ export async function logRental(formData: FormData) {
     hours,
     amount,
     note,
+    business,
     created_by: me.id,
   });
   revalidatePath(PATH);

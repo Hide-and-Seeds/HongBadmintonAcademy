@@ -155,6 +155,13 @@ export default async function CourtRentalsPage({
               <Input type="number" name="amount" step="0.01" min="0" placeholder="0.00" className="h-9 w-28" required />
             </label>
             <label className="block space-y-1">
+              <span className="text-xs font-medium text-slate-500">Arm</span>
+              <Select name="business" defaultValue="academy" className="h-9 w-28">
+                <option value="academy">Academy</option>
+                <option value="club">Club</option>
+              </Select>
+            </label>
+            <label className="block space-y-1">
               <span className="text-xs font-medium text-slate-500">Note</span>
               <Input name="note" placeholder="optional" maxLength={200} className="h-9 w-40" />
             </label>

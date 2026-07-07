@@ -59,8 +59,8 @@ export async function computePots(
   const [{ data: payments }, { data: invoices }, { data: rentals }, salaries] = await Promise.all([
     paymentsQ,
     B(supabase.from("invoices").select("amount, status, period_month, business")).limit(10000),
-    // Court rental cost this month (super-admin RLS; academy expense for now).
-    B(supabase.from("court_rentals").select("amount")).gte("rental_date", startYmd).lt("rental_date", endYmd),
+    // Court rental cost this month, tagged by arm (super-admin RLS).
+    B(supabase.from("court_rentals").select("amount, business")).gte("rental_date", startYmd).lt("rental_date", endYmd),
     monthlyPayrollTotal(supabase, month, branchId),
   ]);
 
@@ -81,8 +81,9 @@ export async function computePots(
     }
   }
 
-  // Spend side — academy-only for now (see header note).
-  arms.academy.courtCost = (rentals ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0);
+  // Spend side. Court cost tagged per arm; coach salaries are academy (no club
+  // staff payroll yet).
+  for (const r of rentals ?? []) arms[armOf((r as any).business)].courtCost += Number((r as any).amount);
   arms.academy.salaries = Number(salaries) || 0;
 
   const round = (t: ArmTotals): ArmTotals => {

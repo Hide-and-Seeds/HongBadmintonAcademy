@@ -39,6 +39,9 @@ export default async function ClubJoinPage({
         </div>
       ) : (
         <form action={joinClub} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
+            <label>Company<input type="text" name="company" tabIndex={-1} autoComplete="off" /></label>
+          </div>
           <div className="space-y-3">
             <span className="block text-sm font-medium text-slate-700">Choose your membership</span>
             {list.map((t: any, i: number) => (

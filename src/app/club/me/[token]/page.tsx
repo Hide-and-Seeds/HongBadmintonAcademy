@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyClubToken } from "@/lib/club-auth";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { SubmitButton } from "@/components/submit-button";
-import { payMemberInvoice, renewMembership, bookCourt } from "./actions";
+import { payMemberInvoice, renewMembership, bookCourt, cancelMyBooking } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +18,10 @@ export default async function ClubPortalPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ paid?: string; error?: string }>;
+  searchParams: Promise<{ paid?: string; canceled?: string; error?: string }>;
 }) {
   const { token } = await params;
-  const { paid, error } = await searchParams;
+  const { paid, canceled, error } = await searchParams;
   const memberId = verifyClubToken(token);
   if (!memberId) notFound();
 
@@ -70,6 +70,7 @@ export default async function ClubPortalPage({
       </div>
 
       {paid && <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">Payment received — thank you! Your membership is up to date.</p>}
+      {canceled && <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">Booking canceled.</p>}
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -135,7 +136,14 @@ export default async function ClubPortalPage({
                   <div className="font-medium text-slate-800">{b.court?.name ?? "Court"}</div>
                   <div className="text-xs text-slate-500">{formatDate(b.booking_date)} · {hhmm(b.start_time)}–{hhmm(b.end_time)}</div>
                 </div>
-                <span className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${b.status === "confirmed" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{b.status}</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${b.status === "confirmed" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{b.status}</span>
+                  <form action={cancelMyBooking}>
+                    <input type="hidden" name="token" value={token} />
+                    <input type="hidden" name="booking_id" value={b.id} />
+                    <button type="submit" className="text-xs font-medium text-slate-400 hover:text-red-600">Cancel</button>
+                  </form>
+                </div>
               </div>
             ))}
           </div>
