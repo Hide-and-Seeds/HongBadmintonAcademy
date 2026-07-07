@@ -56,7 +56,7 @@ export default async function ClubMembersPage({
                   <Td label="Tier">{m.tier?.name ?? <span className="text-slate-400">— none —</span>}</Td>
                   <Td label="Contact" className="text-slate-500">{m.email || m.phone || "—"}</Td>
                   <Td label="Status">
-                    <Badge tone={m.status === "active" ? "green" : "slate"}>{m.status}</Badge>
+                    <Badge tone={m.status === "active" ? "green" : m.status === "pending" ? "yellow" : "slate"}>{m.status}</Badge>
                   </Td>
                   <Td label="Joined" className="text-slate-500">{m.joined_at ? formatDate(m.joined_at) : "—"}</Td>
                   <Td label="Actions" className="text-right">

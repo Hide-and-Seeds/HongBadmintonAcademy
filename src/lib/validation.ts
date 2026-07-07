@@ -38,6 +38,16 @@ export const clubMemberSchema = z.object({
   notes: optionalStr,
 });
 
+// Public club self-signup (2b). Email is required — it receipts the payment and
+// is how the member is later matched to a login. The tier is re-validated
+// server-side (must be an active club fee plan) before any amount is used.
+export const clubJoinSchema = z.object({
+  full_name: z.string().trim().min(1, "Please enter your name"),
+  email: z.string().trim().email("Enter a valid email"),
+  phone: phoneField,
+  tier_id: requiredId,
+});
+
 export const profileSchema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email required"),

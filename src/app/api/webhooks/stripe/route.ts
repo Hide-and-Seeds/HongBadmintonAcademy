@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
             stripe_payment_intent_id: piId(s.payment_intent),
           })
           .eq("id", invoiceId)
-          .select("business")
+          .select("business, club_member_id")
           .maybeSingle();
 
         await recordPayment(db, {
@@ -98,6 +98,12 @@ export async function POST(req: NextRequest) {
           business: (updatedInv as any)?.business ?? s.metadata?.business ?? "academy",
           raw: s as unknown as Record<string, unknown>,
         });
+
+        // Public club self-signup: first dues paid → activate the member.
+        const clubMemberId = (updatedInv as any)?.club_member_id ?? null;
+        if (clubMemberId) {
+          await db.from("club_members").update({ status: "active" }).eq("id", clubMemberId);
+        }
         await notifyAdmins({
           type: "payment",
           title: "Payment received",
