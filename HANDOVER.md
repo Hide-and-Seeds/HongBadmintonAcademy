@@ -177,6 +177,55 @@ cookie (parent). `/parent-login` is a redirect kept for old bookmarks. Password
 reset is by email (`/parent-login/forgot` → `/parent-login/reset`) and works for
 any account.
 
+### Roles at a glance
+
+There are **four** roles (`profiles.role`). Note the app *labels* a plain admin
+"**Branch admin**" (`ROLE_LABEL` in `src/lib/constants.ts`) — so wherever these
+docs say "admin" without qualification, read it as **branch admin**; the owner
+tier is always spelled out as **super-admin**.
+
+| Role | App label | Auth | Scope |
+|------|-----------|------|-------|
+| `super_admin` | Super admin | Supabase session + MFA | **Owner tier.** Every branch, all money, all global config. Strict superset of admin. |
+| `admin` | Branch admin | Supabase session + MFA | Daily ops for their own branch. **No** revenue, settings, branches, staff, refunds, or fee-price edits. |
+| `coach` | Coach | Supabase session + MFA | Own classes: check-in, marking, assessments, exams, own payroll. |
+| `parent` | Parent | `hba_parent` cookie (no session) | Own children: progress, schedule, leave, fees. |
+
+### Super-admin — the owner tier (and how to get access)
+
+`super_admin` is the account that owns the business. Enforced by
+`requireSuperAdmin()` / `is_super_admin()` and the `superOnly` nav flag.
+**Only super-admin can:**
+
+- Manage **branches** (`/admin/branches`) and **staff / roles**
+  (`/admin/staff` — create, promote, delete admins/coaches, assign role + branch).
+- Global **Settings** (`/admin/settings`): WhatsApp worker URL, kill switches,
+  send schedule, "require 2FA", monthly billing schedule.
+- **Refunds** + Stripe config; edit **fee-plan prices** (Stripe sync).
+- All **revenue / analytics / paid history / invoice+payment exports**
+  (branch admins see outstanding-only — see Finance visibility below).
+- **Court Rentals**, the **Club** business (members, dues, bookings, **Pots**
+  P&L), hard-deletes, and the cross-branch **view switcher**.
+
+**Who holds it:** the seed super-admin is the profile
+`00000000-0000-0000-0000-000000000001`, promoted from `admin` by migration
+`0031` — **but only if seed data exists**. On the live hosted project it is
+whichever account the owner promoted.
+
+**Granting super-admin on takeover** (the keys to the kingdom):
+
+1. **From the app** — an existing super-admin promotes the account at
+   `/admin/staff`. This is the normal path.
+2. **From the DB** (bootstrap / no super-admin reachable) — in the Supabase SQL
+   editor: `update profiles set role = 'super_admin' where id = '<auth user id>';`
+   Find the id under Auth → Users.
+
+> `node scripts/create-admin.mjs` creates a **branch admin only** (`role: "admin"`),
+> **not** a super-admin — promote it afterward by one of the two paths above.
+> **Keep ≥ 2 super-admins**: a sole super-admin who loses their 2FA has only
+> backup-code recovery, and staff/branch/settings become unmanageable if that
+> account is lost.
+
 ### Security invariants — keep these or vulnerabilities regress
 
 - **Server Actions are standalone POST endpoints; the `(admin)` layout guard does
