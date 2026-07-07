@@ -5,6 +5,8 @@ node_modules
 # QR image holds a live device-link token while valid — never commit.
 qr.png
 .env
+# Saved worker secret (so setup-client.bat never re-prompts). Local-only, secret.
+wa-secret.txt
 *.log
 # Downloaded by setup-client.bat — machine-specific, never commit.
 cloudflared.exe

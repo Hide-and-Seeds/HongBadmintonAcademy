@@ -11,9 +11,10 @@ echo Stops the worker + tunnel and DELETES generated files:
 echo   deps (node_modules), portable Node (.node), cloudflared.exe,
 echo   .env (secret/config), logs, and the puppeteer Chrome cache.
 echo.
-echo KEEPS: your code files AND the WhatsApp link (.wwebjs_auth) - so
-echo you do NOT have to re-scan the QR. To also unlink WhatsApp, delete
-echo the .wwebjs_auth folder by hand after this.
+echo KEEPS: your code files, the WhatsApp link (.wwebjs_auth) so you do
+echo NOT re-scan the QR, and the saved secret (wa-secret.txt) so setup
+echo does NOT ask for it again. To also unlink WhatsApp, delete the
+echo .wwebjs_auth folder by hand after this.
 echo.
 pause
 

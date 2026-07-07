@@ -35,12 +35,18 @@ if exist "cloudflared.exe" (
   if not exist "cloudflared.exe" ( echo    ERROR: cloudflared download failed. & pause & exit /b 1 )
 )
 
-REM ----- 3/6  .env (shared secret) -----
+REM ----- 3/6  .env (shared secret; remembered in wa-secret.txt) -----
 if exist ".env" (
   echo [3/6] .env present ^(keeping it^).
 ) else (
-  echo [3/6] Paste the WA_WORKER_SECRET ^(the SAME value set in Vercel^):
-  set /p "WSEC=      Secret: "
+  if exist "wa-secret.txt" (
+    set /p WSEC=<wa-secret.txt
+    echo [3/6] Using saved secret ^(wa-secret.txt^).
+  ) else (
+    echo [3/6] Paste the WA_WORKER_SECRET ^(the SAME value set in Vercel^):
+    set /p "WSEC=      Secret: "
+    > "wa-secret.txt" echo !WSEC!
+  )
   >  ".env" echo WA_WORKER_SECRET=!WSEC!
   >> ".env" echo PORT=8787
 )
