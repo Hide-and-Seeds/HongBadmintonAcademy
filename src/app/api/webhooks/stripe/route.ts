@@ -25,6 +25,7 @@ async function recordPayment(
     txnId: string | null;
     status: "succeeded" | "failed" | "refunded";
     method?: string | null;
+    business?: string | null;
     raw: Record<string, unknown>;
   },
 ) {
@@ -45,6 +46,7 @@ async function recordPayment(
     provider_event_id: p.eventId,
     status: p.status,
     method: p.method ?? null,
+    business: p.business ?? "academy",
     raw: p.raw,
   });
 }
@@ -73,7 +75,7 @@ export async function POST(req: NextRequest) {
       const s = event.data.object as Stripe.Checkout.Session;
       const invoiceId = s.metadata?.invoice_id ?? s.client_reference_id ?? null;
       if (invoiceId) {
-        await db
+        const { data: updatedInv } = await db
           .from("invoices")
           .update({
             status: "paid",
@@ -81,7 +83,9 @@ export async function POST(req: NextRequest) {
             stripe_checkout_session_id: s.id,
             stripe_payment_intent_id: piId(s.payment_intent),
           })
-          .eq("id", invoiceId);
+          .eq("id", invoiceId)
+          .select("business")
+          .maybeSingle();
 
         await recordPayment(db, {
           invoiceId,
@@ -91,6 +95,7 @@ export async function POST(req: NextRequest) {
           txnId: piId(s.payment_intent) ?? s.id,
           status: "succeeded",
           method: "card",
+          business: (updatedInv as any)?.business ?? s.metadata?.business ?? "academy",
           raw: s as unknown as Record<string, unknown>,
         });
         await notifyAdmins({
@@ -117,6 +122,7 @@ export async function POST(req: NextRequest) {
           txnId: piId(s.payment_intent) ?? s.id,
           status: "failed",
           method: "card",
+          business: s.metadata?.business ?? "academy",
           raw: s as unknown as Record<string, unknown>,
         });
       }
@@ -128,16 +134,18 @@ export async function POST(req: NextRequest) {
       const charge = event.data.object as Stripe.Charge;
       const pi = piId(charge.payment_intent);
       let invoiceId: string | null = null;
+      let refundBusiness: string | null = null;
       if (pi) {
         const { data: pay } = await db
           .from("payments")
-          .select("invoice_id")
+          .select("invoice_id, business")
           .eq("provider", "stripe")
           .eq("provider_txn_id", pi)
           .eq("status", "succeeded")
           .limit(1)
           .maybeSingle();
         invoiceId = (pay?.invoice_id as string | undefined) ?? null;
+        refundBusiness = (pay as any)?.business ?? null;
       }
       if (invoiceId) {
         await db.from("invoices").update({ status: "refunded" }).eq("id", invoiceId);
@@ -149,6 +157,7 @@ export async function POST(req: NextRequest) {
           txnId: pi,
           status: "refunded",
           method: "card",
+          business: refundBusiness ?? "academy",
           raw: charge as unknown as Record<string, unknown>,
         });
       }

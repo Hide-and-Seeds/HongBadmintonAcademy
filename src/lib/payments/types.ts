@@ -6,6 +6,8 @@ export interface CheckoutInput {
   amount: number; // major units, e.g. 150.00 MYR
   currency: string; // e.g. "MYR"
   description: string;
+  /** Which arm this charge belongs to — tags Stripe metadata for reporting. */
+  business?: "academy" | "club";
   customerEmail?: string | null;
   /** Existing provider customer id to attach the payment to (optional). */
   customerId?: string | null;

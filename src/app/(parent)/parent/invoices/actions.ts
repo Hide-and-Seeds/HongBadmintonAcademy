@@ -21,7 +21,7 @@ export async function payInvoice(formData: FormData) {
 
   const { data: inv } = await db
     .from("invoices")
-    .select("id, amount, currency, description, status, parent_id, students(full_name)")
+    .select("id, amount, currency, description, status, parent_id, business, students(full_name)")
     .eq("id", id)
     .eq("parent_id", me.id)
     .maybeSingle();
@@ -62,6 +62,7 @@ export async function payInvoice(formData: FormData) {
     amount: Number(inv.amount),
     currency: inv.currency,
     description: inv.description || `Academy fee — ${studentName}`,
+    business: ((inv as any).business as "academy" | "club") ?? "academy",
     customerEmail: profile?.email ?? null,
     customerId,
     successUrl: `${baseUrl}/parent/invoices?paid=1`,

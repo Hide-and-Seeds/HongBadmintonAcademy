@@ -74,6 +74,8 @@ export const feePlanSchema = z.object({
   amount: z.coerce.number().positive("Amount must be > 0"),
   currency: z.string().default("MYR"),
   interval: z.enum(["monthly", "one_time"]).default("monthly"),
+  // Which arm this plan bills for — academy (default) or the club.
+  business: z.enum(["academy", "club"]).default("academy"),
   // Optional class-rank tag; anything outside the fixed set (incl. "") → null.
   rank: z.string().trim().optional().transform((v) =>
     v && (CLASS_RANKS as readonly string[]).includes(v) ? v : null,

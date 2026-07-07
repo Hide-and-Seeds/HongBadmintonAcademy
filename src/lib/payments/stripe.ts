@@ -123,7 +123,7 @@ export const stripeProvider: PaymentProvider = {
           },
         },
       ],
-      metadata: { invoice_id: input.invoiceId },
+      metadata: { invoice_id: input.invoiceId, business: input.business ?? "academy" },
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
     });

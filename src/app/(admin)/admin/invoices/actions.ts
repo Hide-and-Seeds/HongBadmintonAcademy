@@ -37,11 +37,24 @@ export async function createInvoice(formData: FormData) {
     branchId = (s as any)?.branch_id ?? null;
   }
 
+  // Tag the invoice's arm from its fee plan (academy vs club). No plan → the
+  // column default ('academy') applies.
+  let business: string | undefined;
+  if (parsed.data.fee_plan_id) {
+    const { data: fp } = await supabase
+      .from("fee_plans")
+      .select("business")
+      .eq("id", parsed.data.fee_plan_id)
+      .maybeSingle();
+    business = (fp as any)?.business ?? undefined;
+  }
+
   const { error } = await supabase.from("invoices").insert({
     ...parsed.data,
     parent_id: parentId,
     branch_id: branchId,
     period_month: new Date().toLocaleDateString("en-CA").slice(0, 8) + "01",
+    ...(business ? { business } : {}),
   });
   if (error) err("/admin/invoices/new", error.message);
 
@@ -71,7 +84,7 @@ export async function markPaid(formData: FormData) {
 
   const { data: inv } = await supabase
     .from("invoices")
-    .select("amount, currency")
+    .select("amount, currency, business")
     .eq("id", id)
     .maybeSingle();
 
@@ -88,6 +101,7 @@ export async function markPaid(formData: FormData) {
       provider: "manual",
       status: "succeeded",
       method: "manual",
+      business: (inv as any).business ?? "academy",
     });
   }
   revalidatePath("/admin/invoices");

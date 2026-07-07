@@ -42,18 +42,25 @@ export function FeePlanForm({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Arm" hint="Which business this plan bills for.">
+            <Select name="business" defaultValue={plan?.business ?? "academy"}>
+              <option value="academy">Academy</option>
+              <option value="club">Club</option>
+            </Select>
+          </Field>
           <Field label="Currency">
             <Input name="currency" defaultValue={plan?.currency ?? "MYR"} />
           </Field>
-          <Field label="Level" hint="Optional — tag this plan to a training level.">
-            <Select name="rank" defaultValue={plan?.rank ?? ""}>
-              <option value="">— none —</option>
-              {CLASS_RANKS.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </Select>
-          </Field>
         </div>
+
+        <Field label="Level" hint="Optional — tag this plan to a training level.">
+          <Select name="rank" defaultValue={plan?.rank ?? ""}>
+            <option value="">— none —</option>
+            {CLASS_RANKS.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </Select>
+        </Field>
 
         <Field label="Description">
           <Textarea name="description" defaultValue={plan?.description ?? ""} />

@@ -126,6 +126,7 @@ export interface FeePlan {
   amount: number;
   currency: string;
   interval: FeeInterval;
+  business: "academy" | "club";
   rank: string | null;
   is_active: boolean;
   stripe_product_id: string | null;
