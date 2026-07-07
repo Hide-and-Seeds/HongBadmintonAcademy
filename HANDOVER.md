@@ -503,8 +503,7 @@ Built and shipped:
   billed, outstanding, court cost, salaries, and available = collected − court −
   salaries; combined P&L.
 
-Migrations `0043`→`0047` were applied; **`0048` (`court_rentals.business`) was
-pending** as of the last note — verify it's applied. Full plan:
+Migrations `0043`→`0048` are all applied (confirmed 2026-07-07). Full plan:
 [`CLUB-PLAN-2026-07-06.md`](CLUB-PLAN-2026-07-06.md).
 
 ---
@@ -540,9 +539,8 @@ pending** as of the last note — verify it's applied. Full plan:
   `scorecard-pdf` pipeline; PIN login helpers in `parent-auth.ts`.
 - `enforceStaffMfa()` makes a `listFactors` network call on every staff
   `requireRole` — cache later if it bites.
-- Rotate `WA_WORKER_SECRET` (was once pasted in chat).
-- Confirm the worker box has auto-login + Sleep=Never; confirm the old GCP VM is
-  killed; confirm club migration `0048` is applied.
+- **Open (external, owner to confirm):** worker box auto-login + Sleep=Never;
+  old GCP VM decommissioned; Supabase leaked-password protection enabled.
 
 **Still-listed UX polish (from the roadmap, low priority):** progress photos,
 referral, minor i18n coverage (zh currently covers parent nav/home/schedule/report
