@@ -28,6 +28,16 @@ export const studentSchema = z.object({
   notes: optionalStr,
 });
 
+export const clubMemberSchema = z.object({
+  full_name: z.string().trim().min(1, "Name is required"),
+  email: optionalStr,
+  phone: phoneField,
+  tier_id: optionalId,
+  profile_id: optionalId,
+  status: z.enum(["active", "inactive"]).default("active"),
+  notes: optionalStr,
+});
+
 export const profileSchema = z.object({
   full_name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email required"),
