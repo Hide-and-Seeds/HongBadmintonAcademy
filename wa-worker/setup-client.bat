@@ -52,16 +52,24 @@ if exist "node_modules" (
   echo [4/6] Installing dependencies...
   call npm install
 )
-REM whatsapp-web.js drives a real Chrome. Use puppeteer's OWN installer, which
-REM downloads the EXACT pinned Chrome-for-Testing build this puppeteer expects
-REM (isolated — no clash with the user's browsing Chrome, which otherwise makes
-REM the launch instantly exit with "Code: 0"). Idempotent.
-echo       Ensuring Chrome for WhatsApp Web ^(one time, ~150 MB^)...
-call node "node_modules\puppeteer\install.mjs"
-if errorlevel 1 (
-  echo       First try failed - clearing partial downloads and retrying...
-  rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
+REM whatsapp-web.js drives a real Chrome. Prefer an installed Google Chrome
+REM (fast + reliable — point CHROME_PATH at it); only download puppeteer's own
+REM isolated Chrome if the box has none. The download is ~300 MB over two
+REM browsers and corrupts if interrupted, so avoid it when a system Chrome exists.
+set "SYSCHROME="
+if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "SYSCHROME=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
+if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" set "SYSCHROME=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
+if defined SYSCHROME (
+  echo       Using installed Google Chrome.
+  findstr /b /c:"CHROME_PATH=" ".env" >nul 2>&1 || echo CHROME_PATH=!SYSCHROME!>> ".env"
+) else (
+  echo       No system Chrome found - downloading isolated Chrome ^(~300 MB; do NOT close this window^)...
   call node "node_modules\puppeteer\install.mjs"
+  if errorlevel 1 (
+    echo       Retry after clearing the partial download...
+    rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
+    call node "node_modules\puppeteer\install.mjs"
+  )
 )
 
 REM ----- 5/6  autostart on login -----
