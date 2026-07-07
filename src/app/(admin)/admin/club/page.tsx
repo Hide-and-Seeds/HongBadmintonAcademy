@@ -6,17 +6,17 @@ import { SubmitButton } from "@/components/submit-button";
 import { formatDate } from "@/lib/format";
 import { signClubToken } from "@/lib/club-auth";
 import { getBaseUrl } from "@/lib/url";
-import { deleteClubMember, raiseMemberInvoice } from "./actions";
+import { deleteClubMember, raiseMemberInvoice, generateClubDuesNow } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClubMembersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ raised?: string; error?: string }>;
+  searchParams: Promise<{ raised?: string; dues?: string; error?: string }>;
 }) {
   await requireSuperAdmin();
-  const { raised, error } = await searchParams;
+  const { raised, dues, error } = await searchParams;
   const supabase = await createClient();
   const { data: members } = await supabase
     .from("club_members")
@@ -39,6 +39,9 @@ export default async function ClubMembersPage({
             >
               Public signup page ↗
             </a>
+            <form action={generateClubDuesNow}>
+              <SubmitButton variant="secondary" pendingText="Generating…">Generate dues</SubmitButton>
+            </form>
             <LinkButton href="/admin/club/new">+ Add member</LinkButton>
           </>
         }
@@ -47,6 +50,11 @@ export default async function ClubMembersPage({
       {raised && (
         <p className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
           Membership invoice raised — see it in Invoices and Pots.
+        </p>
+      )}
+      {dues !== undefined && (
+        <p className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          Generated {dues} membership due invoice{dues === "1" ? "" : "s"} for this month.
         </p>
       )}
       {error && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}

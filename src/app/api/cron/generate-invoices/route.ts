@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateInvoicesCore } from "@/lib/billing";
+import { generateClubDuesCore } from "@/lib/club-billing";
 import { upsertCommunityMonthlyNotice } from "@/lib/reminders";
 import { getMonthlySchedule, mytDayOfMonth } from "@/lib/settings";
 import { getBaseUrl } from "@/lib/url";
@@ -24,10 +25,13 @@ export async function GET(req: NextRequest) {
     if (today !== schedule.runDay) {
       return NextResponse.json({ ok: true, skipped: "not-run-day", today, runDay: schedule.runDay });
     }
-    const result = await generateInvoicesCore(createAdminClient(), new Date(), schedule.dueDay);
+    const db = createAdminClient();
+    const result = await generateInvoicesCore(db, new Date(), schedule.dueDay);
+    // Club membership dues — same billing day, tagged business='club'.
+    const club = await generateClubDuesCore(db, new Date(), schedule.dueDay);
     // Combined "reports + fees" Community notice (or one-sided fallback).
     const notice = await upsertCommunityMonthlyNotice(await getBaseUrl());
-    return NextResponse.json({ ok: true, ...result, notice });
+    return NextResponse.json({ ok: true, ...result, club, notice });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

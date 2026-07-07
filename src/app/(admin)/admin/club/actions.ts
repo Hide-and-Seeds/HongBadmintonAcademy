@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewBranchId } from "@/lib/branch";
+import { getMonthlySchedule } from "@/lib/settings";
+import { generateClubDuesCore } from "@/lib/club-billing";
 import { clubMemberSchema } from "@/lib/validation";
 
 function err(path: string, message: string): never {
@@ -45,6 +47,17 @@ export async function deleteClubMember(formData: FormData) {
   const id = String(formData.get("id"));
   await createAdminClient().from("club_members").delete().eq("id", id);
   revalidatePath("/admin/club");
+}
+
+// Manual "Generate dues now" — raise this month's membership invoice for every
+// active member on a monthly tier, instead of waiting for the daily cron. Same
+// idempotent core, so clicking twice won't double-bill.
+export async function generateClubDuesNow() {
+  await requireSuperAdmin();
+  const schedule = await getMonthlySchedule();
+  const { generated } = await generateClubDuesCore(createAdminClient(), new Date(), schedule.dueDay);
+  revalidatePath("/admin/club");
+  redirect(`/admin/club?dues=${generated}`);
 }
 
 // Raise this member's membership invoice for the current month (business=club →
