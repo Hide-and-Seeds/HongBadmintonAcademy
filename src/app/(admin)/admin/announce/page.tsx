@@ -84,6 +84,17 @@ export default async function AnnouncePage({
         </Section>
       )}
 
+      {env.waCommunityLink && (
+        <a
+          href="/community-poster"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:underline"
+        >
+          🖨️ Print WhatsApp-group QR poster (for the front desk) →
+        </a>
+      )}
+
       {botReady ? (
         <Section
           title="Message the parent Community"
