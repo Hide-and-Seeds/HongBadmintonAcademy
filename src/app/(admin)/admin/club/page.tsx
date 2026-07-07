@@ -4,6 +4,8 @@ import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState } fro
 import { ConfirmButton } from "@/components/confirm-button";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate } from "@/lib/format";
+import { signClubToken } from "@/lib/club-auth";
+import { getBaseUrl } from "@/lib/url";
 import { deleteClubMember, raiseMemberInvoice } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,7 @@ export default async function ClubMembersPage({
     .from("club_members")
     .select("id, full_name, email, phone, status, joined_at, tier:fee_plans!club_members_tier_id_fkey(name)")
     .order("full_name");
+  const baseUrl = await getBaseUrl();
 
   return (
     <div>
@@ -73,6 +76,15 @@ export default async function ClubMembersPage({
                   <Td label="Joined" className="text-slate-500">{m.joined_at ? formatDate(m.joined_at) : "—"}</Td>
                   <Td label="Actions" className="text-right">
                     <div className="flex justify-end gap-2">
+                      <a
+                        href={`${baseUrl}/club/me/${signClubToken(m.id)}`}
+                        target="_blank"
+                        rel="noopener"
+                        className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        title="Open this member's personal portal link"
+                      >
+                        Portal ↗
+                      </a>
                       <form action={raiseMemberInvoice}>
                         <input type="hidden" name="id" value={m.id} />
                         <SubmitButton variant="secondary" pendingText="Raising…">Raise invoice</SubmitButton>
