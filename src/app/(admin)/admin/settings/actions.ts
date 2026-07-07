@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth";
-import { setWorkerPaused, setSendPolicy, setMonthlySchedule } from "@/lib/settings";
+import { setWorkerPaused, setSendPolicy, setMonthlySchedule, set2faRequired } from "@/lib/settings";
 
 // Pause/resume the WhatsApp drip worker. The desired new state arrives as a
 // hidden "paused" field ("true"/"false"). Super-admin only.
@@ -11,6 +11,15 @@ export async function toggleWorker(formData: FormData) {
   await requireSuperAdmin();
   await setWorkerPaused(formData.get("paused") === "true");
   revalidatePath("/admin/settings");
+}
+
+// Require 2FA for every staff account (super-admin only). When on, staff without
+// 2FA are forced to enrol before they can use the app.
+export async function toggle2fa(formData: FormData) {
+  await requireSuperAdmin();
+  await set2faRequired(formData.get("required") === "true");
+  revalidatePath("/admin/settings");
+  redirect("/admin/settings?saved=1");
 }
 
 // Admin sets the worker's daily send schedule (window + cap + gap). Clamped to

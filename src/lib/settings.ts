@@ -5,6 +5,7 @@ const WORKER_PAUSED = "worker_paused";
 const FEE_REMINDERS_PAUSED = "fee_reminders_paused";
 const SEND_POLICY = "send_policy";
 const MONTHLY_SCHEDULE = "monthly_schedule";
+const REQUIRE_2FA = "require_2fa";
 
 // Generic app_settings value store. Read via the service-role client so
 // worker/cron endpoints (no user session) can read it.
@@ -25,6 +26,11 @@ async function setValue(key: string, value: unknown): Promise<void> {
 // Whole WhatsApp drip worker: paused = drain nothing at all.
 export const isWorkerPaused = () => getValue(WORKER_PAUSED, false);
 export const setWorkerPaused = (v: boolean) => setValue(WORKER_PAUSED, v);
+
+// When true, every staff member must have 2FA enabled — those without it are
+// forced into enrollment before they can use the app.
+export const is2faRequired = () => getValue(REQUIRE_2FA, false);
+export const set2faRequired = (v: boolean) => setValue(REQUIRE_2FA, v);
 
 // Auto fee reminders only: paused = stop queuing new ones AND hold any already
 // queued (worker still sends community posts etc.).

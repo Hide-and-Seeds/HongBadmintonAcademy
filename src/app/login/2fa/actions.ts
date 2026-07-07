@@ -2,7 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, homeForRole } from "@/lib/auth";
+import { consumeBackupCode } from "@/lib/mfa-codes";
 
 // Complete the second factor at login. On success the session is upgraded to
 // aal2 and we route by role.
@@ -24,6 +26,27 @@ export async function verifyLoginTotp(formData: FormData): Promise<void> {
 
   const profile = await getProfile();
   redirect(next || homeForRole(profile?.role ?? "admin"));
+}
+
+// Recover with a one-time backup code (lost device). A valid code removes the
+// TOTP factor (dropping the aal2 requirement) so the staffer gets in with just
+// their password, then re-enrols. Self-service — no super-admin needed.
+export async function useBackupCode(formData: FormData): Promise<void> {
+  const code = String(formData.get("code") ?? "").trim();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const ok = await consumeBackupCode(user!.id, code);
+  if (!ok) redirect(`/login/2fa?mode=backup&error=${encodeURIComponent("That backup code is invalid or already used.")}`);
+
+  // Wipe factors → nextLevel drops to aal1 → they're through.
+  const db = createAdminClient();
+  const { data } = await db.auth.admin.mfa.listFactors({ userId: user!.id });
+  for (const f of (data as any)?.factors ?? []) await db.auth.admin.mfa.deleteFactor({ id: f.id, userId: user!.id });
+
+  const profile = await getProfile();
+  redirect(homeForRole(profile?.role ?? "admin"));
 }
 
 // Bail out of the 2FA step (wrong account / lost device) → back to a clean login.

@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ShieldCheck, ShieldOff } from "lucide-react";
-import { enrollTotp, verifyTotp, unenrollTotp } from "@/app/staff-2fa-actions";
+import { ShieldCheck, ShieldOff, KeyRound } from "lucide-react";
+import { enrollTotp, verifyTotp, unenrollTotp, regenerateBackupCodes } from "@/app/staff-2fa-actions";
 
-// Account card: enable TOTP 2FA (enroll → scan QR → verify a code) or turn it
-// off. Reloads on success so the server re-reads the factor state.
+// Account card: enable TOTP 2FA (enroll → scan QR → verify → save backup codes)
+// or turn it off. Reloads on success so the server re-reads factor state.
 export function TwoFactorSetup({ enrolled, factorId }: { enrolled: boolean; factorId: string | null }) {
-  const [step, setStep] = useState<"idle" | "enrolling">("idle");
+  const [step, setStep] = useState<"idle" | "enrolling" | "codes">("idle");
   const [qr, setQr] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [pendingFactor, setPendingFactor] = useState<string | null>(null);
+  const [codes, setCodes] = useState<string[]>([]);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
@@ -20,9 +21,7 @@ export function TwoFactorSetup({ enrolled, factorId }: { enrolled: boolean; fact
     start(async () => {
       const r = await enrollTotp();
       if (!r.ok) { setError(r.error ?? "Couldn't start 2FA setup."); return; }
-      setQr(r.qr ?? null);
-      setSecret(r.secret ?? null);
-      setPendingFactor(r.factorId ?? null);
+      setQr(r.qr ?? null); setSecret(r.secret ?? null); setPendingFactor(r.factorId ?? null);
       setStep("enrolling");
     });
   }
@@ -33,7 +32,17 @@ export function TwoFactorSetup({ enrolled, factorId }: { enrolled: boolean; fact
     start(async () => {
       const r = await verifyTotp(pendingFactor, code);
       if (!r.ok) { setError(r.error ?? "That code didn't match."); return; }
-      window.location.reload();
+      setCodes(r.backupCodes ?? []);
+      setStep("codes");
+    });
+  }
+
+  function regen() {
+    setError(null);
+    start(async () => {
+      const r = await regenerateBackupCodes();
+      if (!r.ok) { setError(r.error ?? "Couldn't generate codes."); return; }
+      setCodes(r.codes ?? []); setStep("codes");
     });
   }
 
@@ -46,6 +55,22 @@ export function TwoFactorSetup({ enrolled, factorId }: { enrolled: boolean; fact
     });
   }
 
+  // ── Backup codes screen (after enrol or regenerate) ──────────────────────
+  if (step === "codes") {
+    return (
+      <div className="space-y-3">
+        <div className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800"><KeyRound className="h-4 w-4 text-amber-500" /> Backup codes</div>
+        <p className="text-sm text-slate-600">Save these somewhere safe. Each works once to sign in if you lose your device. They won't be shown again.</p>
+        <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-sm text-slate-800">
+          {codes.map((c) => <span key={c}>{c}</span>)}
+        </div>
+        <button type="button" onClick={() => window.location.reload()} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
+          I've saved them
+        </button>
+      </div>
+    );
+  }
+
   if (enrolled) {
     return (
       <div className="space-y-3">
@@ -53,14 +78,14 @@ export function TwoFactorSetup({ enrolled, factorId }: { enrolled: boolean; fact
           <ShieldCheck className="h-4 w-4" /> Two-factor is on
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="button"
-          onClick={disable}
-          disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-        >
-          <ShieldOff className="h-4 w-4" /> Turn off
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={regen} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+            <KeyRound className="h-4 w-4" /> New backup codes
+          </button>
+          <button type="button" onClick={disable} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+            <ShieldOff className="h-4 w-4" /> Turn off
+          </button>
+        </div>
       </div>
     );
   }
@@ -83,14 +108,7 @@ export function TwoFactorSetup({ enrolled, factorId }: { enrolled: boolean; fact
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex items-center gap-2">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="123456"
-            className="h-10 w-32 rounded-lg border border-slate-300 text-center text-lg tracking-widest focus:border-green-500 focus:outline-none"
-          />
+          <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" maxLength={6} placeholder="123456" className="h-10 w-32 rounded-lg border border-slate-300 text-center text-lg tracking-widest focus:border-green-500 focus:outline-none" />
           <button type="button" onClick={confirm} disabled={busy || code.length < 6} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
             Verify & enable
           </button>

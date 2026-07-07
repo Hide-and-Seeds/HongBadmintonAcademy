@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
+import { is2faRequired } from "@/lib/settings";
 import type { Profile, Role } from "@/lib/types";
 
 // Resolve the current user's profile (or null). Returns null when Supabase
@@ -40,7 +41,11 @@ export function homeForRole(role: Role): string {
 async function enforceStaffMfa(): Promise<void> {
   const supabase = await createClient();
   const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (data && data.currentLevel === "aal1" && data.nextLevel === "aal2") redirect("/login/2fa");
+  if (!data) return;
+  // Has a factor but hasn't cleared it this session → verify.
+  if (data.currentLevel === "aal1" && data.nextLevel === "aal2") redirect("/login/2fa");
+  // No factor at all, but the academy requires 2FA → force enrollment first.
+  if (data.nextLevel === "aal1" && (await is2faRequired())) redirect("/login/2fa/setup");
 }
 
 // Guard a page to one or more roles. Redirects to /login when signed out, or to

@@ -1,11 +1,11 @@
 import { requireSuperAdmin } from "@/lib/auth";
 import { PageHeader, Section, Field, Input, Badge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { isWorkerPaused, getMonthlySchedule } from "@/lib/settings";
+import { isWorkerPaused, getMonthlySchedule, is2faRequired } from "@/lib/settings";
 import { WaLinkPanel } from "@/components/wa-link-panel";
 import { PushPanel } from "@/components/push-panel";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
-import { toggleWorker, saveMonthlySchedule } from "./actions";
+import { toggleWorker, saveMonthlySchedule, toggle2fa } from "./actions";
 import { savePushSubscription, removePushSubscription, sendTestPushToSelf } from "./push-actions";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ export default async function SettingsPage({
   const { error, saved } = await searchParams;
   const paused = await isWorkerPaused();
   const schedule = await getMonthlySchedule();
+  const require2fa = await is2faRequired();
 
   return (
     <div className="space-y-6">
@@ -26,6 +27,27 @@ export default async function SettingsPage({
 
       {saved && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">Saved.</p>}
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+
+      <Section title="Security">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div className="text-sm text-slate-600">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="font-medium text-slate-800">Require 2FA for staff:</span>
+              <Badge tone={require2fa ? "green" : "slate"}>{require2fa ? "Required" : "Optional"}</Badge>
+            </div>
+            {require2fa
+              ? "Every admin and coach must set up an authenticator app before using the app."
+              : "Staff can enable 2FA on their account, but it isn't forced."}
+            <div className="mt-1 text-xs text-slate-400">Keep at least two super-admins so a locked-out admin can be reset.</div>
+          </div>
+          <form action={toggle2fa}>
+            <input type="hidden" name="required" value={require2fa ? "false" : "true"} />
+            <SubmitButton variant={require2fa ? "secondary" : "primary"} pendingText="Saving…">
+              {require2fa ? "Make optional" : "Require for all staff"}
+            </SubmitButton>
+          </form>
+        </div>
+      </Section>
 
       <Section title="WhatsApp worker">
         <div className="flex flex-wrap items-center justify-between gap-4 p-5">
