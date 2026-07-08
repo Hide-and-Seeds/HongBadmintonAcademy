@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 import {
   PageHeader, Section, StatCard, Table, Th, Td, Badge, EmptyState,
   LinkButton, Field, Input, Select, Button, cn,
@@ -8,6 +9,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatDateTime, formatCurrency, monthLabel } from "@/lib/format";
 import { levelBadgeClass } from "@/lib/training";
 import { getLevelInfoMerged } from "@/lib/syllabus";
+import { dict } from "@/lib/i18n";
 import type { AttendanceStatus, InvoiceStatus } from "@/lib/types";
 import { awardReward, promoteStudent } from "../actions";
 
@@ -29,6 +31,18 @@ export default async function StudentProfilePage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
+  const me = await requireRole("admin");
+  const L = dict(me.locale);
+  const attLabel: Record<string, string> = {
+    present: L.att_present, late: L.att_late, absent: L.att_absent, excused: L.att_excused,
+  };
+  const invLabel: Record<string, string> = {
+    draft: L.inv_st_draft, unpaid: L.inv_st_unpaid, paid: L.inv_st_paid,
+    overdue: L.inv_st_overdue, canceled: L.inv_st_canceled, refunded: L.inv_st_refunded,
+  };
+  const bandLabel: Record<string, string> = {
+    excellent: L.ex_band_excellent, pass: L.ex_band_pass, borderline: L.ex_band_borderline, fail: L.ex_band_fail,
+  };
   const supabase = await createClient();
 
   const { data: student } = await supabase
@@ -98,63 +112,63 @@ export default async function StudentProfilePage({
         description={
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Badge tone={student.status === "active" ? "green" : "slate"}>{student.status}</Badge>
+              <Badge tone={student.status === "active" ? "green" : "slate"}>{student.status === "active" ? L.adm_active : L.adm_inactive}</Badge>
               {student.nickname && <span className="text-slate-500">“{student.nickname}”</span>}
               {classNames && <span>{classNames}</span>}
             </div>
-            {student.parent?.full_name && <div>Parent: {student.parent.full_name}</div>}
-            {student.assigned_coach?.full_name && <div>Coach: {student.assigned_coach.full_name}</div>}
+            {student.parent?.full_name && <div>{L.inv_parent}: {student.parent.full_name}</div>}
+            {student.assigned_coach?.full_name && <div>{L.adm_coach}: {student.assigned_coach.full_name}</div>}
           </div>
         }
         action={
           <>
-            <LinkButton href={`/admin/students/${id}/edit`} variant="secondary">Edit</LinkButton>
-            <LinkButton href="/admin/students" variant="ghost">← All students</LinkButton>
+            <LinkButton href={`/admin/students/${id}/edit`} variant="secondary">{L.edit_btn}</LinkButton>
+            <LinkButton href="/admin/students" variant="ghost">{L.sd_all}</LinkButton>
           </>
         }
       />
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Attendance rate" value={rate != null ? `${rate}%` : "—"} sub={`${attended}/${total} sessions`} tone="blue" />
-        <StatCard label="Last exam" value={lastExam ? `${lastExam.total}/100` : "—"} sub={lastExam ? lastExam.band : `${(exams ?? []).length} exams`} />
-        <StatCard label="Reward points" value={totalPoints} tone="green" />
-        <StatCard label="NFC tag" value={student.nfc_tag_uid ? "✓" : "—"} sub={student.nfc_tag_uid ?? "unbound"} />
+        <StatCard label={L.ana_att_rate} value={rate != null ? `${rate}%` : "—"} sub={`${attended}/${total} ${L.sd_sessions_w}`} tone="blue" />
+        <StatCard label={L.sd_last_exam} value={lastExam ? `${lastExam.total}/100` : "—"} sub={lastExam ? (bandLabel[lastExam.band] ?? lastExam.band) : `${(exams ?? []).length} ${L.sd_exams_w}`} />
+        <StatCard label={L.sd_reward_points} value={totalPoints} tone="green" />
+        <StatCard label={L.sd_nfc_tag} value={student.nfc_tag_uid ? "✓" : "—"} sub={student.nfc_tag_uid ?? L.sd_unbound} />
       </div>
 
       {/* Training level (read-only). Promotion is one-way: this button bumps the
        *  level by +1 (max 6). Coaches normally promote via a graded /coach/exams. */}
-      <Section title="Training level">
+      <Section title={L.training_level}>
         <div className="flex flex-wrap items-center gap-3">
           <span className={cn("inline-flex rounded-full px-3 py-1 text-sm font-semibold", levelBadgeClass(curLevel))}>
             L{curLevel} · {curLevelName}
           </span>
           <span className="text-xs text-slate-400">
-            Set by promotion exams (Jan / Apr / Jul / Oct) or the button here.
+            {L.sd_level_hint}
           </span>
           <form action={promoteStudent}>
             <input type="hidden" name="id" value={id} />
-            <SubmitButton pendingText="Promoting…" {...(curLevel >= 6 ? { disabled: true } : {})}>
-              ⬆ Promote to L{Math.min(6, curLevel + 1)}
+            <SubmitButton pendingText={L.ex_promoting} {...(curLevel >= 6 ? { disabled: true } : {})}>
+              ⬆ {L.ex_promote_to}L{Math.min(6, curLevel + 1)}
             </SubmitButton>
           </form>
         </div>
       </Section>
 
       {/* Attendance history */}
-      <Section title="Attendance history" flush>
+      <Section title={L.sd_att_history} flush>
         {att.length ? (
           <>
             <Table>
-              <thead><tr><Th>Date</Th><Th>Class</Th><Th>Status</Th><Th>Tap in</Th><Th>Tap out</Th></tr></thead>
+              <thead><tr><Th>{L.col_date}</Th><Th>{L.class_word}</Th><Th>{L.col_status}</Th><Th>{L.sd_tap_in}</Th><Th>{L.sd_tap_out}</Th></tr></thead>
               <tbody>
                 {att.slice(0, 3).map((a: any, i) => (
                   <tr key={i} className="hover:bg-slate-50">
                     <Td>{formatDate(a.sessions?.session_date)}</Td>
-                    <Td label="Class" className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
-                    <Td label="Status"><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
-                    <Td label="Tap in" className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
-                    <Td label="Tap out" className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
+                    <Td label={L.class_word} className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
+                    <Td label={L.col_status}><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{attLabel[a.status] ?? a.status}</Badge></Td>
+                    <Td label={L.sd_tap_in} className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
+                    <Td label={L.sd_tap_out} className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -162,7 +176,7 @@ export default async function StudentProfilePage({
             {att.length > 3 && (
               <details className="border-t border-slate-100">
                 <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-green-700 hover:bg-slate-50">
-                  Show {att.length - 3} earlier sessions
+                  {L.sd_show_earlier.replace("{n}", String(att.length - 3))}
                 </summary>
                 <div className="overflow-x-auto border-t border-slate-100">
                   <table className="w-full text-sm">
@@ -170,8 +184,8 @@ export default async function StudentProfilePage({
                       {att.slice(3).map((a: any, i) => (
                         <tr key={i} className="hover:bg-slate-50">
                           <Td>{formatDate(a.sessions?.session_date)}</Td>
-                          <Td label="Class" className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
-                          <Td label="Status"><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{a.status}</Badge></Td>
+                          <Td label={L.class_word} className="text-slate-500">{a.sessions?.classes?.name ?? "—"}</Td>
+                          <Td label={L.col_status}><Badge tone={ATT_TONE[a.status as AttendanceStatus]}>{attLabel[a.status] ?? a.status}</Badge></Td>
                           <Td label="Tap in" className="text-slate-500">{a.tap_in_at ? formatDateTime(a.tap_in_at) : "—"}</Td>
                           <Td label="Tap out" className="text-slate-500">{a.tap_out_at ? formatDateTime(a.tap_out_at) : "—"}</Td>
                         </tr>
@@ -182,110 +196,110 @@ export default async function StudentProfilePage({
               </details>
             )}
           </>
-        ) : <div className="p-5"><EmptyState message="No attendance records yet." /></div>}
+        ) : <div className="p-5"><EmptyState message={L.sd_no_att} /></div>}
       </Section>
 
       {/* Promotion exams */}
-      <Section title="Promotion exams" flush>
+      <Section title={L.sd_promo_exams} flush>
         {exams && exams.length ? (
           <Table>
-            <thead><tr><Th>Date</Th><Th>Level</Th><Th>Score</Th><Th>Result</Th><Th>PDF</Th></tr></thead>
+            <thead><tr><Th>{L.col_date}</Th><Th>{L.level_word}</Th><Th>{L.ex_score}</Th><Th>{L.ex_result}</Th><Th>PDF</Th></tr></thead>
             <tbody>
               {exams.map((e: any) => (
                 <tr key={e.id} className="hover:bg-slate-50">
                   <Td>{formatDate(e.exam_date)}</Td>
-                  <Td label="Level">{e.from_level} → {e.to_level > 6 ? "Elite" : e.to_level}</Td>
-                  <Td label="Score" className="font-semibold tabular-nums">{e.total}/100</Td>
-                  <Td label="Result"><Badge tone={e.band === "excellent" || e.band === "pass" ? "green" : e.band === "borderline" ? "yellow" : "red"}>{e.band ?? "—"}</Badge></Td>
+                  <Td label={L.level_word}>{e.from_level} → {e.to_level > 6 ? L.ex_elite_word : e.to_level}</Td>
+                  <Td label={L.ex_score} className="font-semibold tabular-nums">{e.total}/100</Td>
+                  <Td label={L.ex_result}><Badge tone={e.band === "excellent" || e.band === "pass" ? "green" : e.band === "borderline" ? "yellow" : "red"}>{e.band ? (bandLabel[e.band] ?? e.band) : "—"}</Badge></Td>
                   <Td label="PDF"><a href={`/api/exams/${e.id}/pdf`} target="_blank" rel="noopener" className="text-green-700 hover:underline">PDF</a></Td>
                 </tr>
               ))}
             </tbody>
           </Table>
-        ) : <div className="p-5"><EmptyState message="No promotion exams yet." /></div>}
+        ) : <div className="p-5"><EmptyState message={L.sd_no_exams} /></div>}
       </Section>
 
       {/* Monthly marks (coach's 1–5 monthly assessment — the parent report source) */}
-      <Section title="Monthly marks" flush>
+      <Section title={L.sd_monthly} flush>
         {monthly && monthly.length ? (
           <Table>
-            <thead><tr><Th>Month</Th><Th>Fitness</Th><Th>Skills</Th><Th>Attitude</Th><Th>Comment</Th><Th>Coach</Th></tr></thead>
+            <thead><tr><Th>{L.sd_month}</Th><Th>{L.fitness}</Th><Th>{L.skills}</Th><Th>{L.attitude}</Th><Th>{L.sd_comment}</Th><Th>{L.adm_coach}</Th></tr></thead>
             <tbody>
               {monthly.map((m: any, i) => (
                 <tr key={i} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{monthLabel(m.period_month)}</Td>
-                  <Td label="Fitness" className="tabular-nums">{m.fitness ?? "—"}/5</Td>
-                  <Td label="Skills" className="tabular-nums">{m.skills ?? "—"}/5</Td>
-                  <Td label="Attitude" className="tabular-nums">{m.attitude ?? "—"}/5</Td>
-                  <Td label="Comment" className="max-w-xs truncate text-slate-500">{m.comment ?? "—"}</Td>
-                  <Td label="Coach" className="text-slate-500">{m.coach?.full_name ?? "—"}</Td>
+                  <Td label={L.fitness} className="tabular-nums">{m.fitness ?? "—"}/5</Td>
+                  <Td label={L.skills} className="tabular-nums">{m.skills ?? "—"}/5</Td>
+                  <Td label={L.attitude} className="tabular-nums">{m.attitude ?? "—"}/5</Td>
+                  <Td label={L.sd_comment} className="max-w-xs truncate text-slate-500">{m.comment ?? "—"}</Td>
+                  <Td label={L.adm_coach} className="text-slate-500">{m.coach?.full_name ?? "—"}</Td>
                 </tr>
               ))}
             </tbody>
           </Table>
-        ) : <div className="p-5"><EmptyState message="No monthly marks yet — coaches grade at /coach → Monthly Marks." /></div>}
+        ) : <div className="p-5"><EmptyState message={L.sd_no_monthly} /></div>}
       </Section>
 
       {/* Rewards */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Section title="Rewards ledger" flush>
+          <Section title={L.sd_rewards_ledger} flush>
             {ledger && ledger.length ? (
               <Table>
-                <thead><tr><Th>Date</Th><Th>Rule</Th><Th>Reason</Th><Th className="text-right">Points</Th></tr></thead>
+                <thead><tr><Th>{L.col_date}</Th><Th>{L.sd_rule}</Th><Th>{L.sd_reason}</Th><Th className="text-right">{L.rw_points}</Th></tr></thead>
                 <tbody>
                   {ledger.map((r: any, i) => (
                     <tr key={i} className="hover:bg-slate-50">
                       <Td>{formatDate(r.awarded_at)}</Td>
-                      <Td label="Rule" className="text-slate-500">{r.reward_rules?.name ?? "—"}</Td>
-                      <Td label="Reason" className="text-slate-500">{r.reason ?? "—"}</Td>
-                      <Td label="Points" className="text-right font-semibold text-green-700">+{r.points}</Td>
+                      <Td label={L.sd_rule} className="text-slate-500">{r.reward_rules?.name ?? "—"}</Td>
+                      <Td label={L.sd_reason} className="text-slate-500">{r.reason ?? "—"}</Td>
+                      <Td label={L.rw_points} className="text-right font-semibold text-green-700">+{r.points}</Td>
                     </tr>
                   ))}
                 </tbody>
               </Table>
-            ) : <div className="p-5"><EmptyState message="No rewards awarded yet." /></div>}
+            ) : <div className="p-5"><EmptyState message={L.sd_no_rewards} /></div>}
           </Section>
         </div>
-        <Section title="Award points">
+        <Section title={L.sd_award}>
           <form action={awardReward} className="space-y-3">
             <input type="hidden" name="student_id" value={id} />
-            <Field label="Rule (optional)">
+            <Field label={L.sd_rule_optional}>
               <Select name="rule_id" defaultValue="">
-                <option value="">— custom —</option>
+                <option value="">{L.sd_custom}</option>
                 {(rules ?? []).map((r: any) => (
                   <option key={r.id} value={r.id}>{r.name} (+{r.points})</option>
                 ))}
               </Select>
             </Field>
-            <Field label="Points">
+            <Field label={L.rw_points}>
               <Input type="number" name="points" defaultValue={10} required />
             </Field>
-            <Field label="Reason">
+            <Field label={L.sd_reason}>
               <Input name="reason" placeholder="e.g. Perfect attendance" />
             </Field>
-            <SubmitButton className="w-full" pendingText="Awarding…">Award</SubmitButton>
+            <SubmitButton className="w-full" pendingText={L.sd_awarding}>{L.sd_award_btn}</SubmitButton>
           </form>
         </Section>
       </div>
 
       {/* Invoices */}
-      <Section title="Fees" flush>
+      <Section title={L.sd_fees} flush>
         {invoices && invoices.length ? (
           <Table>
-            <thead><tr><Th>Invoice</Th><Th>Amount</Th><Th>Due</Th><Th>Status</Th></tr></thead>
+            <thead><tr><Th>{L.inv_invoice}</Th><Th>{L.fp_amount}</Th><Th>{L.inv_due}</Th><Th>{L.col_status}</Th></tr></thead>
             <tbody>
               {invoices.map((inv: any, i) => (
                 <tr key={i} className="hover:bg-slate-50">
                   <Td className="font-mono text-xs text-slate-500">{inv.invoice_no ?? "—"}</Td>
-                  <Td label="Amount" className="font-medium text-slate-900">{formatCurrency(Number(inv.amount), inv.currency)}</Td>
-                  <Td label="Due" className="text-slate-500">{formatDate(inv.due_date)}</Td>
-                  <Td label="Status"><Badge tone={INV_TONE[inv.status as InvoiceStatus]}>{inv.status}</Badge></Td>
+                  <Td label={L.fp_amount} className="font-medium text-slate-900">{formatCurrency(Number(inv.amount), inv.currency)}</Td>
+                  <Td label={L.inv_due} className="text-slate-500">{formatDate(inv.due_date)}</Td>
+                  <Td label={L.col_status}><Badge tone={INV_TONE[inv.status as InvoiceStatus]}>{invLabel[inv.status] ?? inv.status}</Badge></Td>
                 </tr>
               ))}
             </tbody>
           </Table>
-        ) : <div className="p-5"><EmptyState message="No invoices yet." /></div>}
+        ) : <div className="p-5"><EmptyState message={L.inv_empty} /></div>}
       </Section>
     </div>
   );
