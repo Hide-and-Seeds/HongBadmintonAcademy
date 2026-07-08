@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { listBranches, canChooseBranch } from "@/lib/branch";
 import { PageHeader } from "@/components/ui";
+import { dict } from "@/lib/i18n";
 import { StudentForm } from "../student-form";
 import { createStudent } from "../actions";
 
@@ -14,6 +15,7 @@ export default async function NewStudentPage({
 }) {
   const { error } = await searchParams;
   const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const [{ data: parents }, { data: plans }, { data: coaches }, branches] = await Promise.all([
     supabase.from("profiles").select("id, full_name").eq("role", "parent").order("full_name"),
@@ -24,7 +26,7 @@ export default async function NewStudentPage({
 
   return (
     <div>
-      <PageHeader title="New student" />
+      <PageHeader title={L.sf_new_student_title} />
       <StudentForm
         action={createStudent}
         parents={parents ?? []}
@@ -34,6 +36,7 @@ export default async function NewStudentPage({
         canChooseBranch={canChooseBranch(me)}
         defaultBranchId={me.branch_id}
         error={error}
+        locale={me.locale}
       />
     </div>
   );

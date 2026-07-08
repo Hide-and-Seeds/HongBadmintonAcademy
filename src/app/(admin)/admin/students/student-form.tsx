@@ -4,6 +4,7 @@ import { NfcTagInput } from "@/components/nfc-tag-input";
 import { AvatarUpload } from "@/components/avatar-upload";
 import { formatCurrency } from "@/lib/format";
 import { levelName } from "@/lib/training";
+import { dict } from "@/lib/i18n";
 import type { Student } from "@/lib/types";
 
 const LEVELS = [1, 2, 3, 4, 5, 6];
@@ -18,6 +19,7 @@ export function StudentForm({
   canChooseBranch,
   defaultBranchId,
   error,
+  locale,
 }: {
   action: (formData: FormData) => void;
   student?: Student;
@@ -28,7 +30,9 @@ export function StudentForm({
   canChooseBranch?: boolean;
   defaultBranchId?: string | null;
   error?: string;
+  locale?: string | null;
 }) {
+  const L = dict(locale);
   return (
     <Card className="max-w-2xl p-6">
       <form action={action} className="space-y-4">
@@ -38,31 +42,31 @@ export function StudentForm({
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Full name" required>
+          <Field label={L.sf_full_name} required>
             <Input name="full_name" defaultValue={student?.full_name ?? ""} required />
           </Field>
-          <Field label="Nickname" hint="What coaches call them on court.">
+          <Field label={L.sf_nickname} hint={L.sf_nickname_hint}>
             <Input name="nickname" defaultValue={student?.nickname ?? ""} placeholder="e.g. Ah Boy" />
           </Field>
         </div>
 
-        <Field label="Photo" hint="JPG, PNG or WebP. Shows on the kiosk, rosters and the parent app.">
+        <Field label={L.sf_photo} hint={L.sf_photo_hint}>
           <AvatarUpload name="photo" currentUrl={student?.photo_url} label={student?.full_name ?? ""} />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Date of birth">
+          <Field label={L.sf_dob}>
             <Input type="date" name="dob" defaultValue={student?.dob ?? ""} />
           </Field>
-          <Field label="Gender">
+          <Field label={L.sf_gender}>
             <Input name="gender" defaultValue={student?.gender ?? ""} placeholder="M / F" />
           </Field>
         </div>
 
         {canChooseBranch && (
-          <Field label="Branch" required hint="Which location this student attends.">
+          <Field label={L.branch} required hint={L.sf_branch_hint}>
             <Select name="branch_id" defaultValue={student?.branch_id ?? defaultBranchId ?? ""} required>
-              <option value="">— select —</option>
+              <option value="">{L.f_select}</option>
               {(branches ?? []).map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
@@ -70,9 +74,9 @@ export function StudentForm({
           </Field>
         )}
 
-        <Field label="Parent">
+        <Field label={L.inv_parent}>
           <Select name="parent_id" defaultValue={student?.parent_id ?? ""}>
-            <option value="">— none —</option>
+            <option value="">{L.none}</option>
             {parents.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.full_name ?? p.id}
@@ -82,16 +86,16 @@ export function StudentForm({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Training level" hint="Set directly; or promote via a graded exam.">
+          <Field label={L.training_level} hint={L.sf_level_hint}>
             <Select name="level" defaultValue={String(student?.level ?? 1)}>
               {LEVELS.map((n) => (
                 <option key={n} value={n}>L{n} · {levelName(n)}</option>
               ))}
             </Select>
           </Field>
-          <Field label="Assigned coach" hint="The coach responsible for this student.">
+          <Field label={L.dir_assigned_coach} hint={L.sf_coach_hint}>
             <Select name="coach_id" defaultValue={student?.coach_id ?? ""}>
-              <option value="">— none —</option>
+              <option value="">{L.none}</option>
               {(coaches ?? []).map((c) => (
                 <option key={c.id} value={c.id}>{c.full_name ?? c.id}</option>
               ))}
@@ -100,11 +104,11 @@ export function StudentForm({
         </div>
 
         <Field
-          label="Monthly fee plan"
-          hint="Monthly plans auto-raise an invoice each month. Leave blank for ad-hoc billing only."
+          label={L.sf_fee_plan}
+          hint={L.sf_fee_plan_hint}
         >
           <Select name="fee_plan_id" defaultValue={student?.fee_plan_id ?? ""}>
-            <option value="">— none —</option>
+            <option value="">{L.none}</option>
             {plans.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} — {formatCurrency(Number(p.amount), p.currency)}
@@ -116,25 +120,25 @@ export function StudentForm({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="NFC tag UID" hint="Tap Scan and hold the card to your phone, or type it.">
+          <Field label={L.sf_nfc} hint={L.sf_nfc_hint}>
             <NfcTagInput defaultValue={student?.nfc_tag_uid ?? ""} />
           </Field>
-          <Field label="Status">
+          <Field label={L.col_status}>
             <Select name="status" defaultValue={student?.status ?? "active"}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="active">{L.adm_active}</option>
+              <option value="inactive">{L.adm_inactive}</option>
             </Select>
           </Field>
         </div>
 
-        <Field label="Notes">
+        <Field label={L.f_notes}>
           <Textarea name="notes" defaultValue={student?.notes ?? ""} />
         </Field>
 
         <div className="flex gap-2 pt-2">
-          <SubmitButton pendingText="Saving…">{student ? "Save changes" : "Create student"}</SubmitButton>
+          <SubmitButton pendingText={L.cr_saving}>{student ? L.br_save_changes : L.sf_create_student}</SubmitButton>
           <LinkButton href="/admin/students" variant="secondary">
-            Cancel
+            {L.inv_cancel_label}
           </LinkButton>
         </div>
       </form>

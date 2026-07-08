@@ -876,6 +876,38 @@ const en = {
   ana_att_col: "Attendance",
   ana_avg_exam_given: "Avg exam given",
   ana_no_coaches: "No coaches yet.",
+
+  // ── admin: student form ──
+  sf_full_name: "Full name",
+  sf_nickname: "Nickname",
+  sf_nickname_hint: "What coaches call them on court.",
+  sf_photo: "Photo",
+  sf_photo_hint: "JPG, PNG or WebP. Shows on the kiosk, rosters and the parent app.",
+  sf_dob: "Date of birth",
+  sf_gender: "Gender",
+  sf_branch_hint: "Which location this student attends.",
+  f_select: "— select —",
+  sf_level_hint: "Set directly; or promote via a graded exam.",
+  sf_coach_hint: "The coach responsible for this student.",
+  sf_fee_plan: "Monthly fee plan",
+  sf_fee_plan_hint: "Monthly plans auto-raise an invoice each month. Leave blank for ad-hoc billing only.",
+  sf_nfc: "NFC tag UID",
+  sf_nfc_hint: "Tap Scan and hold the card to your phone, or type it.",
+  f_notes: "Notes",
+  sf_create_student: "Create student",
+  sf_new_student_title: "New student",
+  sf_edit_student_title: "Edit student",
+
+  // ── admin: class form ──
+  cf_class_name: "Class name",
+  cf_class_level: "Class level",
+  cf_class_level_hint: "Training level this class targets — colour-coded on the class list.",
+  cf_branch_hint: "Which location runs this class.",
+  cf_default_location: "Default location",
+  cf_capacity: "Capacity",
+  cf_description: "Description",
+  cf_create_class: "Create class",
+  cf_new_class_title: "New class",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -1733,6 +1765,38 @@ const zh: Dict = {
   ana_att_col: "出勤",
   ana_avg_exam_given: "平均给分",
   ana_no_coaches: "暂无教练。",
+
+  // ── admin: student form ──
+  sf_full_name: "全名",
+  sf_nickname: "昵称",
+  sf_nickname_hint: "教练在场上对他的称呼。",
+  sf_photo: "照片",
+  sf_photo_hint: "JPG、PNG 或 WebP。显示在自助机、名单和家长应用上。",
+  sf_dob: "出生日期",
+  sf_gender: "性别",
+  sf_branch_hint: "该学员上课的地点。",
+  f_select: "— 选择 —",
+  sf_level_hint: "直接设置；或通过评级考试晋级。",
+  sf_coach_hint: "负责该学员的教练。",
+  sf_fee_plan: "每月收费方案",
+  sf_fee_plan_hint: "每月方案会每月自动开具账单。留空则仅按需计费。",
+  sf_nfc: "NFC 卡 UID",
+  sf_nfc_hint: "点「扫描」并将卡贴近手机，或手动输入。",
+  f_notes: "备注",
+  sf_create_student: "创建学员",
+  sf_new_student_title: "新建学员",
+  sf_edit_student_title: "编辑学员",
+
+  // ── admin: class form ──
+  cf_class_name: "班级名称",
+  cf_class_level: "班级等级",
+  cf_class_level_hint: "该班级面向的训练等级 — 在班级列表中以颜色区分。",
+  cf_branch_hint: "开设该班级的地点。",
+  cf_default_location: "默认地点",
+  cf_capacity: "容量",
+  cf_description: "描述",
+  cf_create_class: "创建班级",
+  cf_new_class_title: "新建班级",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { listBranches, canChooseBranch } from "@/lib/branch";
 import { PageHeader } from "@/components/ui";
+import { dict } from "@/lib/i18n";
 import { StudentForm } from "../../student-form";
 import { updateStudent } from "../../actions";
 
@@ -18,6 +19,7 @@ export default async function EditStudentPage({
   const { id } = await params;
   const { error } = await searchParams;
   const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
 
   const [{ data: student }, { data: parents }, { data: plans }, { data: coaches }, branches] = await Promise.all([
@@ -32,7 +34,7 @@ export default async function EditStudentPage({
 
   return (
     <div>
-      <PageHeader title="Edit student" description={student.full_name} />
+      <PageHeader title={L.sf_edit_student_title} description={student.full_name} />
       <StudentForm
         action={updateStudent}
         student={student}
@@ -43,6 +45,7 @@ export default async function EditStudentPage({
         canChooseBranch={canChooseBranch(me)}
         defaultBranchId={me.branch_id}
         error={error}
+        locale={me.locale}
       />
     </div>
   );

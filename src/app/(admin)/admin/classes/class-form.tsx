@@ -2,6 +2,7 @@ import { Card, Field, Input, Select, Textarea, LinkButton } from "@/components/u
 import { SubmitButton } from "@/components/submit-button";
 import type { ClassRow } from "@/lib/types";
 import { CLASS_RANKS } from "@/lib/ranks";
+import { dict } from "@/lib/i18n";
 
 export function ClassForm({
   action,
@@ -12,6 +13,7 @@ export function ClassForm({
   defaultBranchId,
   error,
   submitLabel,
+  locale,
 }: {
   action: (formData: FormData) => void;
   classRow?: ClassRow;
@@ -21,21 +23,23 @@ export function ClassForm({
   defaultBranchId?: string | null;
   error?: string;
   submitLabel?: string;
+  locale?: string | null;
 }) {
+  const L = dict(locale);
   return (
     <Card className="max-w-2xl p-6">
       <form action={action} className="space-y-4">
         {classRow && <input type="hidden" name="id" value={classRow.id} />}
         {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
-        <Field label="Class name" required>
+        <Field label={L.cf_class_name} required>
           <Input name="name" defaultValue={classRow?.name ?? ""} required />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Class level" hint="Training level this class targets — colour-coded on the class list.">
+          <Field label={L.cf_class_level} hint={L.cf_class_level_hint}>
             <Select name="level" defaultValue={classRow?.level ?? ""}>
-              <option value="">— none —</option>
+              <option value="">{L.none}</option>
               {CLASS_RANKS.map((r) => (
                 <option key={r} value={r}>
                   {r}
@@ -43,9 +47,9 @@ export function ClassForm({
               ))}
             </Select>
           </Field>
-          <Field label="Primary coach">
+          <Field label={L.cls_primary_coach}>
             <Select name="coach_id" defaultValue={classRow?.coach_id ?? ""}>
-              <option value="">— none —</option>
+              <option value="">{L.none}</option>
               {coaches.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.full_name ?? c.id}
@@ -54,31 +58,31 @@ export function ClassForm({
             </Select>
           </Field>
           {canChooseBranch && (
-            <Field label="Branch" required hint="Which location runs this class.">
+            <Field label={L.branch} required hint={L.cf_branch_hint}>
               <Select name="branch_id" defaultValue={classRow?.branch_id ?? defaultBranchId ?? ""} required>
-                <option value="">— select —</option>
+                <option value="">{L.f_select}</option>
                 {(branches ?? []).map((b) => (
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </Select>
             </Field>
           )}
-          <Field label="Default location">
+          <Field label={L.cf_default_location}>
             <Input name="default_location" defaultValue={classRow?.default_location ?? ""} />
           </Field>
-          <Field label="Capacity">
+          <Field label={L.cf_capacity}>
             <Input type="number" name="capacity" defaultValue={classRow?.capacity ?? ""} />
           </Field>
         </div>
 
-        <Field label="Description">
+        <Field label={L.cf_description}>
           <Textarea name="description" defaultValue={classRow?.description ?? ""} />
         </Field>
 
         <div className="flex gap-2 pt-2">
-          <SubmitButton pendingText="Saving…">{submitLabel ?? (classRow ? "Save changes" : "Create class")}</SubmitButton>
+          <SubmitButton pendingText={L.cr_saving}>{submitLabel ?? (classRow ? L.br_save_changes : L.cf_create_class)}</SubmitButton>
           <LinkButton href="/admin/classes" variant="secondary">
-            Cancel
+            {L.inv_cancel_label}
           </LinkButton>
         </div>
       </form>
