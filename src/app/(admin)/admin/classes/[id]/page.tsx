@@ -285,6 +285,7 @@ export default async function ManageClassPage({
               label={L.cm_session_word}
               hidden={[{ name: "class_id", value: classRow.id }]}
               confirmText={L.cm_bulk_del_sessions}
+              locale={me.locale}
             />
           </div>
           </BulkProvider>

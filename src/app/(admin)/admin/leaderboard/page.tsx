@@ -65,7 +65,7 @@ export default async function LeaderboardPage() {
         description={L.lb_desc}
         action={<LinkButton href="/admin/students" variant="ghost">{L.lb_manage_students}</LinkButton>}
       />
-      {rows.length > 0 ? <LeaderboardTable rows={rows} /> : <EmptyState message={L.lb_empty} />}
+      {rows.length > 0 ? <LeaderboardTable rows={rows} locale={me.locale} /> : <EmptyState message={L.lb_empty} />}
     </div>
   );
 }

@@ -144,6 +144,7 @@ export default async function ClassesPage({
               action={deleteClasses}
               label={L.cls_word}
               confirmText={L.cls_bulk_delete}
+              locale={me.locale}
             />
           </div>
           </BulkProvider>

@@ -1123,6 +1123,15 @@ const en = {
   att_out_prefix: "out ",
   att_tap_out: "tap out",
   att_tap_in: "tap in",
+
+  // ── admin: leaderboard table + bulk ──
+  lb_search: "Search student…",
+  lb_age: "Age",
+  lb_max_streak: "Max streak",
+  lb_no_match: "No students match.",
+  bulk_selected: "{n} {label} selected",
+  bulk_del_default: "Delete {n} selected {label}?",
+  bulk_delete_sel: "Delete selected",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -2227,6 +2236,15 @@ const zh: Dict = {
   att_out_prefix: "出 ",
   att_tap_out: "签退",
   att_tap_in: "签到",
+
+  // ── admin: leaderboard table + bulk ──
+  lb_search: "搜索学员…",
+  lb_age: "年龄",
+  lb_max_streak: "最长连续",
+  lb_no_match: "无匹配学员。",
+  bulk_selected: "已选 {n} {label}",
+  bulk_del_default: "删除所选的 {n} {label}？",
+  bulk_delete_sel: "删除所选",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

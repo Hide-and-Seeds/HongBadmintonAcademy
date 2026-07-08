@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { cn } from "@/components/ui";
 import { levelBadgeClass, levelName, TRAINING_LEVELS } from "@/lib/training";
+import { dict } from "@/lib/i18n";
 
 export type LbRow = {
   id: string;
@@ -20,7 +21,8 @@ type Col = "level" | "name" | "age" | "attended" | "rate" | "streak";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
-export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
+export function LeaderboardTable({ rows, locale }: { rows: LbRow[]; locale?: string | null }) {
+  const L = dict(locale);
   // Default sort: training level desc — the boss-facing "who's furthest along".
   const [col, setCol] = useState<Col>("level");
   const [dir, setDir] = useState<1 | -1>(-1);
@@ -80,7 +82,7 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search student…"
+          placeholder={L.lb_search}
           className={cn(fieldCls, "w-full sm:w-56")}
         />
         <select
@@ -88,15 +90,15 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
           onChange={(e) => setLevelFilter(e.target.value === "" ? "" : Number(e.target.value))}
           className={cn(fieldCls, "w-40")}
         >
-          <option value="">All levels</option>
+          <option value="">{L.cls_all_levels}</option>
           {TRAINING_LEVELS.map((lv) => (
             <option key={lv.level} value={lv.level}>L{lv.level} · {lv.name}</option>
           ))}
         </select>
         {(q || levelFilter !== "") && (
-          <button type="button" onClick={() => { setQ(""); setLevelFilter(""); }} className="text-sm text-slate-500 hover:text-slate-900">Clear</button>
+          <button type="button" onClick={() => { setQ(""); setLevelFilter(""); }} className="text-sm text-slate-500 hover:text-slate-900">{L.clear_word}</button>
         )}
-        <span className="ml-auto text-xs text-slate-400">{sorted.length} student{sorted.length === 1 ? "" : "s"}</span>
+        <span className="ml-auto text-xs text-slate-400">{sorted.length} {L.cls_students}</span>
       </div>
 
       {/* Mobile: cards (the 7-col table is unreadable on a phone). */}
@@ -116,7 +118,7 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
             <span className={cn("shrink-0 text-lg font-bold tabular-nums", r.rate >= 80 ? "text-green-600" : r.rate >= 50 ? "text-amber-600" : "text-slate-500")}>{r.rate}%</span>
           </div>
         ))}
-        {sorted.length === 0 && <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-400">No students match.</div>}
+        {sorted.length === 0 && <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-400">{L.lb_no_match}</div>}
       </div>
 
       <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:block">
@@ -124,12 +126,12 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
         <thead>
           <tr>
             <th className="border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">#</th>
-            <Header c="name" label="Name" align="left" />
-            <Header c="level" label="Level" />
-            <Header c="age" label="Age" />
-            <Header c="attended" label="Attended" />
-            <Header c="rate" label="Rate" />
-            <Header c="streak" label="Max streak" />
+            <Header c="name" label={L.col_name} align="left" />
+            <Header c="level" label={L.level_word} />
+            <Header c="age" label={L.lb_age} />
+            <Header c="attended" label={L.mx_attended} />
+            <Header c="rate" label={L.mx_rate} />
+            <Header c="streak" label={L.lb_max_streak} />
           </tr>
         </thead>
         <tbody>
@@ -159,7 +161,7 @@ export function LeaderboardTable({ rows }: { rows: LbRow[] }) {
             </tr>
           ))}
           {sorted.length === 0 && (
-            <tr><td colSpan={7} className="px-3 py-10 text-center text-sm text-slate-400">No students match.</td></tr>
+            <tr><td colSpan={7} className="px-3 py-10 text-center text-sm text-slate-400">{L.lb_no_match}</td></tr>
           )}
         </tbody>
       </table>

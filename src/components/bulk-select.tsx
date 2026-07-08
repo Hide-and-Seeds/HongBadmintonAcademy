@@ -5,6 +5,7 @@ import {
   type ReactNode,
 } from "react";
 import { buttonClass } from "@/components/ui";
+import { dict } from "@/lib/i18n";
 
 // Drop-in multi-select for any server-rendered table.
 //
@@ -131,6 +132,7 @@ export function BulkBar({
   label = "item",
   hidden = [],
   confirmText,
+  locale,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   /** singular noun, e.g. "session" → "3 sessions selected" */
@@ -139,7 +141,9 @@ export function BulkBar({
   hidden?: { name: string; value: string }[];
   /** confirm prompt; "{n}" is replaced with the count */
   confirmText?: string;
+  locale?: string | null;
 }) {
+  const L = dict(locale);
   const { selected, clear } = useBulk();
   const n = selected.size;
   if (n === 0) return null;
@@ -147,17 +151,16 @@ export function BulkBar({
   return (
     <div className="sticky bottom-4 z-10 mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
       <span className="text-sm font-medium text-slate-700">
-        {n} {label}
-        {n > 1 ? "s" : ""} selected
+        {L.bulk_selected.replace("{n}", String(n)).replace("{label}", label)}
       </span>
       <div className="flex items-center gap-2">
         <button type="button" onClick={clear} className={buttonClass("ghost")}>
-          Clear
+          {L.clear_word}
         </button>
         <form
           action={action}
           onSubmit={(e) => {
-            const msg = (confirmText ?? `Delete ${n} selected ${label}${n > 1 ? "s" : ""}?`).replace(
+            const msg = (confirmText ?? L.bulk_del_default.replace("{label}", label)).replace(
               "{n}",
               String(n),
             );
@@ -172,7 +175,7 @@ export function BulkBar({
             <input key={id} type="hidden" name="ids" value={id} />
           ))}
           <button type="submit" className={buttonClass("danger")}>
-            Delete selected
+            {L.bulk_delete_sel}
           </button>
         </form>
       </div>
