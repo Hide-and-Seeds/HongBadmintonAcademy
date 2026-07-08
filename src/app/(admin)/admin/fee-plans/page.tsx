@@ -103,7 +103,7 @@ export default async function FeePlansPage({
                       </LinkButton>
                       <form action={deleteFeePlan}>
                         <input type="hidden" name="id" value={p.id} />
-                        <ConfirmButton confirmText={L.fp_delete_confirm.replace("{name}", p.name)} />
+                        <ConfirmButton label={L.del_word} confirmText={L.fp_delete_confirm.replace("{name}", p.name)} />
                       </form>
                     </div>
                   </Td>

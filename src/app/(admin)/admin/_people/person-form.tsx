@@ -93,7 +93,7 @@ export function PersonForm({
           required={!person}
           hint={person ? L.pf_pw_hint_edit : L.pf_pw_hint_new}
         >
-          <PasswordField required={!person} />
+          <PasswordField required={!person} locale={locale} />
         </Field>
 
         <div className="flex gap-2 pt-2">

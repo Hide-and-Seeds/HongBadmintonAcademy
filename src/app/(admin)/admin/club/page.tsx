@@ -169,7 +169,7 @@ export default async function ClubHubPage({
                       <LinkButton href={`/admin/club/${m.id}`} variant="secondary">{L.edit_btn}</LinkButton>
                       <form action={deleteClubMember}>
                         <input type="hidden" name="id" value={m.id} />
-                        <ConfirmButton confirmText={L.club_del_member.replace("{name}", m.full_name)} />
+                        <ConfirmButton label={L.del_word} confirmText={L.club_del_member.replace("{name}", m.full_name)} />
                       </form>
                     </div>
                   </Td>

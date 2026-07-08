@@ -49,7 +49,7 @@ export default async function RewardsPage() {
                       </LinkButton>
                       <form action={deleteRewardRule}>
                         <input type="hidden" name="id" value={r.id} />
-                        <ConfirmButton confirmText={L.rw_delete_confirm.replace("{name}", r.name)} />
+                        <ConfirmButton label={L.del_word} confirmText={L.rw_delete_confirm.replace("{name}", r.name)} />
                       </form>
                     </div>
                   </Td>

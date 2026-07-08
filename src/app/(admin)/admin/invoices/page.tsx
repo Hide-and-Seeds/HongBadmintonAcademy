@@ -213,6 +213,7 @@ export default async function InvoicesPage({
                               waUrl={waUrl}
                               action={logReminderSend}
                               label={L.inv_remind}
+                              locale={me.locale}
                               fields={{
                                 invoice_id: i.id,
                                 recipient_phone: i.parent?.phone ?? "",
@@ -238,7 +239,7 @@ export default async function InvoicesPage({
                           )}
                           <form action={deleteInvoice}>
                             <input type="hidden" name="id" value={i.id} />
-                            <ConfirmButton confirmText={L.inv_delete_confirm} />
+                            <ConfirmButton label={L.del_word} confirmText={L.inv_delete_confirm} />
                           </form>
                         </div>
                       </Td>

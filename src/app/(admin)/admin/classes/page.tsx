@@ -131,7 +131,7 @@ export default async function ClassesPage({
                       </LinkButton>
                       <form action={deleteClass}>
                         <input type="hidden" name="id" value={c.id} />
-                        <ConfirmButton confirmText={L.cls_delete_confirm.replace("{name}", c.name)} />
+                        <ConfirmButton label={L.del_word} confirmText={L.cls_delete_confirm.replace("{name}", c.name)} />
                       </form>
                     </div>
                   </Td>

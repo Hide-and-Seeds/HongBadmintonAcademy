@@ -1180,6 +1180,15 @@ const en = {
   fc_created: "Created",
   fc_invoice_btn: "Invoice {amt}",
   fc_footer: "Bills the selected student the total above as an unpaid invoice. For siblings, invoice each child.",
+
+  // ── admin: shared widget defaults ──
+  pw_show: "Show",
+  pw_hide: "Hide",
+  pw_show_aria: "Show password",
+  pw_hide_aria: "Hide password",
+  cb_are_you_sure: "Are you sure?",
+  wa_no_phone: "No phone",
+  wa_send_default: "Send on WhatsApp",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -2341,6 +2350,15 @@ const zh: Dict = {
   fc_created: "已创建",
   fc_invoice_btn: "开具 {amt}",
   fc_footer: "按上方总额向所选学员开具未付账单。多个孩子请分别开具。",
+
+  // ── admin: shared widget defaults ──
+  pw_show: "显示",
+  pw_hide: "隐藏",
+  pw_show_aria: "显示密码",
+  pw_hide_aria: "隐藏密码",
+  cb_are_you_sure: "确定吗？",
+  wa_no_phone: "无电话",
+  wa_send_default: "通过 WhatsApp 发送",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

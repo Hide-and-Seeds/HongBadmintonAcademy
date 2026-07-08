@@ -107,6 +107,7 @@ export default async function CollectionsPage() {
                     waUrl={waLink(i.parent?.phone, text)}
                     action={logReminderSend}
                     label={L.coll_chase}
+                    locale={me.locale}
                     fields={{
                       invoice_id: i.id,
                       recipient_phone: i.parent?.phone ?? "",

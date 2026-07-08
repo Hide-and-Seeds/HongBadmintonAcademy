@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { buttonClass } from "@/components/ui";
+import { dict } from "@/lib/i18n";
 
 // A real anchor (reliably opens WhatsApp via wa.me, no popup-blocker issues).
 // On click it also fires the server action to log the send. Disabled when the
@@ -10,17 +11,20 @@ export function WhatsAppButton({
   waUrl,
   action,
   fields,
-  label = "Send on WhatsApp",
+  label,
+  locale,
 }: {
   waUrl: string | null;
   action: (formData: FormData) => void;
   fields: Record<string, string>;
   label?: string;
+  locale?: string | null;
 }) {
+  const L = dict(locale);
   const logged = useRef(false);
 
   if (!waUrl) {
-    return <span className="text-xs text-slate-400">No phone</span>;
+    return <span className="text-xs text-slate-400">{L.wa_no_phone}</span>;
   }
 
   return (
@@ -37,7 +41,7 @@ export function WhatsAppButton({
         void action(fd); // fire-and-forget: record in the message log
       }}
     >
-      {label}
+      {label ?? L.wa_send_default}
     </a>
   );
 }

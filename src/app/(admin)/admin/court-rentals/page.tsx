@@ -192,7 +192,7 @@ export default async function CourtRentalsPage({
                   <Td label={L.col_actions} className="text-right">
                     <form action={deleteRental}>
                       <input type="hidden" name="id" value={r.id} />
-                      <ConfirmButton confirmText={L.cr_del_rental} />
+                      <ConfirmButton label={L.del_word} confirmText={L.cr_del_rental} />
                     </form>
                   </Td>
                 </tr>
@@ -234,7 +234,7 @@ export default async function CourtRentalsPage({
                 <span className="text-sm text-slate-500">{c.hourly_rate ? `${formatCurrency(Number(c.hourly_rate), c.currency)}/h` : L.cr_no_rate}</span>
                 <form action={deleteCourt} className="ml-auto">
                   <input type="hidden" name="id" value={c.id} />
-                  <ConfirmButton confirmText={L.cr_del_court} />
+                  <ConfirmButton label={L.del_word} confirmText={L.cr_del_court} />
                 </form>
               </li>
             ))}
