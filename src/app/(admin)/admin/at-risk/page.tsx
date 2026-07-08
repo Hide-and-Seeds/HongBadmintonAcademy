@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { getBaseUrl } from "@/lib/url";
 import { waLink } from "@/lib/wa";
 import { formatDate } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { nudgeParent } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ function daysBetween(fromDate: string, toDate: string): number {
 
 export default async function AtRiskPage() {
   const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const bf = await getViewBranchId(me);
   const today = mytToday();
@@ -65,24 +67,28 @@ export default async function AtRiskPage() {
 
   const baseUrl = await getBaseUrl();
   const winText = (parentName: string, studentName: string, days: number) =>
-    `Hi ${parentName || "there"}, we've missed ${studentName} at Hong Badminton Academy — about ${days} days since their last class. Everything OK? We'd love to see them back on court! 🏸 ${baseUrl}/parent/schedule`;
+    L.ar_win_msg
+      .replace("{parent}", parentName || L.ar_there)
+      .replace("{student}", studentName)
+      .replace("{days}", String(days))
+      .replace("{url}", `${baseUrl}/parent/schedule`);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="At-risk students"
-        description="Active students who haven't attended in over 30 days — reach out before they drop off."
+        title={L.ar_title}
+        description={L.ar_desc}
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <StatCard label="At risk" value={risk.length} tone={risk.length ? "red" : "green"} />
-        <StatCard label="Active students" value={list.length} tone="slate" />
-        <StatCard label="Retention" value={list.length ? `${Math.round(((list.length - risk.length) / list.length) * 100)}%` : "—"} tone="blue" sub="attended in last 30d" />
+        <StatCard label={L.ar_at_risk} value={risk.length} tone={risk.length ? "red" : "green"} />
+        <StatCard label={L.adm_active_students} value={list.length} tone="slate" />
+        <StatCard label={L.ar_retention} value={list.length ? `${Math.round(((list.length - risk.length) / list.length) * 100)}%` : "—"} tone="blue" sub={L.ar_retention_sub} />
       </div>
 
-      <Section title={`Reach out (${risk.length})`} description="Oldest gap first" flush>
+      <Section title={`${L.ar_reach_out} (${risk.length})`} description={L.ar_oldest_first} flush>
         {risk.length === 0 ? (
-          <div className="p-5"><EmptyState message="No one's slipping — every active student attended in the last 30 days." /></div>
+          <div className="p-5"><EmptyState message={L.ar_empty} /></div>
         ) : (
           <ul className="divide-y divide-slate-100">
             {risk.map((s) => {
@@ -94,20 +100,20 @@ export default async function AtRiskPage() {
                   <div className="min-w-0 flex-1">
                     <Link href={`/admin/students/${s.id}`} className="font-medium text-slate-900 hover:text-green-700 hover:underline">{s.full_name}</Link>
                     <div className="truncate text-xs text-slate-500">
-                      {s.seen ? `Last seen ${formatDate(s.seen)}` : "Never attended"} · {p?.full_name ?? "No parent linked"}
+                      {s.seen ? `${L.ar_last_seen}${formatDate(s.seen)}` : L.ar_never} · {p?.full_name ?? L.ar_no_parent}
                     </div>
                   </div>
-                  <Badge tone={s.daysSince >= 60 ? "red" : "yellow"}>{s.daysSince}d away</Badge>
+                  <Badge tone={s.daysSince >= 60 ? "red" : "yellow"}>{s.daysSince}{L.ar_days_away}</Badge>
                   {wa ? (
                     <a href={wa} target="_blank" rel="noopener" className="inline-flex items-center rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">WhatsApp</a>
                   ) : (
-                    <span className="text-xs text-slate-400">no phone</span>
+                    <span className="text-xs text-slate-400">{L.ar_no_phone}</span>
                   )}
                   {s.parent_id && (
                     <form action={nudgeParent}>
                       <input type="hidden" name="parent_id" value={s.parent_id} />
                       <input type="hidden" name="student_name" value={s.full_name} />
-                      <SubmitButton variant="secondary" pendingText="…">Nudge</SubmitButton>
+                      <SubmitButton variant="secondary" pendingText="…">{L.ar_nudge}</SubmitButton>
                     </form>
                   )}
                 </li>
@@ -118,7 +124,7 @@ export default async function AtRiskPage() {
       </Section>
 
       <p className="text-xs text-slate-400">
-        WhatsApp opens a pre-filled chat (nothing sends until you press send). Nudge sends an in-app + push notification to the parent.
+        {L.ar_footer_note}
       </p>
     </div>
   );

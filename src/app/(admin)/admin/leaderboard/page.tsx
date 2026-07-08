@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 import { PageHeader, LinkButton, EmptyState } from "@/components/ui";
 import { LeaderboardTable, type LbRow } from "@/components/leaderboard-table";
+import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,8 @@ function ageFrom(dob: string | null): number | null {
 }
 
 export default async function LeaderboardPage() {
+  const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
 
   const [{ data: students }, { data: att }] = await Promise.all([
@@ -57,11 +61,11 @@ export default async function LeaderboardPage() {
   return (
     <div>
       <PageHeader
-        title="Students Leaderboard"
-        description="Ranked by training level (1–6) by default — tap any column to sort."
-        action={<LinkButton href="/admin/students" variant="ghost">Manage students →</LinkButton>}
+        title={L.lb_title}
+        description={L.lb_desc}
+        action={<LinkButton href="/admin/students" variant="ghost">{L.lb_manage_students}</LinkButton>}
       />
-      {rows.length > 0 ? <LeaderboardTable rows={rows} /> : <EmptyState message="No active students yet." />}
+      {rows.length > 0 ? <LeaderboardTable rows={rows} /> : <EmptyState message={L.lb_empty} />}
     </div>
   );
 }

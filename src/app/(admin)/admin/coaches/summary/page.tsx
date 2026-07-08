@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 import { PageHeader, LinkButton, EmptyState, StatCard, Card, Avatar } from "@/components/ui";
 import { FilterSearch } from "@/components/filter-controls";
 import { formatCurrency } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { setCoachRate } from "../../_people/actions";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,8 @@ export default async function CoachSummaryPage({
   searchParams: Promise<{ month?: string; q?: string }>;
 }) {
   const { month, q } = await searchParams;
+  const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
 
   // Displayed month (defaults to current MYT month); previous month follows it.
@@ -96,7 +100,7 @@ export default async function CoachSummaryPage({
     }
     return {
       id: co.id,
-      name: co.full_name ?? "Coach",
+      name: co.full_name ?? L.adm_coach,
       rate,
       thisLessons: thisSess.length,
       thisPay: thisSess.length * rate,
@@ -120,33 +124,33 @@ export default async function CoachSummaryPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Coaches Summary"
-        description="Lessons, attendance % & auto-calculated payroll. Pick a month or search a coach."
-        action={<LinkButton href="/admin/coaches" variant="ghost">Manage coaches →</LinkButton>}
+        title={L.cs_title}
+        description={L.cs_desc}
+        action={<LinkButton href="/admin/coaches" variant="ghost">{L.cs_manage_coaches}</LinkButton>}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <LinkButton href={`/admin/coaches/summary?month=${prevMonth}`} variant="secondary" aria-label="Previous month">←</LinkButton>
-          <LinkButton href={`/admin/coaches/summary?month=${thisMonth}`} variant="secondary">Today</LinkButton>
-          <LinkButton href={`/admin/coaches/summary?month=${nextMonth}`} variant="secondary" aria-label="Next month">→</LinkButton>
+          <LinkButton href={`/admin/coaches/summary?month=${prevMonth}`} variant="secondary" aria-label={L.cs_prev_month}>←</LinkButton>
+          <LinkButton href={`/admin/coaches/summary?month=${thisMonth}`} variant="secondary">{L.cs_today}</LinkButton>
+          <LinkButton href={`/admin/coaches/summary?month=${nextMonth}`} variant="secondary" aria-label={L.cs_next_month}>→</LinkButton>
           <span className="ml-2 text-sm font-semibold text-slate-800">{tm.label}</span>
         </div>
         <div className="flex items-center gap-2">
-          <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Search coach…" className="h-9 w-48" />
-          {search && <LinkButton href={`/admin/coaches/summary?month=${monthStr}`} variant="ghost">Clear</LinkButton>}
+          <FilterSearch name="q" defaultValue={q ?? ""} placeholder={L.cs_search_coach} className="h-9 w-48" />
+          {search && <LinkButton href={`/admin/coaches/summary?month=${monthStr}`} variant="ghost">{L.clear_word}</LinkButton>}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Active coaches" value={rows.length} />
-        <StatCard label="Lessons" value={totalLessons} sub={tm.label} />
-        <StatCard label="Attendance" value={`${overallPct}%`} tone={overallPct >= 70 ? "green" : "amber"} sub={tm.label} />
-        <StatCard label="Total payroll" value={formatCurrency(totalPay)} tone="green" sub="auto-calculated" />
+        <StatCard label={L.cs_active_coaches} value={rows.length} />
+        <StatCard label={L.cs_lessons} value={totalLessons} sub={tm.label} />
+        <StatCard label={L.attendance} value={`${overallPct}%`} tone={overallPct >= 70 ? "green" : "amber"} sub={tm.label} />
+        <StatCard label={L.cs_total_payroll} value={formatCurrency(totalPay)} tone="green" sub={L.cs_auto_calc} />
       </div>
 
       {visibleRows.length === 0 ? (
-        <EmptyState message={search ? "No coaches match your search." : "No active coaches yet."} />
+        <EmptyState message={search ? L.cs_empty_search : L.cs_empty} />
       ) : (
         <div className="space-y-3">
           {visibleRows.map((r) => (
@@ -167,9 +171,9 @@ export default async function CoachSummaryPage({
                     defaultValue={r.rate}
                     className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-900"
                   />
-                  <span>/lesson</span>
+                  <span>{L.cs_per_lesson}</span>
                   <button type="submit" className="rounded-md bg-slate-800 px-2.5 py-1 font-medium text-white hover:bg-slate-700">
-                    Save
+                    {L.save}
                   </button>
                 </form>
               </div>
@@ -177,13 +181,13 @@ export default async function CoachSummaryPage({
                 <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{tm.label}</div>
                   <div className="mt-1 text-sm text-slate-700">
-                    {r.thisLessons} lessons · {r.attPct != null ? `${r.attPct}% attendance` : "no data"}
+                    {r.thisLessons} {L.cs_lessons_word} · {r.attPct != null ? `${r.attPct}% ${L.cs_att_word}` : L.cs_no_data}
                   </div>
                   <div className="mt-1 text-lg font-bold text-green-700">{formatCurrency(r.thisPay)}</div>
                 </div>
                 <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{lm.label}</div>
-                  <div className="mt-1 text-sm text-slate-700">{r.lastLessons} lessons</div>
+                  <div className="mt-1 text-sm text-slate-700">{r.lastLessons} {L.cs_lessons_word}</div>
                   <div className="mt-1 text-lg font-bold text-slate-700">{formatCurrency(r.lastPay)}</div>
                 </div>
               </div>

@@ -381,6 +381,60 @@ const en = {
   dir_name_ph: "Name…",
   dir_assigned_coach: "Assigned coach",
   dir_all_branches: "All branches",
+
+  // ── admin: at-risk ──
+  ar_title: "At-risk students",
+  ar_desc: "Active students who haven't attended in over 30 days — reach out before they drop off.",
+  ar_at_risk: "At risk",
+  ar_retention: "Retention",
+  ar_retention_sub: "attended in last 30d",
+  ar_reach_out: "Reach out",
+  ar_oldest_first: "Oldest gap first",
+  ar_empty: "No one's slipping — every active student attended in the last 30 days.",
+  ar_last_seen: "Last seen ",
+  ar_never: "Never attended",
+  ar_no_parent: "No parent linked",
+  ar_days_away: "d away",
+  ar_no_phone: "no phone",
+  ar_nudge: "Nudge",
+  ar_footer_note: "WhatsApp opens a pre-filled chat (nothing sends until you press send). Nudge sends an in-app + push notification to the parent.",
+  ar_win_msg: "Hi {parent}, we've missed {student} at Hong Badminton Academy — about {days} days since their last class. Everything OK? We'd love to see them back on court! 🏸 {url}",
+  ar_there: "there",
+
+  // ── admin: leaderboard ──
+  lb_title: "Students Leaderboard",
+  lb_desc: "Ranked by training level (1–6) by default — tap any column to sort.",
+  lb_manage_students: "Manage students →",
+  lb_empty: "No active students yet.",
+
+  // ── admin: coaches summary ──
+  cs_title: "Coaches Summary",
+  cs_desc: "Lessons, attendance % & auto-calculated payroll. Pick a month or search a coach.",
+  cs_manage_coaches: "Manage coaches →",
+  cs_prev_month: "Previous month",
+  cs_next_month: "Next month",
+  cs_today: "This month",
+  cs_search_coach: "Search coach…",
+  cs_active_coaches: "Active coaches",
+  cs_lessons: "Lessons",
+  cs_total_payroll: "Total payroll",
+  cs_auto_calc: "auto-calculated",
+  cs_empty_search: "No coaches match your search.",
+  cs_empty: "No active coaches yet.",
+  cs_per_lesson: "/lesson",
+  cs_lessons_word: "lessons",
+  cs_att_word: "attendance",
+  cs_no_data: "no data",
+
+  // ── admin: rewards ──
+  rw_title: "Reward Rules",
+  rw_desc: "Configure the reward logic provided by the client.",
+  rw_new: "+ New rule",
+  rw_section: "Rules",
+  rw_points: "Points",
+  edit_btn: "Edit",
+  rw_delete_confirm: 'Delete rule "{name}"?',
+  rw_empty: "No reward rules yet.",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -743,6 +797,60 @@ const zh: Dict = {
   dir_name_ph: "姓名…",
   dir_assigned_coach: "负责教练",
   dir_all_branches: "所有分院",
+
+  // ── admin: at-risk ──
+  ar_title: "流失预警学员",
+  ar_desc: "超过 30 天未出勤的在读学员 — 在他们流失前主动联系。",
+  ar_at_risk: "有流失风险",
+  ar_retention: "留存率",
+  ar_retention_sub: "近 30 天有出勤",
+  ar_reach_out: "主动联系",
+  ar_oldest_first: "间隔最久优先",
+  ar_empty: "没有人掉队 — 每位在读学员近 30 天都有出勤。",
+  ar_last_seen: "最近出勤 ",
+  ar_never: "从未出勤",
+  ar_no_parent: "未关联家长",
+  ar_days_away: " 天未到",
+  ar_no_phone: "无电话",
+  ar_nudge: "提醒",
+  ar_footer_note: "WhatsApp 会打开预填的聊天（未按发送前不会发出）。「提醒」会向家长发送应用内通知与推送。",
+  ar_win_msg: "您好 {parent}，我们在宏羽毛球学院想念 {student} 了 — 距上次上课已约 {days} 天。一切都好吗？期待他们回到球场！🏸 {url}",
+  ar_there: "家长",
+
+  // ── admin: leaderboard ──
+  lb_title: "学员排行榜",
+  lb_desc: "默认按训练等级（1–6）排名 — 点击任意列可排序。",
+  lb_manage_students: "管理学员 →",
+  lb_empty: "暂无在读学员。",
+
+  // ── admin: coaches summary ──
+  cs_title: "教练汇总",
+  cs_desc: "课时、出勤率与自动计算的薪酬。选择月份或搜索教练。",
+  cs_manage_coaches: "管理教练 →",
+  cs_prev_month: "上个月",
+  cs_next_month: "下个月",
+  cs_today: "本月",
+  cs_search_coach: "搜索教练…",
+  cs_active_coaches: "在职教练",
+  cs_lessons: "课时",
+  cs_total_payroll: "薪酬总额",
+  cs_auto_calc: "自动计算",
+  cs_empty_search: "没有符合搜索的教练。",
+  cs_empty: "暂无在职教练。",
+  cs_per_lesson: "/节",
+  cs_lessons_word: "节课",
+  cs_att_word: "出勤",
+  cs_no_data: "暂无数据",
+
+  // ── admin: rewards ──
+  rw_title: "奖励规则",
+  rw_desc: "配置客户提供的奖励逻辑。",
+  rw_new: "+ 新建规则",
+  rw_section: "规则",
+  rw_points: "积分",
+  edit_btn: "编辑",
+  rw_delete_confirm: "删除规则「{name}」？",
+  rw_empty: "暂无奖励规则。",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };
