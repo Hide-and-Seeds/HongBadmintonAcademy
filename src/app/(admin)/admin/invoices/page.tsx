@@ -11,6 +11,7 @@ import { getBaseUrl } from "@/lib/url";
 import { getMonthlySchedule } from "@/lib/settings";
 import { waLink } from "@/lib/wa";
 import { feeReminderText } from "@/lib/reminder-text";
+import { dict } from "@/lib/i18n";
 import type { InvoiceStatus } from "@/lib/types";
 import { markPaid, cancelInvoice, refundInvoice, deleteInvoice, logReminderSend, generateMonthlyInvoices } from "./actions";
 
@@ -37,11 +38,21 @@ export default async function InvoicesPage({
 }) {
   const { generated, notice, status, month, q, refunded, error } = await searchParams;
   const me = await requireRole("admin");
+  const L = dict(me.locale);
   const isSuper = me.role === "super_admin";
   const supabase = await createClient();
   const bf = await getViewBranchId(me);
   const baseUrl = await getBaseUrl();
   const schedule = await getMonthlySchedule();
+  // English uses an ordinal ("7th"); Chinese uses a bare day number ("7号").
+  const dueStr = me.locale === "zh" ? String(schedule.dueDay) : ordinal(schedule.dueDay);
+  const invStatus: Record<string, string> = {
+    draft: L.inv_st_draft, unpaid: L.inv_st_unpaid, paid: L.inv_st_paid,
+    overdue: L.inv_st_overdue, canceled: L.inv_st_canceled, refunded: L.inv_st_refunded,
+  };
+  const payStatus: Record<string, string> = {
+    succeeded: L.inv_pay_succeeded, failed: L.inv_pay_failed, pending: L.inv_pay_pending,
+  };
 
   // Branch admins are limited to follow-ups (unpaid + overdue) — no paid history
   // or revenue; super-admins see every status.
@@ -86,16 +97,14 @@ export default async function InvoicesPage({
     <div className="space-y-8">
       <div>
         <PageHeader
-          title={isSuper ? "Invoices & Payments" : "Outstanding Fees"}
-          description={isSuper
-            ? `Fees auto-raise monthly, due on the ${ordinal(schedule.dueDay)}. Reconcile payments here.`
-            : `Unpaid and overdue fees for your branch — chase, remind and mark paid. Fees are due on the ${ordinal(schedule.dueDay)}.`}
+          title={isSuper ? L.inv_title_super : L.inv_title_branch}
+          description={(isSuper ? L.inv_desc_super : L.inv_desc_branch).replace("{d}", dueStr)}
           action={
             <>
               <form action={generateMonthlyInvoices}>
-                <SubmitButton variant="secondary" pendingText="Generating…">Generate this month</SubmitButton>
+                <SubmitButton variant="secondary" pendingText={L.inv_generating}>{L.inv_generate}</SubmitButton>
               </form>
-              <LinkButton href="/admin/invoices/new">+ New invoice</LinkButton>
+              <LinkButton href="/admin/invoices/new">{L.inv_new}</LinkButton>
             </>
           }
         />
@@ -103,24 +112,24 @@ export default async function InvoicesPage({
         {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         {refunded && (
           <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-            {refunded === "stripe" ? "Refunded via Stripe — the money is on its way back to the parent." : "Marked refunded. It was paid manually, so settle the refund with the parent yourself."}
+            {refunded === "stripe" ? L.inv_refund_stripe : L.inv_refund_manual}
           </p>
         )}
 
         {generated !== undefined && (() => {
           const n = Number(generated);
           const map: Record<string, { tone: string; msg: string }> = {
-            sent: { tone: "border-green-200 bg-green-50 text-green-800", msg: "✅ Community notice posted now — all parents notified (reports + fees)." },
-            queued: { tone: "border-green-200 bg-green-50 text-green-800", msg: "Community notice queued — worker will post the combined update to parents shortly." },
-            updated: { tone: "border-green-200 bg-green-50 text-green-800", msg: "Combined Community notice (reports + fees) refreshed and queued." },
-            "already-sent": { tone: "border-blue-200 bg-blue-50 text-blue-800", msg: "This month's Community notice was already posted — not duplicated." },
+            sent: { tone: "border-green-200 bg-green-50 text-green-800", msg: L.inv_notice_sent },
+            queued: { tone: "border-green-200 bg-green-50 text-green-800", msg: L.inv_notice_queued },
+            updated: { tone: "border-green-200 bg-green-50 text-green-800", msg: L.inv_notice_updated },
+            "already-sent": { tone: "border-blue-200 bg-blue-50 text-blue-800", msg: L.inv_notice_already },
             skipped: { tone: "border-slate-200 bg-slate-50 text-slate-700", msg: "" },
-            "no-group-id": { tone: "border-amber-200 bg-amber-50 text-amber-800", msg: "⚠️ Set WA_COMMUNITY_GROUP_ID in Vercel to auto-post the Community notice." },
+            "no-group-id": { tone: "border-amber-200 bg-amber-50 text-amber-800", msg: L.inv_notice_no_group },
           };
           const m = map[notice ?? ""] ?? { tone: "border-slate-200 bg-slate-50 text-slate-700", msg: "" };
           return (
             <div className={`mb-5 rounded-xl border p-4 text-sm ${m.tone}`}>
-              <strong>Raised {n} invoice{n === 1 ? "" : "s"} for this month.</strong> {m.msg}
+              <strong>{L.inv_raised.replace("{n}", String(n))}</strong> {m.msg}
             </div>
           );
         })()}
@@ -128,39 +137,39 @@ export default async function InvoicesPage({
         {/* Filters (auto-apply, soft navigation) */}
         <div className="mb-4 flex flex-wrap items-end gap-3">
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-slate-600">Status</span>
+            <span className="text-xs font-medium text-slate-600">{L.col_status}</span>
             <FilterSelect name="status" defaultValue={statusFilter} className="h-9 w-40">
-              <option value="">All statuses</option>
+              <option value="">{L.inv_all_statuses}</option>
               {allowedStatuses.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>{invStatus[s] ?? s}</option>
               ))}
             </FilterSelect>
           </label>
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-slate-600">Month</span>
+            <span className="text-xs font-medium text-slate-600">{L.inv_month_label}</span>
             <FilterSelect name="month" defaultValue={monthFilter} className="h-9 w-44">
-              <option value="">All months</option>
+              <option value="">{L.inv_all_months}</option>
               {monthOptions.map((mo) => (
                 <option key={mo} value={mo}>{monthLabel(mo)}</option>
               ))}
             </FilterSelect>
           </label>
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-slate-600">Search</span>
-            <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Invoice # or name…" className="h-9 w-52" />
+            <span className="text-xs font-medium text-slate-600">{L.adm_search}</span>
+            <FilterSearch name="q" defaultValue={q ?? ""} placeholder={L.inv_search_ph} className="h-9 w-52" />
           </label>
           {filtered && (
-            <LinkButton href="/admin/invoices" variant="ghost">Clear</LinkButton>
+            <LinkButton href="/admin/invoices" variant="ghost">{L.clear_word}</LinkButton>
           )}
         </div>
 
         {invoices && invoices.length > 0 ? (
-          <Collapsible title={filtered ? "Invoices (filtered)" : "Invoices"} count={invoices.length}>
+          <Collapsible title={filtered ? L.inv_section_filtered : L.inv_section} count={invoices.length}>
             <Table>
               <thead>
                 <tr>
-                  <Th>Invoice</Th><Th>Student</Th><Th>Parent</Th><Th>Amount</Th>
-                  <Th>Due</Th><Th>Status</Th><Th className="text-right">Actions</Th>
+                  <Th>{L.inv_invoice}</Th><Th>{L.student_col}</Th><Th>{L.inv_parent}</Th><Th>{L.fp_amount}</Th>
+                  <Th>{L.inv_due}</Th><Th>{L.col_status}</Th><Th className="text-right">{L.col_actions}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -178,11 +187,11 @@ export default async function InvoicesPage({
                   return (
                     <tr key={i.id} className="hover:bg-slate-50">
                       <Td className="font-mono text-xs text-slate-500">{i.invoice_no ?? "—"}</Td>
-                      <Td label="Student" className="font-medium text-slate-900">{i.students?.full_name ?? "—"}</Td>
-                      <Td label="Parent" className="text-slate-500">{i.parent?.full_name ?? "—"}</Td>
-                      <Td label="Amount" className="font-medium text-slate-900">{formatCurrency(Number(i.amount), i.currency)}</Td>
-                      <Td label="Due" className="text-slate-500">{formatDate(i.due_date)}</Td>
-                      <Td label="Status"><Badge tone={TONE[i.status as InvoiceStatus]}>{i.status}</Badge></Td>
+                      <Td label={L.student_col} className="font-medium text-slate-900">{i.students?.full_name ?? "—"}</Td>
+                      <Td label={L.inv_parent} className="text-slate-500">{i.parent?.full_name ?? "—"}</Td>
+                      <Td label={L.fp_amount} className="font-medium text-slate-900">{formatCurrency(Number(i.amount), i.currency)}</Td>
+                      <Td label={L.inv_due} className="text-slate-500">{formatDate(i.due_date)}</Td>
+                      <Td label={L.col_status}><Badge tone={TONE[i.status as InvoiceStatus]}>{invStatus[i.status] ?? i.status}</Badge></Td>
                       <Td className="text-right">
                         <div className="flex justify-end gap-2">
                           <a
@@ -196,14 +205,14 @@ export default async function InvoicesPage({
                           {i.status !== "paid" && (
                             <form action={markPaid}>
                               <input type="hidden" name="id" value={i.id} />
-                              <SubmitButton variant="secondary" pendingText="Saving…">Mark paid</SubmitButton>
+                              <SubmitButton variant="secondary" pendingText={L.cr_saving}>{L.inv_mark_paid}</SubmitButton>
                             </form>
                           )}
                           {payable && (
                             <WhatsAppButton
                               waUrl={waUrl}
                               action={logReminderSend}
-                              label="Remind"
+                              label={L.inv_remind}
                               fields={{
                                 invoice_id: i.id,
                                 recipient_phone: i.parent?.phone ?? "",
@@ -215,21 +224,21 @@ export default async function InvoicesPage({
                           {payable && (
                             <form action={cancelInvoice}>
                               <input type="hidden" name="id" value={i.id} />
-                              <ConfirmButton label="Cancel" confirmText="Cancel this invoice? No payment is taken. It stays on record as canceled." />
+                              <ConfirmButton label={L.inv_cancel_label} confirmText={L.inv_cancel_confirm} />
                             </form>
                           )}
                           {i.status === "paid" && (
                             <form action={refundInvoice}>
                               <input type="hidden" name="id" value={i.id} />
                               <ConfirmButton
-                                label="Refund"
-                                confirmText={i.stripe_payment_intent_id ? "Refund this invoice? This returns the money to the parent via Stripe and cannot be undone." : "Mark this invoice refunded? It was paid manually, so no money moves automatically — settle the refund yourself."}
+                                label={L.inv_refund_label}
+                                confirmText={i.stripe_payment_intent_id ? L.inv_refund_confirm_stripe : L.inv_refund_confirm_manual}
                               />
                             </form>
                           )}
                           <form action={deleteInvoice}>
                             <input type="hidden" name="id" value={i.id} />
-                            <ConfirmButton confirmText="Delete this invoice?" />
+                            <ConfirmButton confirmText={L.inv_delete_confirm} />
                           </form>
                         </div>
                       </Td>
@@ -240,17 +249,17 @@ export default async function InvoicesPage({
             </Table>
           </Collapsible>
         ) : (
-          <EmptyState message={filtered ? "No invoices match these filters." : "No invoices yet."} />
+          <EmptyState message={filtered ? L.inv_empty_filtered : L.inv_empty} />
         )}
       </div>
 
       {isSuper && (
-      <Collapsible title="Recent payments" count={payments?.length ?? 0}>
+      <Collapsible title={L.inv_recent_pay} count={payments?.length ?? 0}>
         {payments && payments.length > 0 ? (
           <Table>
             <thead>
               <tr>
-                <Th>Date</Th><Th>Invoice</Th><Th>Amount</Th><Th>Provider</Th><Th>Status</Th>
+                <Th>{L.col_date}</Th><Th>{L.inv_invoice}</Th><Th>{L.fp_amount}</Th><Th>{L.inv_provider}</Th><Th>{L.col_status}</Th>
               </tr>
             </thead>
             <tbody>
@@ -262,7 +271,7 @@ export default async function InvoicesPage({
                   <Td className="capitalize text-slate-500">{p.provider}</Td>
                   <Td>
                     <Badge tone={p.status === "succeeded" ? "green" : p.status === "failed" ? "red" : "slate"}>
-                      {p.status}
+                      {payStatus[p.status] ?? p.status}
                     </Badge>
                   </Td>
                 </tr>
@@ -270,7 +279,7 @@ export default async function InvoicesPage({
             </tbody>
           </Table>
         ) : (
-          <div className="p-5"><EmptyState message="No payments recorded yet." /></div>
+          <div className="p-5"><EmptyState message={L.inv_empty_pay} /></div>
         )}
       </Collapsible>
       )}
