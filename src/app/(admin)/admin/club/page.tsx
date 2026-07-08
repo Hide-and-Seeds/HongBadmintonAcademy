@@ -10,6 +10,7 @@ import { formatDate, formatCurrency } from "@/lib/format";
 import { signClubToken } from "@/lib/club-auth";
 import { getBaseUrl } from "@/lib/url";
 import { computePots } from "@/lib/pots";
+import { dict } from "@/lib/i18n";
 import { deleteClubMember, raiseMemberInvoice, generateClubDuesNow } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export default async function ClubHubPage({
   searchParams: Promise<{ raised?: string; dues?: string; error?: string }>;
 }) {
   const me = await requireSuperAdmin();
+  const L = dict(me.locale);
   const { raised, dues, error } = await searchParams;
   const supabase = await createClient();
   const branchId = await getViewBranchId(me);
@@ -45,24 +47,24 @@ export default async function ClubHubPage({
   const pendingCount = memberRows.filter((m: any) => m.status === "pending").length;
 
   const TILES = [
-    { label: "Active members", value: String(activeCount), sub: pendingCount ? `${pendingCount} pending` : "members", Icon: Users },
-    { label: "Club revenue", value: formatCurrency(pots.club.collected, "MYR"), sub: `collected · ${pots.monthLabel}`, Icon: TrendingUp },
-    { label: "Available to draw", value: formatCurrency(pots.club.available, "MYR"), sub: "club pot", Icon: Wallet },
-    { label: "Upcoming bookings", value: String(upcomingBookings ?? 0), sub: "courts", Icon: CalendarClock },
+    { label: L.club_active_members, value: String(activeCount), sub: pendingCount ? L.club_pending_sub.replace("{n}", String(pendingCount)) : L.club_members_sub, Icon: Users },
+    { label: L.club_revenue, value: formatCurrency(pots.club.collected, "MYR"), sub: `${L.club_collected_sub} · ${pots.monthLabel}`, Icon: TrendingUp },
+    { label: L.pot_available, value: formatCurrency(pots.club.available, "MYR"), sub: L.club_pot_sub, Icon: Wallet },
+    { label: L.club_upcoming, value: String(upcomingBookings ?? 0), sub: L.club_courts_sub, Icon: CalendarClock },
   ];
   const LINKS = [
-    { href: "/admin/club/bookings", label: "Court bookings", desc: "Member reservations", Icon: CalendarClock },
-    { href: "/admin/pots", label: "Revenue & P&L", desc: "Academy vs Club pots", Icon: TrendingUp },
-    { href: "/admin/fee-plans", label: "Membership tiers", desc: "Club fee plans", Icon: Tag },
-    { href: "/admin/court-rentals", label: "Court costs", desc: "Rentals by arm", Icon: Wallet },
-    { href: "/club", label: "Public signup page", desc: "Share to join", Icon: ExternalLink, external: true },
+    { href: "/admin/club/bookings", label: L.club_bookings, desc: L.club_bookings_desc, Icon: CalendarClock },
+    { href: "/admin/pots", label: L.club_revenue_pl, desc: L.club_revenue_pl_desc, Icon: TrendingUp },
+    { href: "/admin/fee-plans", label: L.club_tiers, desc: L.club_tiers_desc, Icon: Tag },
+    { href: "/admin/court-rentals", label: L.club_court_costs, desc: L.club_court_costs_desc, Icon: Wallet },
+    { href: "/club", label: L.club_signup_link, desc: L.club_signup_desc, Icon: ExternalLink, external: true },
   ];
 
   return (
     <div>
       <PageHeader
-        title="Club"
-        description="Everything for the club business arm — members, dues, court bookings and revenue in one place."
+        title={L.club_title}
+        description={L.club_desc}
         action={
           <>
             <a
@@ -71,25 +73,25 @@ export default async function ClubHubPage({
               rel="noopener"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              Public signup page ↗
+              {L.club_public_signup} ↗
             </a>
-            <LinkButton href="/admin/club/bookings" variant="secondary">Court bookings</LinkButton>
+            <LinkButton href="/admin/club/bookings" variant="secondary">{L.club_bookings}</LinkButton>
             <form action={generateClubDuesNow}>
-              <SubmitButton variant="secondary" pendingText="Generating…">Generate dues</SubmitButton>
+              <SubmitButton variant="secondary" pendingText={L.inv_generating}>{L.club_gen_dues}</SubmitButton>
             </form>
-            <LinkButton href="/admin/club/new">+ Add member</LinkButton>
+            <LinkButton href="/admin/club/new">{L.club_add_member}</LinkButton>
           </>
         }
       />
 
       {raised && (
         <p className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          Membership invoice raised — see it in Invoices and Pots.
+          {L.club_raised}
         </p>
       )}
       {dues !== undefined && (
         <p className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          Generated {dues} membership due invoice{dues === "1" ? "" : "s"} for this month.
+          {L.club_dues.replace("{n}", dues)}
         </p>
       )}
       {error && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -127,47 +129,47 @@ export default async function ClubHubPage({
       </div>
 
       {members && members.length > 0 ? (
-        <Section title={`Members (${members.length})`} flush>
+        <Section title={`${L.club_members_section} (${members.length})`} flush>
           <Table>
             <thead>
               <tr>
-                <Th>Name</Th>
-                <Th>Tier</Th>
-                <Th>Contact</Th>
-                <Th>Status</Th>
-                <Th>Joined</Th>
-                <Th className="text-right">Actions</Th>
+                <Th>{L.col_name}</Th>
+                <Th>{L.club_tier}</Th>
+                <Th>{L.club_contact}</Th>
+                <Th>{L.col_status}</Th>
+                <Th>{L.club_joined}</Th>
+                <Th className="text-right">{L.col_actions}</Th>
               </tr>
             </thead>
             <tbody>
               {members.map((m: any) => (
                 <tr key={m.id} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{m.full_name}</Td>
-                  <Td label="Tier">{m.tier?.name ?? <span className="text-slate-400">— none —</span>}</Td>
-                  <Td label="Contact" className="text-slate-500">{m.email || m.phone || "—"}</Td>
-                  <Td label="Status">
-                    <Badge tone={m.status === "active" ? "green" : m.status === "pending" ? "yellow" : "slate"}>{m.status}</Badge>
+                  <Td label={L.club_tier}>{m.tier?.name ?? <span className="text-slate-400">{L.none}</span>}</Td>
+                  <Td label={L.club_contact} className="text-slate-500">{m.email || m.phone || "—"}</Td>
+                  <Td label={L.col_status}>
+                    <Badge tone={m.status === "active" ? "green" : m.status === "pending" ? "yellow" : "slate"}>{m.status === "active" ? L.adm_active : m.status === "pending" ? L.lv_st_pending : L.adm_inactive}</Badge>
                   </Td>
-                  <Td label="Joined" className="text-slate-500">{m.joined_at ? formatDate(m.joined_at) : "—"}</Td>
-                  <Td label="Actions" className="text-right">
+                  <Td label={L.club_joined} className="text-slate-500">{m.joined_at ? formatDate(m.joined_at) : "—"}</Td>
+                  <Td label={L.col_actions} className="text-right">
                     <div className="flex justify-end gap-2">
                       <a
                         href={`${baseUrl}/club/me/${signClubToken(m.id)}`}
                         target="_blank"
                         rel="noopener"
                         className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                        title="Open this member's personal portal link"
+                        title={L.club_portal_title}
                       >
-                        Portal ↗
+                        {L.club_portal} ↗
                       </a>
                       <form action={raiseMemberInvoice}>
                         <input type="hidden" name="id" value={m.id} />
-                        <SubmitButton variant="secondary" pendingText="Raising…">Raise invoice</SubmitButton>
+                        <SubmitButton variant="secondary" pendingText={L.club_raising}>{L.club_raise_invoice}</SubmitButton>
                       </form>
-                      <LinkButton href={`/admin/club/${m.id}`} variant="secondary">Edit</LinkButton>
+                      <LinkButton href={`/admin/club/${m.id}`} variant="secondary">{L.edit_btn}</LinkButton>
                       <form action={deleteClubMember}>
                         <input type="hidden" name="id" value={m.id} />
-                        <ConfirmButton confirmText={`Remove member "${m.full_name}"?`} />
+                        <ConfirmButton confirmText={L.club_del_member.replace("{name}", m.full_name)} />
                       </form>
                     </div>
                   </Td>
@@ -177,7 +179,7 @@ export default async function ClubHubPage({
           </Table>
         </Section>
       ) : (
-        <EmptyState message="No club members yet. Add one to start club billing." />
+        <EmptyState message={L.club_empty} />
       )}
     </div>
   );
