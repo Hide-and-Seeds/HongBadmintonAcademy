@@ -2376,6 +2376,7 @@ const ZH_NAV: Record<string, string> = {
   Daily: "日常",
   Teaching: "教学",
   "Finance & Comms": "财务与通讯",
+  Costs: "成本",
   "Insights & Setup": "分析与设置",
   Organization: "机构",
   // items
