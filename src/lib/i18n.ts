@@ -960,6 +960,32 @@ const en = {
   ivf_fee_plan: "Fee plan (optional)",
   ivf_due_date: "Due date",
   ivf_create: "Create invoice",
+
+  // ── admin: staff edit ──
+  pf_edit_staff: "Edit staff",
+  st2fa_desc: "If this staff member lost their authenticator device, reset it — they'll set up 2FA again on next login.",
+  st2fa_reset: "Reset 2FA",
+  st2fa_confirm: "Remove this staff member's 2FA? They'll sign in with just their password until they set it up again.",
+
+  // ── admin: parent detail ──
+  pd_edit_title: "Edit parent",
+  pd_signin: "Parent app sign-in",
+  pd_signin_desc: "Parents sign in with their email + password. Send a reset email, or a one-tap login link.",
+  pd_send_reset: "Send password reset email",
+  pd_gen_link: "Generate login link",
+  pd_children: "Children",
+  pd_unlink: "Unlink",
+  pd_unlink_confirm: "Remove {name} from this parent? The student stays, just unlinked.",
+  pd_no_children: "No children linked to this parent yet.",
+  pd_link_label: "Link a student to this parent",
+  pd_pick_student: "— pick a student —",
+  pd_link_btn: "Link student",
+
+  // ── admin: coach detail ──
+  cd_edit_title: "Edit coach",
+  cd_pay_att: "Pay & attendance →",
+  cd_active_sub: "active",
+  cd_no_classes: "Not assigned to any classes yet.",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -1901,6 +1927,32 @@ const zh: Dict = {
   ivf_fee_plan: "收费方案（可选）",
   ivf_due_date: "到期日",
   ivf_create: "创建账单",
+
+  // ── admin: staff edit ──
+  pf_edit_staff: "编辑员工",
+  st2fa_desc: "若该员工丢失了验证器设备，请重置 — 他们下次登录时会重新设置双重验证。",
+  st2fa_reset: "重置双重验证",
+  st2fa_confirm: "移除该员工的双重验证？在重新设置前，他们将仅用密码登录。",
+
+  // ── admin: parent detail ──
+  pd_edit_title: "编辑家长",
+  pd_signin: "家长应用登录",
+  pd_signin_desc: "家长用邮箱 + 密码登录。发送重置邮件，或一键登录链接。",
+  pd_send_reset: "发送密码重置邮件",
+  pd_gen_link: "生成登录链接",
+  pd_children: "孩子",
+  pd_unlink: "取消关联",
+  pd_unlink_confirm: "将 {name} 从此家长移除？学员保留，仅取消关联。",
+  pd_no_children: "此家长暂未关联孩子。",
+  pd_link_label: "关联一名学员到此家长",
+  pd_pick_student: "— 选择学员 —",
+  pd_link_btn: "关联学员",
+
+  // ── admin: coach detail ──
+  cd_edit_title: "编辑教练",
+  cd_pay_att: "薪酬与出勤 →",
+  cd_active_sub: "在读",
+  cd_no_classes: "尚未分配任何班级。",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

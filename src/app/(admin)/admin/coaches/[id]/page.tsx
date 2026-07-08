@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireSuperAdmin } from "@/lib/auth";
 import { listBranches } from "@/lib/branch";
 import { PageHeader, Section, StatCard, Badge, EmptyState, LinkButton } from "@/components/ui";
 import { formatCurrency } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { PersonForm } from "../../_people/person-form";
 import { updatePerson } from "../../_people/actions";
 
@@ -18,6 +20,8 @@ export default async function EditCoachPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
+  const me = await requireSuperAdmin();
+  const L = dict(me.locale);
   const supabase = await createClient();
   const [{ data: person }, { data: primary }, { data: cc }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
@@ -62,32 +66,32 @@ export default async function EditCoachPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Edit coach"
+        title={L.cd_edit_title}
         description={person.full_name ?? undefined}
-        action={<LinkButton href="/admin/coaches/summary" variant="ghost">Pay & attendance →</LinkButton>}
+        action={<LinkButton href="/admin/coaches/summary" variant="ghost">{L.cd_pay_att}</LinkButton>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Lessons" value={lessons} sub="this month" />
-        <StatCard label="Attendance" value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub="this month" />
-        <StatCard label="Pay" value={formatCurrency(lessons * rate)} tone="green" sub="this month" />
-        <StatCard label="Students" value={students} sub="active" />
+        <StatCard label={L.cs_lessons} value={lessons} sub={L.ana_this_month} />
+        <StatCard label={L.attendance} value={attPct != null ? `${attPct}%` : "—"} tone={attPct != null && attPct >= 70 ? "green" : "amber"} sub={L.ana_this_month} />
+        <StatCard label={L.pay_word} value={formatCurrency(lessons * rate)} tone="green" sub={L.ana_this_month} />
+        <StatCard label={L.cls_students} value={students} sub={L.cd_active_sub} />
       </div>
 
-      <Section title={`Classes (${classes.length})`} flush>
+      <Section title={`${L.cls_section} (${classes.length})`} flush>
         {classes.length > 0 ? (
           <ul className="divide-y divide-slate-100">
             {classes.map((c) => (
               <li key={c.id}>
                 <Link href={`/admin/classes/${c.id}`} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
                   <span className="font-medium text-slate-900">{c.name}</span>
-                  <Badge tone={c.is_active ? "green" : "slate"}>{c.is_active ? "active" : "inactive"}</Badge>
+                  <Badge tone={c.is_active ? "green" : "slate"}>{c.is_active ? L.adm_active : L.adm_inactive}</Badge>
                 </Link>
               </li>
             ))}
           </ul>
         ) : (
-          <div className="p-5"><EmptyState message="Not assigned to any classes yet." /></div>
+          <div className="p-5"><EmptyState message={L.cd_no_classes} /></div>
         )}
       </Section>
 
@@ -99,6 +103,7 @@ export default async function EditCoachPage({
         showBranch
         allowEmailEdit
         error={error}
+        locale={me.locale}
       />
     </div>
   );

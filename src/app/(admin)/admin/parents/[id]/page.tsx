@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 import { PageHeader, Section, Badge, EmptyState, Select, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { levelBadgeClass, levelName } from "@/lib/training";
+import { dict } from "@/lib/i18n";
 import { PersonForm } from "../../_people/person-form";
 import {
   updatePerson,
@@ -31,6 +33,8 @@ export default async function EditParentPage({
 }) {
   const { id } = await params;
   const { error, saved, link, wa } = await searchParams;
+  const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const [{ data: person }, { data: children }, { data: unlinked }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
@@ -42,7 +46,7 @@ export default async function EditParentPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Edit parent" description={person.full_name ?? undefined} />
+      <PageHeader title={L.pd_edit_title} description={person.full_name ?? undefined} />
 
       {saved && (
         <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
@@ -51,18 +55,18 @@ export default async function EditParentPage({
       )}
 
       <Section
-        title="Parent app sign-in"
-        description="Parents sign in with their email + password. Send a reset email, or a one-tap login link."
+        title={L.pd_signin}
+        description={L.pd_signin_desc}
       >
         <div className="space-y-4 p-5">
           <div className="flex flex-wrap gap-2">
             <form action={sendParentPasswordReset}>
               <input type="hidden" name="parent_id" value={id} />
-              <SubmitButton pendingText="Sending…">Send password reset email</SubmitButton>
+              <SubmitButton pendingText="…">{L.pd_send_reset}</SubmitButton>
             </form>
             <form action={generateParentLoginLink}>
               <input type="hidden" name="parent_id" value={id} />
-              <SubmitButton variant="secondary" pendingText="Generating…">Generate login link</SubmitButton>
+              <SubmitButton variant="secondary" pendingText={L.inv_generating}>{L.pd_gen_link}</SubmitButton>
             </form>
           </div>
 
@@ -70,7 +74,7 @@ export default async function EditParentPage({
         </div>
       </Section>
 
-      <Section title={`Children (${children?.length ?? 0})`} flush>
+      <Section title={`${L.pd_children} (${children?.length ?? 0})`} flush>
         {children && children.length > 0 ? (
           <ul className="divide-y divide-slate-100">
             {children.map((c: any) => {
@@ -82,11 +86,11 @@ export default async function EditParentPage({
                     <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", levelBadgeClass(lvl))}>L{lvl} · {levelName(lvl)}</span>
                   </Link>
                   <div className="flex flex-shrink-0 items-center gap-2">
-                    <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status}</Badge>
+                    <Badge tone={c.status === "active" ? "green" : "slate"}>{c.status === "active" ? L.adm_active : L.adm_inactive}</Badge>
                     <form action={unlinkChild}>
                       <input type="hidden" name="student_id" value={c.id} />
                       <input type="hidden" name="parent_id" value={id} />
-                      <ConfirmButton label="Unlink" confirmText={`Remove ${c.full_name} from this parent? The student stays, just unlinked.`} />
+                      <ConfirmButton label={L.pd_unlink} confirmText={L.pd_unlink_confirm.replace("{name}", c.full_name)} />
                     </form>
                   </div>
                 </li>
@@ -94,21 +98,21 @@ export default async function EditParentPage({
             })}
           </ul>
         ) : (
-          <div className="p-5"><EmptyState message="No children linked to this parent yet." /></div>
+          <div className="p-5"><EmptyState message={L.pd_no_children} /></div>
         )}
         {unlinked && unlinked.length > 0 && (
           <form action={linkChild} className="flex flex-wrap items-end gap-2 border-t border-slate-100 p-5">
             <input type="hidden" name="parent_id" value={id} />
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-slate-600">Link a student to this parent</span>
+              <span className="text-xs font-medium text-slate-600">{L.pd_link_label}</span>
               <Select name="student_id" required className="h-9 w-64">
-                <option value="">— pick a student —</option>
+                <option value="">{L.pd_pick_student}</option>
                 {unlinked.map((s: any) => (
                   <option key={s.id} value={s.id}>{s.full_name}</option>
                 ))}
               </Select>
             </label>
-            <SubmitButton pendingText="Linking…">Link student</SubmitButton>
+            <SubmitButton pendingText="…">{L.pd_link_btn}</SubmitButton>
           </form>
         )}
       </Section>
@@ -118,6 +122,7 @@ export default async function EditParentPage({
         person={person}
         action={updatePerson.bind(null, "parent")}
         error={error}
+        locale={me.locale}
       />
     </div>
   );

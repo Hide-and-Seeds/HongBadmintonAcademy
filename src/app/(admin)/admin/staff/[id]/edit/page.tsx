@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listBranches } from "@/lib/branch";
 import { PageHeader, Section } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
+import { dict } from "@/lib/i18n";
 import { PersonForm } from "../../../_people/person-form";
 import { updateStaff, resetStaffTwoFactor } from "../../../_people/actions";
 
@@ -16,7 +17,8 @@ export default async function EditStaffPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requireSuperAdmin();
+  const me = await requireSuperAdmin();
+  const L = dict(me.locale);
   const { id } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
@@ -28,29 +30,30 @@ export default async function EditStaffPage({
 
   return (
     <div>
-      <PageHeader title="Edit staff" description={person.full_name ?? person.email ?? undefined} />
+      <PageHeader title={L.pf_edit_staff} description={person.full_name ?? person.email ?? undefined} />
       <PersonForm
         role={person.role}
         person={person}
         action={updateStaff}
         roleOptions={[
-          { value: "admin", label: "Branch admin (one branch)" },
-          { value: "super_admin", label: "Super admin (all branches)" },
-          { value: "coach", label: "Coach" },
+          { value: "admin", label: L.pf_role_branch_admin },
+          { value: "super_admin", label: L.pf_role_super },
+          { value: "coach", label: L.pf_coach },
         ]}
         branches={branches}
         showBranch
         allowEmailEdit
         cancelHref="/admin/staff"
-        submitLabel="Save changes"
+        submitLabel={L.br_save_changes}
         error={error}
+        locale={me.locale}
       />
 
-      <Section title="Two-factor authentication" description="If this staff member lost their authenticator device, reset it — they'll set up 2FA again on next login.">
+      <Section title={L.two_factor} description={L.st2fa_desc}>
         <div className="p-5">
           <form action={resetStaffTwoFactor}>
             <input type="hidden" name="id" value={id} />
-            <ConfirmButton label="Reset 2FA" variant="secondary" confirmText="Remove this staff member's 2FA? They'll sign in with just their password until they set it up again." />
+            <ConfirmButton label={L.st2fa_reset} variant="secondary" confirmText={L.st2fa_confirm} />
           </form>
         </div>
       </Section>
