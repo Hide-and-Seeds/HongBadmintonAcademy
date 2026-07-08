@@ -101,6 +101,10 @@ const en = {
   choose_coach_hint: "Choose who coaches your child.",
   none: "— none —",
   saved_tick: "Saved ✓",
+  nn_title: "Nickname",
+  nn_hint: "A friendly name shown around the app. Their official name stays the same.",
+  nn_placeholder: "e.g. Ah Boy",
+  nn_save: "Save",
   download_invoice: "Download",
   download_card: "Download this month's card (PDF)",
   exam_results: "Exam results",
@@ -733,7 +737,6 @@ const en = {
   br_edit_details: "Edit details",
   br_save_changes: "Save changes",
   br_empty: "No branches yet — add your first above.",
-  br_color: "Colour",
 
   // ── admin: account ──
   acc_phone_updated: "Phone updated.",
@@ -1074,6 +1077,23 @@ const en = {
   cb_st_confirmed: "confirmed",
   cb_st_canceled: "canceled",
   cb_st_pending: "pending",
+
+  // ── admin: session + attendance detail ──
+  sess_no_coach: "No coach",
+  sess_back: "← Sessions",
+  sess_restore: "Restore session",
+  sess_cancel: "Cancel session",
+  sess_delete: "Delete session",
+  sess_del_confirm: "Delete this session? This cannot be undone.",
+  att_unmarked: "unmarked",
+  att_finalise: "Finalise",
+  att_finalise_title: "Flag late tap-ins and mark no-shows absent",
+  att_coach_court: "Coach on court:",
+  att_not_checked: "(not checked in)",
+  att_in_prefix: "in ",
+  att_out_prefix: "out ",
+  att_tap_out: "tap out",
+  att_tap_in: "tap in",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -1162,6 +1182,10 @@ const zh: Dict = {
   choose_coach_hint: "选择负责您孩子的教练。",
   none: "— 无 —",
   saved_tick: "已保存 ✓",
+  nn_title: "昵称",
+  nn_hint: "在应用中显示的昵称，正式姓名不变。",
+  nn_placeholder: "例如 阿宝",
+  nn_save: "保存",
   download_invoice: "下载",
   download_card: "下载本月成长卡（PDF）",
   exam_results: "考试成绩",
@@ -1788,7 +1812,6 @@ const zh: Dict = {
   br_edit_details: "编辑详情",
   br_save_changes: "保存更改",
   br_empty: "暂无分院 — 在上方添加第一个。",
-  br_color: "颜色",
 
   // ── admin: account ──
   acc_phone_updated: "电话已更新。",
@@ -2129,6 +2152,23 @@ const zh: Dict = {
   cb_st_confirmed: "已确认",
   cb_st_canceled: "已取消",
   cb_st_pending: "待处理",
+
+  // ── admin: session + attendance detail ──
+  sess_no_coach: "无教练",
+  sess_back: "← 课程节次",
+  sess_restore: "恢复课程",
+  sess_cancel: "取消课程",
+  sess_delete: "删除课程",
+  sess_del_confirm: "删除此课程？此操作无法撤销。",
+  att_unmarked: "未标记",
+  att_finalise: "结算",
+  att_finalise_title: "标记迟到打卡并将缺席者记为缺勤",
+  att_coach_court: "在场教练：",
+  att_not_checked: "（未签到）",
+  att_in_prefix: "进 ",
+  att_out_prefix: "出 ",
+  att_tap_out: "签退",
+  att_tap_in: "签到",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };
