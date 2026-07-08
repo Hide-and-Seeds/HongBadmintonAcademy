@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, LinkButton, cn } from "@/components/ui";
 import { FilterSelect, FilterSearch } from "@/components/filter-controls";
 import { CLASS_RANKS } from "@/lib/ranks";
+import { dict } from "@/lib/i18n";
 import { StudentsList } from "../students/students-list";
 import { PeopleList } from "../_people/people-list";
 import { deleteStudents } from "../students/actions";
@@ -36,8 +37,14 @@ export default async function DirectoryPage({
 }) {
   const { tab, q, status, rank, coach, branch, sort, dir, page } = await searchParams;
   const me = await requireRole("admin");
+  const L = dict(me.locale);
   const isSuper = me.role === "super_admin";
   const active: Tab = TABS.some((t) => t.key === tab) ? (tab as Tab) : "students";
+  const tabLabel: Record<string, string> = {
+    students: L.dir_students,
+    parents: L.dir_parents,
+    coaches: L.dir_coaches,
+  };
 
   const supabase = await createClient();
   const [{ data: coaches }, { data: branches }] = await Promise.all([
@@ -55,26 +62,26 @@ export default async function DirectoryPage({
 
   const newButton =
     active === "students" ? (
-      <LinkButton href="/admin/students/new">+ New student</LinkButton>
+      <LinkButton href="/admin/students/new">{L.dir_new_student}</LinkButton>
     ) : active === "parents" ? (
-      <LinkButton href="/admin/parents/new">+ New parent</LinkButton>
+      <LinkButton href="/admin/parents/new">{L.dir_new_parent}</LinkButton>
     ) : isSuper ? (
       // Coaches are staff → only a super-admin can create them.
-      <LinkButton href="/admin/coaches/new">+ New coach</LinkButton>
+      <LinkButton href="/admin/coaches/new">{L.dir_new_coach}</LinkButton>
     ) : null;
 
   return (
     <div>
       <PageHeader
-        title="Directory"
-        description="Students, parents and coaches — all in one place."
+        title={L.dir_title}
+        description={L.dir_desc}
         action={
           <>
             {active === "coaches" && (
-              <LinkButton href="/admin/coaches/summary" variant="secondary">💰 Payroll &amp; attendance</LinkButton>
+              <LinkButton href="/admin/coaches/summary" variant="secondary">💰 {L.dir_payroll_att}</LinkButton>
             )}
             {active === "students" && (
-              <LinkButton href="/admin/leaderboard" variant="secondary">🏆 Leaderboard</LinkButton>
+              <LinkButton href="/admin/leaderboard" variant="secondary">🏆 {L.dir_leaderboard}</LinkButton>
             )}
             {newButton}
           </>
@@ -95,7 +102,7 @@ export default async function DirectoryPage({
                   : "border-transparent text-slate-500 hover:text-slate-800",
               )}
             >
-              {t.label}
+              {tabLabel[t.key] ?? t.label}
             </Link>
           );
         })}
@@ -104,32 +111,32 @@ export default async function DirectoryPage({
       {/* Filters (auto-apply, soft navigation). The active tab is preserved via the URL. */}
       <div className="mb-5 flex flex-wrap items-end gap-3">
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-slate-600">Search</span>
-          <FilterSearch name="q" defaultValue={q ?? ""} placeholder="Name…" className="h-9 w-48" />
+          <span className="text-xs font-medium text-slate-600">{L.adm_search}</span>
+          <FilterSearch name="q" defaultValue={q ?? ""} placeholder={L.dir_name_ph} className="h-9 w-48" />
         </label>
         {active === "students" && (
           <>
             <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-slate-600">Level</span>
+              <span className="text-xs font-medium text-slate-600">{L.level_word}</span>
               <FilterSelect name="rank" defaultValue={rankFilter} className="h-9 w-44">
-                <option value="">All levels</option>
+                <option value="">{L.cls_all_levels}</option>
                 {CLASS_RANKS.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </FilterSelect>
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-slate-600">Status</span>
+              <span className="text-xs font-medium text-slate-600">{L.col_status}</span>
               <FilterSelect name="status" defaultValue={statusFilter} className="h-9 w-36">
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="">{L.filter_all}</option>
+                <option value="active">{L.adm_active}</option>
+                <option value="inactive">{L.adm_inactive}</option>
               </FilterSelect>
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-slate-600">Assigned coach</span>
+              <span className="text-xs font-medium text-slate-600">{L.dir_assigned_coach}</span>
               <FilterSelect name="coach" defaultValue={coachFilter} className="h-9 w-44">
-                <option value="">All coaches</option>
+                <option value="">{L.adm_all_coaches}</option>
                 {(coaches ?? []).map((c) => (
                   <option key={c.id} value={c.id}>{c.full_name ?? c.id}</option>
                 ))}
@@ -137,9 +144,9 @@ export default async function DirectoryPage({
             </label>
             {isSuper && (
               <label className="block space-y-1.5">
-                <span className="text-xs font-medium text-slate-600">Branch</span>
+                <span className="text-xs font-medium text-slate-600">{L.branch}</span>
                 <FilterSelect name="branch" defaultValue={branchFilter} className="h-9 w-44">
-                  <option value="">All branches</option>
+                  <option value="">{L.dir_all_branches}</option>
                   {(branches ?? []).map((b: any) => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
@@ -148,7 +155,7 @@ export default async function DirectoryPage({
             )}
           </>
         )}
-        {filtered && <LinkButton href={`/admin/people?tab=${active}`} variant="ghost">Clear</LinkButton>}
+        {filtered && <LinkButton href={`/admin/people?tab=${active}`} variant="ghost">{L.clear_word}</LinkButton>}
       </div>
 
       {active === "students" && (

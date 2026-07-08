@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 import { PageHeader, LinkButton, EmptyState, cn } from "@/components/ui";
 import { levelBadgeClass, levelNameBadgeClass } from "@/lib/training";
+import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +11,6 @@ const DOT: Record<string, string> = {
   present: "bg-green-500", late: "bg-amber-500", absent: "bg-red-500", excused: "bg-slate-400",
 };
 const LETTER: Record<string, string> = { present: "P", late: "L", absent: "A", excused: "E" };
-const LEGEND: [string, string, string][] = [
-  ["Present", "P", "bg-green-500"], ["Late", "L", "bg-amber-500"],
-  ["Absent", "A", "bg-red-500"], ["Excused", "E", "bg-slate-400"],
-];
 
 function shortDate(d: string) {
   const dt = new Date(d);
@@ -28,7 +26,13 @@ export default async function MatrixPage({
   searchParams: Promise<{ class?: string }>;
 }) {
   const { class: qClass } = await searchParams;
+  const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
+  const LEGEND: [string, string, string][] = [
+    [L.att_present, "P", "bg-green-500"], [L.att_late, "L", "bg-amber-500"],
+    [L.att_absent, "A", "bg-red-500"], [L.att_excused, "E", "bg-slate-400"],
+  ];
 
   const { data: classes } = await supabase
     .from("classes")
@@ -79,9 +83,9 @@ export default async function MatrixPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Attendance grid"
-        description="Last 16 lessons, oldest → newest."
-        action={<LinkButton href="/admin" variant="ghost">← Dashboard</LinkButton>}
+        title={L.mx_title}
+        description={L.mx_desc}
+        action={<LinkButton href="/admin" variant="ghost">← {L.dashboard}</LinkButton>}
       />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
@@ -112,7 +116,7 @@ export default async function MatrixPage({
       )}
 
       {rows.length === 0 || sessions.length === 0 ? (
-        <EmptyState message="No students or sessions for this class yet." />
+        <EmptyState message={L.mx_empty} />
       ) : (
         <>
         {/* Mobile: per-student cards (the wide dot grid is unusable on a phone). */}
@@ -125,12 +129,12 @@ export default async function MatrixPage({
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
                 <span className={cn("inline-flex rounded-full px-1.5 py-0.5 font-semibold", levelBadgeClass(r.level))}>L{r.level}</span>
-                <span>{r.attended} attended</span>
+                <span>{r.attended} {L.mx_attended_word}</span>
                 <span className="font-medium text-green-700">🔥 {r.streak}</span>
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
                 {r.cells.slice(-10).map((c, i) => (
-                  <span key={i} aria-label={c ?? "no record"} className={cn("inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white", c ? DOT[c] : "bg-slate-100 text-transparent ring-1 ring-inset ring-slate-200")}>{c ? LETTER[c] : ""}</span>
+                  <span key={i} aria-label={c ?? L.mx_no_record} className={cn("inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white", c ? DOT[c] : "bg-slate-100 text-transparent ring-1 ring-inset ring-slate-200")}>{c ? LETTER[c] : ""}</span>
                 ))}
               </div>
             </div>
@@ -142,9 +146,9 @@ export default async function MatrixPage({
             <thead>
               <tr className="bg-slate-50">
                 <th className="sticky left-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Student
+                  {L.student_col}
                 </th>
-                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Level</th>
+                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">{L.level_word}</th>
                 {sessions.map((s) => {
                   const d = shortDate(s.session_date);
                   return (
@@ -154,9 +158,9 @@ export default async function MatrixPage({
                     </th>
                   );
                 })}
-                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Attended</th>
-                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Rate</th>
-                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">Streak</th>
+                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">{L.mx_attended}</th>
+                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">{L.mx_rate}</th>
+                <th className="border-b border-slate-200 px-2 py-2 text-center text-[10px] font-semibold uppercase text-slate-500">{L.streak_label}</th>
               </tr>
             </thead>
             <tbody>
@@ -171,8 +175,8 @@ export default async function MatrixPage({
                   {r.cells.map((c, i) => (
                     <td key={i} className="border-b border-slate-100 px-1.5 py-2 text-center">
                       <span
-                        aria-label={c ?? "no record"}
-                        title={c ?? "no record"}
+                        aria-label={c ?? L.mx_no_record}
+                        title={c ?? L.mx_no_record}
                         className={cn(
                           "inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white",
                           c ? DOT[c] : "bg-slate-100 text-transparent ring-1 ring-inset ring-slate-200",
