@@ -427,7 +427,30 @@ Vercel cron ──queues──▶ message_queue ◀──polls── Worker (Win
   sits at the lock screen and nothing sends.
 - **One-run installer:** `wa-worker/setup-client.bat` (downloads Node if absent,
   cloudflared, deps, Chrome, Startup shortcut, shows the QR). See
-  `wa-worker/START-HERE.md` / `CLIENT-SETUP.md`.
+  `wa-worker/CLIENT-SETUP.md`.
+
+### Worker setup — standing up a fresh box
+
+Full detail in `wa-worker/CLIENT-SETUP.md`. **You need:** a Windows box that
+stays powered on; the **dedicated WhatsApp SIM** (a phone — *never* the academy's
+main number, ban risk); and the `WA_WORKER_SECRET` value (the same one set in
+Vercel).
+
+1. **Copy** the `wa-worker/` folder onto the box (or `git clone` the repo).
+2. **Double-click `setup-client.bat`.** It downloads Node + cloudflared, installs
+   deps + Chrome, registers autostart, and starts the worker. **Paste the
+   `WA_WORKER_SECRET`** when it asks.
+3. **Scan the QR** (it opens in the browser) with the dedicated SIM: WhatsApp →
+   Linked devices → Link a device. Wait until it says connected.
+4. **Enable auto-login** (for unattended reboots): `Win+R` → `netplwiz` → uncheck
+   *"Users must enter a user name and password"* → set the password. And set
+   **Power → Sleep = Never**.
+
+After that it is zero-touch: reboot → auto-login → worker + tunnel auto-start →
+re-link from the saved session → self-register the URL → live. No Vercel edits, no
+re-scan. **Swap the number / hand to a new person:** Admin → Settings → Link
+WhatsApp → **Disconnect & re-link** → scan the new SIM — all in the web app, no box
+access needed.
 
 ### Anti-ban send policy (`src/lib/reminders.ts`)
 
