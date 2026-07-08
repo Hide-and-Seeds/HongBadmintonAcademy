@@ -5,6 +5,7 @@ import { isWorkerPaused, getMonthlySchedule, is2faRequired } from "@/lib/setting
 import { WaLinkPanel } from "@/components/wa-link-panel";
 import { PushPanel } from "@/components/push-panel";
 import { getVapidPublicKey, isPushConfigured } from "@/lib/push";
+import { dict } from "@/lib/i18n";
 import { toggleWorker, saveMonthlySchedule, toggle2fa } from "./actions";
 import { savePushSubscription, removePushSubscription, sendTestPushToSelf } from "./push-actions";
 
@@ -15,7 +16,8 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
-  await requireSuperAdmin();
+  const me = await requireSuperAdmin();
+  const L = dict(me.locale);
   const { error, saved } = await searchParams;
   const paused = await isWorkerPaused();
   const schedule = await getMonthlySchedule();
@@ -23,57 +25,53 @@ export default async function SettingsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="WhatsApp automation and the monthly run schedule." />
+      <PageHeader title={L.set_title} description={L.set_desc} />
 
-      {saved && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">Saved.</p>}
+      {saved && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{L.saved}</p>}
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
-      <Section title="Security">
+      <Section title={L.set_security}>
         <div className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div className="text-sm text-slate-600">
             <div className="mb-1 flex items-center gap-2">
-              <span className="font-medium text-slate-800">Require 2FA for staff:</span>
-              <Badge tone={require2fa ? "green" : "slate"}>{require2fa ? "Required" : "Optional"}</Badge>
+              <span className="font-medium text-slate-800">{L.set_2fa_label}</span>
+              <Badge tone={require2fa ? "green" : "slate"}>{require2fa ? L.set_required : L.set_optional}</Badge>
             </div>
-            {require2fa
-              ? "Every admin and coach must set up an authenticator app before using the app."
-              : "Staff can enable 2FA on their account, but it isn't forced."}
-            <div className="mt-1 text-xs text-slate-400">Keep at least two super-admins so a locked-out admin can be reset.</div>
+            {require2fa ? L.set_2fa_on : L.set_2fa_off}
+            <div className="mt-1 text-xs text-slate-400">{L.set_2fa_note}</div>
           </div>
           <form action={toggle2fa}>
             <input type="hidden" name="required" value={require2fa ? "false" : "true"} />
-            <SubmitButton variant={require2fa ? "secondary" : "primary"} pendingText="Saving…">
-              {require2fa ? "Make optional" : "Require for all staff"}
+            <SubmitButton variant={require2fa ? "secondary" : "primary"} pendingText={L.cr_saving}>
+              {require2fa ? L.set_make_optional : L.set_require_all}
             </SubmitButton>
           </form>
         </div>
       </Section>
 
-      <Section title="WhatsApp worker">
+      <Section title={L.set_worker}>
         <div className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div className="text-sm text-slate-600">
             <div className="mb-1 flex items-center gap-2">
-              <span className="font-medium text-slate-800">Auto-send status:</span>
-              <Badge tone={paused ? "red" : "green"}>{paused ? "Paused" : "Running"}</Badge>
+              <span className="font-medium text-slate-800">{L.set_autosend}</span>
+              <Badge tone={paused ? "red" : "green"}>{paused ? L.set_paused : L.set_running}</Badge>
             </div>
-            {paused
-              ? "Reminders are NOT being sent. They stay queued and go out once resumed."
-              : "Queued reminders drip-send automatically (throttled)."}
+            {paused ? L.set_paused_desc : L.set_running_desc}
           </div>
           <form action={toggleWorker}>
             <input type="hidden" name="paused" value={paused ? "false" : "true"} />
-            <SubmitButton variant={paused ? "primary" : "secondary"} pendingText="Saving…">
-              {paused ? "Resume worker" : "Pause worker"}
+            <SubmitButton variant={paused ? "primary" : "secondary"} pendingText={L.cr_saving}>
+              {paused ? L.set_resume : L.set_pause}
             </SubmitButton>
           </form>
         </div>
       </Section>
 
-      <Section title="Link WhatsApp (scan QR)" description="Re-link the dedicated number after a logout — scan from here, no SSH needed." flush>
+      <Section title={L.set_link_wa} description={L.set_link_wa_desc} flush>
         <WaLinkPanel />
       </Section>
 
-      <Section title="Push notifications (test)" description="Web Push via PWA. Subscribe this device, then fire a test push to your own subscriptions." flush>
+      <Section title={L.set_push_test} description={L.set_push_test_desc} flush>
         {isPushConfigured() ? (
           <PushPanel
             vapidPublicKey={getVapidPublicKey()}
@@ -83,30 +81,25 @@ export default async function SettingsPage({
           />
         ) : (
           <div className="p-5 text-sm text-amber-700">
-            Set <code className="rounded bg-amber-50 px-1.5 py-0.5">VAPID_PUBLIC_KEY</code>,{" "}
-            <code className="rounded bg-amber-50 px-1.5 py-0.5">VAPID_PRIVATE_KEY</code> and{" "}
-            <code className="rounded bg-amber-50 px-1.5 py-0.5">NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> in
-            Vercel env, redeploy, then this panel goes live.
+            {L.set_push_hint}
           </div>
         )}
       </Section>
 
-      <Section title="Monthly schedule">
+      <Section title={L.set_schedule}>
         <form action={saveMonthlySchedule} className="space-y-4 p-5">
           <p className="text-sm text-slate-600">
-            The <strong>run day</strong> is when monthly invoices are generated (and the Community post goes out).
-            The <strong>due day</strong> is when each fee falls due. Days 1–28; the crons check daily. The manual
-            &quot;Generate this month&quot; button works any day.
+            {L.set_schedule_note}
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Monthly run day" hint="Raise fees + post the Community notice.">
+            <Field label={L.set_run_day} hint={L.set_run_day_hint}>
               <Input type="number" name="runDay" min={1} max={28} defaultValue={schedule.runDay} />
             </Field>
-            <Field label="Invoice due day">
+            <Field label={L.set_due_day}>
               <Input type="number" name="dueDay" min={1} max={28} defaultValue={schedule.dueDay} />
             </Field>
           </div>
-          <SubmitButton pendingText="Saving…">Save schedule</SubmitButton>
+          <SubmitButton pendingText={L.cr_saving}>{L.set_save_schedule}</SubmitButton>
         </form>
       </Section>
     </div>

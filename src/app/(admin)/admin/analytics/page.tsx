@@ -10,6 +10,7 @@ import { rankBadgeClass } from "@/lib/ranks";
 import { LEVEL_NAMES } from "@/lib/training";
 import { computeAnalytics } from "@/lib/analytics";
 import { RevenueAreaChart, CountBarChart, SkillBarChart, CategoryBarChart } from "@/components/charts";
+import { dict } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function AnalyticsPage({
   // Revenue-heavy academy analytics are super-admin only; branch admins are
   // scoped to follow-up collections (see /admin/collections).
   const me = await requireSuperAdmin();
+  const L = dict(me.locale);
   const supabase = await createClient();
   const { month, branch } = await searchParams;
   const nowD = new Date();
@@ -55,8 +57,8 @@ export default async function AnalyticsPage({
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Analytics"
-        description={branchLabel ? `${branchLabel} branch — open a section below for detail.` : "The headline numbers first — open a section below for detail."}
+        title={L.ana_title}
+        description={branchLabel ? `${branchLabel} — ${L.ana_desc_branch}` : L.ana_desc_all}
         action={
           <div className="flex flex-wrap items-center gap-1.5">
             <LinkButton href={`/api/analytics/pdf?month=${monthStr}`} target="_blank" rel="noopener" variant="secondary">PDF</LinkButton>
@@ -68,9 +70,9 @@ export default async function AnalyticsPage({
       {/* Branch filter (super-admin) — pick one branch or all. */}
       {branches.length > 1 && (
         <label className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-slate-600">Branch</span>
+          <span className="text-xs font-medium text-slate-600">{L.branch}</span>
           <FilterSelect name="branch" defaultValue={branchParam ?? ""} className="h-9 w-52">
-            <option value="">All branches</option>
+            <option value="">{L.dir_all_branches}</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
@@ -80,60 +82,60 @@ export default async function AnalyticsPage({
 
       {/* Period control — the one filter, made obvious. */}
       <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-        <Link href={`/admin/analytics?month=${prevM}${bq}`} aria-label="Previous month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+        <Link href={`/admin/analytics?month=${prevM}${bq}`} aria-label={L.cs_prev_month} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <div className="text-center">
           <div className="text-sm font-semibold text-slate-900">{a.monthLabel}</div>
           {monthStr !== thisM && (
-            <Link href={`/admin/analytics?month=${thisM}${bq}`} className="text-xs font-medium text-green-700 hover:underline">Jump to this month</Link>
+            <Link href={`/admin/analytics?month=${thisM}${bq}`} className="text-xs font-medium text-green-700 hover:underline">{L.cr_jump_this}</Link>
           )}
         </div>
-        <Link href={`/admin/analytics?month=${nextM}${bq}`} aria-label="Next month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+        <Link href={`/admin/analytics?month=${nextM}${bq}`} aria-label={L.cs_next_month} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
           <ChevronRight className="h-5 w-5" />
         </Link>
       </div>
 
       {/* Headline KPIs — health of the academy at a glance. Colour = look here. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Revenue this month" value={formatCurrency(a.revenueThisMonth, a.currency)} tone="green" />
+        <StatCard label={L.ana_revenue_month} value={formatCurrency(a.revenueThisMonth, a.currency)} tone="green" />
         <StatCard
-          label="Collection rate"
+          label={L.coll_rate}
           value={a.collection.rate != null ? `${a.collection.rate}%` : "—"}
-          sub={a.outstanding > 0 ? `${formatCurrency(a.outstanding, a.currency)} outstanding` : "all collected"}
+          sub={a.outstanding > 0 ? `${formatCurrency(a.outstanding, a.currency)} ${L.ana_outstanding_sub}` : L.ana_all_collected}
           tone={collTone}
         />
-        <StatCard label="Active students" value={a.counts.students} sub={a.newStudentsThisMonth ? `+${a.newStudentsThisMonth} this month` : undefined} tone="blue" />
-        <StatCard label="Attendance rate" value={a.attendanceRate != null ? `${a.attendanceRate}%` : "—"} sub="this month" tone={attTone} />
+        <StatCard label={L.adm_active_students} value={a.counts.students} sub={a.newStudentsThisMonth ? L.ana_new_sub.replace("{n}", String(a.newStudentsThisMonth)) : undefined} tone="blue" />
+        <StatCard label={L.ana_att_rate} value={a.attendanceRate != null ? `${a.attendanceRate}%` : "—"} sub={L.ana_this_month} tone={attTone} />
       </div>
 
       {/* ── Money ─────────────────────────────────────────────────────────── */}
-      <Collapsible title="Money" defaultOpen={false}>
+      <Collapsible title={L.ana_money} defaultOpen={false}>
         <div className="space-y-6 p-5">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard label="Billed" value={formatCurrency(a.collection.billed, a.currency)} />
-            <StatCard label="Collected" value={formatCurrency(a.collection.collected, a.currency)} tone="green" />
-            <StatCard label="Outstanding" value={formatCurrency(a.outstanding, a.currency)} tone={a.outstanding > 0 ? "red" : "slate"} />
-            <StatCard label="90+ days late" value={formatCurrency(a.feeAging.d90, a.currency)} tone={a.feeAging.d90 > 0 ? "red" : "slate"} />
+            <StatCard label={L.pot_billed} value={formatCurrency(a.collection.billed, a.currency)} />
+            <StatCard label={L.coll_collected} value={formatCurrency(a.collection.collected, a.currency)} tone="green" />
+            <StatCard label={L.adm_outstanding} value={formatCurrency(a.outstanding, a.currency)} tone={a.outstanding > 0 ? "red" : "slate"} />
+            <StatCard label={L.ana_90_late} value={formatCurrency(a.feeAging.d90, a.currency)} tone={a.feeAging.d90 > 0 ? "red" : "slate"} />
           </div>
           {/* Court rental cost folded in → net of what was collected. */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard label="Court rental cost" value={formatCurrency(a.courtRentalCost, a.currency)} tone={a.courtRentalCost > 0 ? "amber" : "slate"} />
-            <StatCard label="Net (collected − rentals)" value={formatCurrency(a.netRevenue, a.currency)} tone={a.netRevenue >= 0 ? "green" : "red"} />
+            <StatCard label={L.ana_court_cost} value={formatCurrency(a.courtRentalCost, a.currency)} tone={a.courtRentalCost > 0 ? "amber" : "slate"} />
+            <StatCard label={L.ana_net} value={formatCurrency(a.netRevenue, a.currency)} tone={a.netRevenue >= 0 ? "green" : "red"} />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
-            <Section title="Revenue trend" description="Succeeded payments, last 6 months">
+            <Section title={L.ana_rev_trend} description={L.ana_rev_trend_desc}>
               {a.revenueTrend.some((m) => m.amount > 0) ? (
                 <RevenueAreaChart data={a.revenueTrend} currency={a.currency} />
-              ) : <EmptyState message="No payments in the last 6 months." />}
+              ) : <EmptyState message={L.ana_no_pay_6mo} />}
             </Section>
-            <Section title="Fee aging" description="Unpaid / overdue, by days past due">
+            <Section title={L.ana_fee_aging} description={L.ana_fee_aging_desc}>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: "0–30 days", v: a.feeAging.d0, tone: "text-slate-700" },
-                  { label: "31–60 days", v: a.feeAging.d30, tone: "text-amber-600" },
-                  { label: "61–90 days", v: a.feeAging.d60, tone: "text-orange-600" },
-                  { label: "90+ days", v: a.feeAging.d90, tone: "text-red-600" },
+                  { label: L.coll_b1, v: a.feeAging.d0, tone: "text-slate-700" },
+                  { label: L.coll_b2, v: a.feeAging.d30, tone: "text-amber-600" },
+                  { label: L.coll_b3, v: a.feeAging.d60, tone: "text-orange-600" },
+                  { label: L.coll_b4, v: a.feeAging.d90, tone: "text-red-600" },
                 ].map((b) => (
                   <div key={b.label} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
                     <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{b.label}</div>
@@ -143,49 +145,49 @@ export default async function AnalyticsPage({
               </div>
             </Section>
           </div>
-          <Section title="Invoices by status">
+          <Section title={L.ana_inv_by_status}>
             {Object.keys(a.invoiceStatus).length ? (
               <CategoryBarChart data={recordToBars(a.invoiceStatus, INV_COLOR)} />
-            ) : <EmptyState message="No invoices yet." />}
+            ) : <EmptyState message={L.ana_no_invoices} />}
           </Section>
         </div>
       </Collapsible>
 
       {/* ── Students & attendance ─────────────────────────────────────────── */}
-      <Collapsible title="Students & attendance" defaultOpen={false}>
+      <Collapsible title={L.ana_students_att} defaultOpen={false}>
         <div className="space-y-6 p-5">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
-              label="Retention (30d)"
+              label={L.ana_retention}
               value={a.retention.rate != null ? `${a.retention.rate}%` : "—"}
-              sub="attended in last 30 days"
+              sub={L.ana_retention_sub2}
               tone={a.retention.rate == null ? "slate" : a.retention.rate >= 80 ? "green" : a.retention.rate >= 60 ? "amber" : "red"}
             />
-            <StatCard label="No-show >30 days" value={a.retention.inactive30} tone={a.retention.inactive30 ? "red" : "green"} />
-            <StatCard label="Inactive students" value={a.inactiveStudents} tone={a.inactiveStudents ? "amber" : "slate"} />
-            <StatCard label="Class occupancy" value={a.avgOccupancyPct != null ? `${a.avgOccupancyPct}%` : "—"} sub="avg of capacity" tone="blue" />
+            <StatCard label={L.ana_noshow} value={a.retention.inactive30} tone={a.retention.inactive30 ? "red" : "green"} />
+            <StatCard label={L.ana_inactive} value={a.inactiveStudents} tone={a.inactiveStudents ? "amber" : "slate"} />
+            <StatCard label={L.ana_occupancy} value={a.avgOccupancyPct != null ? `${a.avgOccupancyPct}%` : "—"} sub={L.ana_occupancy_sub} tone="blue" />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
-            <Section title="Attendance breakdown">
+            <Section title={L.ana_att_breakdown}>
               <CategoryBarChart
                 data={[
-                  { name: "Present", value: a.attendanceBreakdown.present, color: "#16a34a" },
-                  { name: "Late", value: a.attendanceBreakdown.late, color: "#f59e0b" },
-                  { name: "Absent", value: a.attendanceBreakdown.absent, color: "#ef4444" },
-                  { name: "Excused", value: a.attendanceBreakdown.excused, color: "#94a3b8" },
+                  { name: L.att_present, value: a.attendanceBreakdown.present, color: "#16a34a" },
+                  { name: L.att_late, value: a.attendanceBreakdown.late, color: "#f59e0b" },
+                  { name: L.att_absent, value: a.attendanceBreakdown.absent, color: "#ef4444" },
+                  { name: L.att_excused, value: a.attendanceBreakdown.excused, color: "#94a3b8" },
                 ]}
               />
             </Section>
-            <Section title="New students" description="Sign-ups per month, last 6 months">
+            <Section title={L.ana_new_students} description={L.ana_new_students_desc}>
               {a.newStudentTrend.some((m) => m.count > 0) ? (
                 <CountBarChart data={a.newStudentTrend} />
-              ) : <EmptyState message="No sign-ups in the last 6 months." />}
+              ) : <EmptyState message={L.ana_no_signups} />}
             </Section>
           </div>
-          <Section title="Class occupancy" description="Enrolled vs capacity" flush>
+          <Section title={L.ana_occupancy} description={L.ana_occupancy_desc} flush>
             {a.classOccupancy.length ? (
               <Table>
-                <thead><tr><Th>Class</Th><Th className="text-right">Filled</Th><Th className="text-right">Occupancy</Th></tr></thead>
+                <thead><tr><Th>{L.class_word}</Th><Th className="text-right">{L.ana_filled}</Th><Th className="text-right">{L.ana_occupancy_col}</Th></tr></thead>
                 <tbody>
                   {a.classOccupancy.map((c) => (
                     <tr key={c.name} className="hover:bg-slate-50">
@@ -200,34 +202,34 @@ export default async function AnalyticsPage({
                   ))}
                 </tbody>
               </Table>
-            ) : <div className="p-5"><EmptyState message="Set a capacity on classes to track occupancy." /></div>}
+            ) : <div className="p-5"><EmptyState message={L.ana_set_capacity} /></div>}
           </Section>
         </div>
       </Collapsible>
 
       {/* ── Coaching & progress ───────────────────────────────────────────── */}
-      <Collapsible title="Coaching & progress" defaultOpen={false}>
+      <Collapsible title={L.ana_coaching} defaultOpen={false}>
         <div className="space-y-6 p-5">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-2">
             <StatCard
-              label="Avg exam score"
+              label={L.ana_avg_exam}
               value={a.avgScore != null ? `${a.avgScore}/100` : "—"}
               sub={a.avgScore != null
-                ? `${a.assessmentCount} exam${a.assessmentCount === 1 ? "" : "s"} this year${a.skillImprovement != null ? ` · ${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} vs last yr` : ""}`
-                : "no exams this year"}
+                ? `${L.ana_exams_year.replace("{n}", String(a.assessmentCount))}${a.skillImprovement != null ? ` · ${a.skillImprovement >= 0 ? "+" : ""}${a.skillImprovement} ${L.ana_vs_last}` : ""}`
+                : L.ana_no_exams_year}
               tone={a.skillImprovement != null ? (a.skillImprovement >= 0 ? "green" : "red") : "slate"}
             />
-            <StatCard label="Active classes" value={a.counts.classes} />
+            <StatCard label={L.ana_active_classes} value={a.counts.classes} />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
-            <Section title="Exam sections" description="Average % per section, this year">
+            <Section title={L.ana_exam_sections} description={L.ana_exam_sections_desc}>
               {a.skillsBreakdown.length ? (
                 <SkillBarChart data={a.skillsBreakdown} />
-              ) : <EmptyState message="No exams scored this year." />}
+              ) : <EmptyState message={L.ana_no_exams_scored} />}
             </Section>
-            <Section title="Students by level" flush>
+            <Section title={L.ex_by_level} flush>
               <Table>
-                <thead><tr><Th>Level</Th><Th className="text-right">Students</Th><Th className="text-right">Share</Th></tr></thead>
+                <thead><tr><Th>{L.level_word}</Th><Th className="text-right">{L.cls_students}</Th><Th className="text-right">{L.ana_share}</Th></tr></thead>
                 <tbody>
                   {LEVEL_NAMES.map((r) => {
                     const n = a.rankDistribution[r] ?? 0;
@@ -243,10 +245,10 @@ export default async function AnalyticsPage({
               </Table>
             </Section>
           </div>
-          <Section title="Coach performance" description="Students · attendance % (this month) · avg exam given (this year)" flush>
+          <Section title={L.ana_coach_perf} description={L.ana_coach_perf_desc} flush>
             {a.coachPerformance.length ? (
               <Table>
-                <thead><tr><Th>Coach</Th><Th className="text-right">Students</Th><Th className="text-right">Attendance</Th><Th className="text-right">Avg exam given</Th></tr></thead>
+                <thead><tr><Th>{L.adm_coach}</Th><Th className="text-right">{L.cls_students}</Th><Th className="text-right">{L.ana_att_col}</Th><Th className="text-right">{L.ana_avg_exam_given}</Th></tr></thead>
                 <tbody>
                   {a.coachPerformance.map((c) => (
                     <tr key={c.name} className="hover:bg-slate-50">
@@ -260,7 +262,7 @@ export default async function AnalyticsPage({
                   ))}
                 </tbody>
               </Table>
-            ) : <div className="p-5"><EmptyState message="No coaches yet." /></div>}
+            ) : <div className="p-5"><EmptyState message={L.ana_no_coaches} /></div>}
           </Section>
         </div>
       </Collapsible>
