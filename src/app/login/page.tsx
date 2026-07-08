@@ -1,7 +1,7 @@
 import { Feather } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/env";
-import { Card, Field, Input } from "@/components/ui";
+import { Card, Field, Input, LinkButton } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { signIn } from "./actions";
 
@@ -54,6 +54,13 @@ export default async function LoginPage({
           <br />
           <span className="text-slate-400">Coaches &amp; admins: contact the academy to reset.</span>
         </p>
+
+        <div className="mt-6 border-t border-slate-200 pt-5 text-center">
+          <p className="mb-2 text-sm text-slate-600">New here? Try us first —</p>
+          <LinkButton href="/trial" variant="secondary" className="w-full">
+            Book a free trial →
+          </LinkButton>
+        </div>
       </Card>
     </main>
   );
