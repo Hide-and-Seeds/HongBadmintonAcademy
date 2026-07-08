@@ -9,7 +9,8 @@ import {
 } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
-import { dayName, formatDate, formatTime, DAY_NAMES } from "@/lib/format";
+import { formatDate, formatTime, DAY_NAMES } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { ClassForm } from "../class-form";
 import {
   updateClass, addSchedule, deleteSchedule, addCoaches, removeCoach,
@@ -29,6 +30,12 @@ export default async function ManageClassPage({
   const { id } = await params;
   const { error } = await searchParams;
   const me = await requireRole("admin");
+  const L = dict(me.locale);
+  const DAY_ZH = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const dn = (i: number) => (me.locale === "zh" ? DAY_ZH[i] ?? DAY_NAMES[i] : DAY_NAMES[i]);
+  const stLabel: Record<string, string> = {
+    scheduled: L.st_scheduled, completed: L.st_completed, canceled: L.canceled, in_progress: L.coach_in_progress,
+  };
   const supabase = await createClient();
   const branches = await listBranches();
   const today = new Date().toLocaleDateString("en-CA");
@@ -70,9 +77,9 @@ export default async function ManageClassPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Manage class"
+        title={L.cm_title}
         description={classRow.name}
-        action={<LinkButton href="/admin/classes" variant="ghost">← All classes</LinkButton>}
+        action={<LinkButton href="/admin/classes" variant="ghost">{L.cm_all}</LinkButton>}
       />
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
@@ -83,29 +90,30 @@ export default async function ManageClassPage({
         branches={branches}
         canChooseBranch={canChooseBranch(me)}
         defaultBranchId={me.branch_id}
+        locale={me.locale}
       />
 
       {/* Schedule */}
-      <Section title="Weekly schedule" flush>
+      <Section title={L.cm_schedule} flush>
         {schedules && schedules.length > 0 ? (
           <Table>
             <thead>
               <tr>
-                <Th>Day</Th><Th>Time</Th><Th>Location</Th><Th>Grace</Th><Th className="text-right">—</Th>
+                <Th>{L.cm_day}</Th><Th>{L.col_time}</Th><Th>{L.cm_location}</Th><Th>{L.cm_grace}</Th><Th className="text-right">—</Th>
               </tr>
             </thead>
             <tbody>
               {schedules.map((s: any) => (
                 <tr key={s.id} className="hover:bg-slate-50">
-                  <Td className="font-medium text-slate-900">{dayName(s.day_of_week)}</Td>
+                  <Td className="font-medium text-slate-900">{dn(s.day_of_week)}</Td>
                   <Td>{formatTime(s.start_time)}–{formatTime(s.end_time)}</Td>
                   <Td className="text-slate-500">{s.location ?? "—"}</Td>
-                  <Td className="text-slate-500">{s.grace_minutes} min</Td>
+                  <Td className="text-slate-500">{s.grace_minutes} {L.cm_min}</Td>
                   <Td className="text-right">
                     <form action={deleteSchedule}>
                       <input type="hidden" name="id" value={s.id} />
                       <input type="hidden" name="class_id" value={classRow.id} />
-                      <ConfirmButton label="Remove" confirmText="Remove this schedule?" />
+                      <ConfirmButton label={L.hol_remove} confirmText={L.cm_remove_sched} />
                     </form>
                   </Td>
                 </tr>
@@ -113,26 +121,26 @@ export default async function ManageClassPage({
             </tbody>
           </Table>
         ) : (
-          <div className="px-5 pt-5"><EmptyState message="No schedule slots yet." /></div>
+          <div className="px-5 pt-5"><EmptyState message={L.cm_no_schedule} /></div>
         )}
         <form action={addSchedule} className="grid items-end gap-4 border-t border-slate-100 p-5 sm:grid-cols-5">
           <input type="hidden" name="class_id" value={classRow.id} />
-          <Field label="Day">
+          <Field label={L.cm_day}>
             <Select name="day_of_week" defaultValue="1">
               {DAY_NAMES.map((d, i) => (
-                <option key={i} value={i}>{d}</option>
+                <option key={i} value={i}>{dn(i)}</option>
               ))}
             </Select>
           </Field>
-          <Field label="Start"><Input type="time" name="start_time" defaultValue="18:00" required /></Field>
-          <Field label="End"><Input type="time" name="end_time" defaultValue="19:30" required /></Field>
-          <Field label="Grace (min)"><Input type="number" name="grace_minutes" defaultValue={15} /></Field>
-          <Button type="submit">Add slot</Button>
+          <Field label={L.cm_start}><Input type="time" name="start_time" defaultValue="18:00" required /></Field>
+          <Field label={L.cm_end}><Input type="time" name="end_time" defaultValue="19:30" required /></Field>
+          <Field label={L.cm_grace_min}><Input type="number" name="grace_minutes" defaultValue={15} /></Field>
+          <Button type="submit">{L.cm_add_slot}</Button>
         </form>
       </Section>
 
       {/* Coaches */}
-      <Section title="Coaches">
+      <Section title={L.cm_coaches}>
         <div className="flex flex-wrap gap-2">
           {(assigned ?? []).map((a: any) => (
             <form key={a.coach_id} action={removeCoach}>
@@ -140,18 +148,18 @@ export default async function ManageClassPage({
               <input type="hidden" name="coach_id" value={a.coach_id} />
               <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
                 {a.profiles?.full_name ?? a.coach_id}
-                <button className="text-red-500 hover:text-red-700" title="Remove">✕</button>
+                <button className="text-red-500 hover:text-red-700" title={L.hol_remove}>✕</button>
               </span>
             </form>
           ))}
           {(assigned ?? []).length === 0 && (
-            <span className="text-sm text-slate-400">No coaches assigned.</span>
+            <span className="text-sm text-slate-400">{L.cm_no_coaches}</span>
           )}
         </div>
         {availableCoaches.length > 0 ? (
           <form action={addCoaches} className="mt-4 border-t border-slate-100 pt-4">
             <input type="hidden" name="class_id" value={classRow.id} />
-            <div className="mb-2 text-sm font-medium text-slate-700">Add coaches — tick any number</div>
+            <div className="mb-2 text-sm font-medium text-slate-700">{L.cm_add_coaches}</div>
             <div className="flex flex-wrap gap-2">
               {availableCoaches.map((c) => (
                 <label key={c.id} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
@@ -160,18 +168,18 @@ export default async function ManageClassPage({
                 </label>
               ))}
             </div>
-            <div className="mt-3"><Button type="submit">Add selected</Button></div>
+            <div className="mt-3"><Button type="submit">{L.cm_add_selected}</Button></div>
           </form>
         ) : (
-          <p className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-400">All coaches assigned.</p>
+          <p className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-400">{L.cm_all_coaches}</p>
         )}
       </Section>
 
       {/* Enrollment */}
-      <Section title="Enrolled students" flush>
+      <Section title={L.cm_enrolled} flush>
         {enrollments && enrollments.length > 0 ? (
           <Table>
-            <thead><tr><Th>Student</Th><Th className="text-right">—</Th></tr></thead>
+            <thead><tr><Th>{L.student_col}</Th><Th className="text-right">—</Th></tr></thead>
             <tbody>
               {enrollments.map((e: any) => (
                 <tr key={e.id} className="hover:bg-slate-50">
@@ -182,7 +190,7 @@ export default async function ManageClassPage({
                     <form action={unenrollStudent}>
                       <input type="hidden" name="id" value={e.id} />
                       <input type="hidden" name="class_id" value={classRow.id} />
-                      <ConfirmButton label="Unenroll" confirmText="Remove student from class?" />
+                      <ConfirmButton label={L.cm_unenroll} confirmText={L.cm_unenroll_confirm} />
                     </form>
                   </Td>
                 </tr>
@@ -190,13 +198,13 @@ export default async function ManageClassPage({
             </tbody>
           </Table>
         ) : (
-          <div className="px-5 pt-5"><EmptyState message="No students enrolled." /></div>
+          <div className="px-5 pt-5"><EmptyState message={L.cm_no_enrolled} /></div>
         )}
         {availableStudents.length > 0 ? (
           <form action={enrollStudents} className="border-t border-slate-100 p-5">
             <input type="hidden" name="class_id" value={classRow.id} />
             <div className="mb-2 text-sm font-medium text-slate-700">
-              Enroll students — tick any number ({availableStudents.length} available)
+              {L.cm_enroll_students.replace("{n}", String(availableStudents.length))}
             </div>
             <div className="flex max-h-56 flex-wrap gap-2 overflow-y-auto">
               {availableStudents.map((s) => (
@@ -206,22 +214,22 @@ export default async function ManageClassPage({
                 </label>
               ))}
             </div>
-            <div className="mt-3"><Button type="submit">Enroll selected</Button></div>
+            <div className="mt-3"><Button type="submit">{L.cm_enroll_selected}</Button></div>
           </form>
         ) : (
-          <p className="border-t border-slate-100 p-5 text-sm text-slate-400">All active students enrolled.</p>
+          <p className="border-t border-slate-100 p-5 text-sm text-slate-400">{L.cm_all_enrolled}</p>
         )}
       </Section>
 
       {/* Sessions */}
-      <Section title="Upcoming sessions" flush>
+      <Section title={L.cm_upcoming} flush>
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-5">
           <div className="text-sm text-slate-600">
-            <span className="text-2xl font-bold text-slate-900">{sessionCount ?? 0}</span> total scheduled.
+            <span className="text-2xl font-bold text-slate-900">{sessionCount ?? 0}</span> {L.cm_total_scheduled}
           </div>
           <form action={generateSessions}>
             <input type="hidden" name="class_id" value={classRow.id} />
-            <Button type="submit" variant="secondary">Generate next 4 weeks</Button>
+            <Button type="submit" variant="secondary">{L.cm_gen_4w}</Button>
           </form>
         </div>
         {upcoming && upcoming.length > 0 ? (
@@ -230,7 +238,7 @@ export default async function ManageClassPage({
             <thead>
               <tr>
                 <Th className="w-10"><BulkSelectAll /></Th>
-                <Th>Date</Th><Th>Time</Th><Th>Location</Th><Th>Status</Th><Th className="text-right">Actions</Th>
+                <Th>{L.col_date}</Th><Th>{L.col_time}</Th><Th>{L.cm_location}</Th><Th>{L.col_status}</Th><Th className="text-right">{L.col_actions}</Th>
               </tr>
             </thead>
             <tbody>
@@ -242,7 +250,7 @@ export default async function ManageClassPage({
                   <Td className="text-slate-500">{s.location ?? "—"}</Td>
                   <Td>
                     <Badge tone={s.status === "canceled" ? "red" : s.status === "completed" ? "green" : "blue"}>
-                      {s.status}
+                      {stLabel[s.status] ?? s.status}
                     </Badge>
                   </Td>
                   <Td className="text-right">
@@ -251,19 +259,19 @@ export default async function ManageClassPage({
                         <form action={restoreSession}>
                           <input type="hidden" name="id" value={s.id} />
                           <input type="hidden" name="class_id" value={classRow.id} />
-                          <Button type="submit" variant="secondary">Restore</Button>
+                          <Button type="submit" variant="secondary">{L.cm_restore}</Button>
                         </form>
                       ) : (
                         <form action={cancelSession}>
                           <input type="hidden" name="id" value={s.id} />
                           <input type="hidden" name="class_id" value={classRow.id} />
-                          <Button type="submit" variant="secondary">Cancel</Button>
+                          <Button type="submit" variant="secondary">{L.inv_cancel_label}</Button>
                         </form>
                       )}
                       <form action={deleteSession}>
                         <input type="hidden" name="id" value={s.id} />
                         <input type="hidden" name="class_id" value={classRow.id} />
-                        <ConfirmButton label="Delete" confirmText="Delete this session?" />
+                        <ConfirmButton label={L.del_word} confirmText={L.cm_del_session} />
                       </form>
                     </div>
                   </Td>
@@ -274,15 +282,15 @@ export default async function ManageClassPage({
           <div className="px-5 pb-5">
             <BulkBar
               action={deleteSessions}
-              label="session"
+              label={L.cm_session_word}
               hidden={[{ name: "class_id", value: classRow.id }]}
-              confirmText="Delete {n} selected session(s)?"
+              confirmText={L.cm_bulk_del_sessions}
             />
           </div>
           </BulkProvider>
         ) : (
           <div className="px-5 pt-5">
-            <EmptyState message="No upcoming sessions. Add a schedule slot, then Generate." />
+            <EmptyState message={L.cm_no_upcoming} />
           </div>
         )}
       </Section>
