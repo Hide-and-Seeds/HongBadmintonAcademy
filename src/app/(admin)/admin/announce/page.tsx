@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { AnnounceComposer } from "@/components/announce-composer";
 import { getCommunityIntro } from "@/lib/settings";
 import { getProfile } from "@/lib/auth";
+import { dict } from "@/lib/i18n";
 import { logAnnouncement, postCommunityMessage, saveCommunityIntro, inviteParentsToCommunity } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default async function AnnouncePage({
   const { posted, error, intro: introSaved, invited, parents } = await searchParams;
   const botReady = !!env.waCommunityGroupId;
   const me = await getProfile();
+  const L = dict(me?.locale);
   const isSuper = me?.role === "super_admin";
   const intro = await getCommunityIntro();
   const supabase = await createClient();
@@ -31,55 +33,55 @@ export default async function AnnouncePage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Announcements"
-        description="Blast one message to the whole parent WhatsApp Community at once — sent immediately. Great for holiday greetings, schedule changes, reminders."
+        title={L.an_title}
+        description={L.an_desc}
       />
 
       {posted === "1" && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-          ✅ Sent to the whole parent Community now.
+          {L.an_sent_now}
         </div>
       )}
       {posted === "queued" && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Worker offline — your message is queued and will post to the Community the moment the worker reconnects.
+          {L.an_queued}
         </div>
       )}
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
       )}
       {introSaved === "saved" && (
-        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">Monthly note saved.</div>
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">{L.an_note_saved}</div>
       )}
       {introSaved === "cleared" && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">Monthly note cleared.</div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">{L.an_note_cleared}</div>
       )}
       {invited !== undefined && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-          ✅ Invite sent — pushed to {invited} of {parents ?? "?"} parents. The rest have push off; they&apos;ll see it in the app.
+          {L.an_invited.replace("{n}", invited).replace("{total}", parents ?? "?")}
         </div>
       )}
 
       {/* Super-admin only: push all parents an invite to the WhatsApp group. */}
       {isSuper && env.waCommunityLink && (
         <Section
-          title="Invite parents to the WhatsApp group"
-          description="Sends a one-tap push to every parent — it lands on their phone (even if they never open the app) and the tap opens the WhatsApp group invite. Zero ban risk (push, not a WhatsApp DM)."
+          title={L.an_invite_title}
+          description={L.an_invite_desc}
         >
           <form>
             <button type="submit" formAction={inviteParentsToCommunity} className={buttonClass("primary")}>
-              📢 Push invite to all parents
+              📢 {L.an_push_invite}
             </button>
             <p className="mt-2 text-xs text-slate-500">
-              Send <b>sparingly</b> — we can&apos;t tell who already joined, so this goes to every parent each time. Once is usually enough; re-send only when you have a batch of new families.
+              {L.an_invite_note}
             </p>
           </form>
         </Section>
       )}
       {isSuper && !env.waCommunityLink && (
-        <Section title="Invite parents to the WhatsApp group">
+        <Section title={L.an_invite_title}>
           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            Set <code>WA_COMMUNITY_LINK</code> in Vercel (your <code>chat.whatsapp.com/…</code> invite) to enable the one-tap parent invite.
+            {L.an_wa_link_hint}
           </p>
         </Section>
       )}
@@ -91,59 +93,58 @@ export default async function AnnouncePage({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:underline"
         >
-          🖨️ Print WhatsApp-group QR poster (for the front desk) →
+          🖨️ {L.an_print_poster}
         </a>
       )}
 
       {botReady ? (
         <Section
-          title="Message the parent Community"
-          description="One WhatsApp message to all parents. No private info (fees, scores, a child's name)."
+          title={L.an_msg_community}
+          description={L.an_msg_desc}
         >
           <form className="space-y-3">
-            <Textarea name="text" rows={4} placeholder="Type a message…" />
+            <Textarea name="text" rows={4} placeholder={L.an_type_msg} />
             <div className="flex flex-wrap items-center gap-2">
-              <button type="submit" formAction={postCommunityMessage} className={buttonClass("primary")}>Send now</button>
-              <button type="submit" formAction={saveCommunityIntro} className={buttonClass("secondary")}>Save as monthly note</button>
+              <button type="submit" formAction={postCommunityMessage} className={buttonClass("primary")}>{L.an_send_now}</button>
+              <button type="submit" formAction={saveCommunityIntro} className={buttonClass("secondary")}>{L.an_save_note}</button>
             </div>
             <p className="text-xs text-slate-500">
-              <b>Send now</b> — posts immediately to everyone. <b>Save as monthly note</b> — added automatically to next
-              month&apos;s Growth-Reports &amp; fees post (not sent now); save with the box empty to clear it.
+              {L.an_send_note}
             </p>
           </form>
           <div className="mt-4 border-t border-slate-100 pt-3 text-sm">
             {intro ? (
-              <span className="text-slate-600">📌 Monthly note: <span className="text-slate-900">&ldquo;{intro}&rdquo;</span></span>
+              <span className="text-slate-600">📌 {L.an_monthly_note}<span className="text-slate-900">&ldquo;{intro}&rdquo;</span></span>
             ) : (
-              <span className="text-slate-400">No monthly note set — the auto post sends the summary only.</span>
+              <span className="text-slate-400">{L.an_no_note}</span>
             )}
           </div>
         </Section>
       ) : (
-        <Section title="Message the parent Community">
+        <Section title={L.an_msg_community}>
           <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            Auto-posting isn&apos;t configured (set <code>WA_COMMUNITY_GROUP_ID</code>). Until then, post by hand:
+            {L.an_autopost_hint}
           </p>
           <AnnounceComposer action={logAnnouncement} communityLink={env.waCommunityLink || null} />
         </Section>
       )}
 
-      <Section title={`Recent announcements (${history?.length ?? 0})`} flush>
+      <Section title={`${L.an_recent} (${history?.length ?? 0})`} flush>
         {history && history.length > 0 ? (
           <Table>
             <thead>
               <tr>
-                <Th>When</Th>
-                <Th>Message</Th>
-                <Th>Status</Th>
+                <Th>{L.an_when}</Th>
+                <Th>{L.an_message}</Th>
+                <Th>{L.col_status}</Th>
               </tr>
             </thead>
             <tbody>
               {history.map((m: any) => (
                 <tr key={m.id} className="hover:bg-slate-50">
                   <Td className="whitespace-nowrap text-slate-500">{formatDateTime(m.created_at)}</Td>
-                  <Td label="Message" className="max-w-lg whitespace-pre-wrap text-slate-700">{m.body}</Td>
-                  <Td label="Status">
+                  <Td label={L.an_message} className="max-w-lg whitespace-pre-wrap text-slate-700">{m.body}</Td>
+                  <Td label={L.col_status}>
                     <Badge tone="green">{m.status}</Badge>
                   </Td>
                 </tr>
@@ -152,7 +153,7 @@ export default async function AnnouncePage({
           </Table>
         ) : (
           <div className="p-5">
-            <EmptyState message="No announcements logged yet." />
+            <EmptyState message={L.an_empty} />
           </div>
         )}
       </Section>

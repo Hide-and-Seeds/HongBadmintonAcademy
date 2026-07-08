@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 import { PageHeader, Section, LinkButton, Table, Th, Td, Badge, EmptyState, cn } from "@/components/ui";
 import { rankBadgeClass } from "@/lib/ranks";
+import { dict } from "@/lib/i18n";
 import { ConfirmButton } from "@/components/confirm-button";
 import { SubmitButton } from "@/components/submit-button";
 import { formatCurrency } from "@/lib/format";
@@ -16,6 +18,8 @@ export default async function FeePlansPage({
   searchParams: Promise<{ synced?: string; error?: string }>;
 }) {
   const { synced, error } = await searchParams;
+  const me = await requireRole("admin");
+  const L = dict(me.locale);
   const supabase = await createClient();
   const { data: plans } = await supabase.from("fee_plans").select("*").order("name");
 
@@ -26,14 +30,14 @@ export default async function FeePlansPage({
   return (
     <div>
       <PageHeader
-        title="Fee Plans"
-        description="Reusable fee templates used to raise invoices."
+        title={L.fp_title}
+        description={L.fp_desc}
         action={
           <>
             <form action={syncFeePlansToStripe}>
-              <SubmitButton variant="secondary" pendingText="Syncing…">Sync to Stripe</SubmitButton>
+              <SubmitButton variant="secondary" pendingText={L.fp_syncing}>{L.fp_sync}</SubmitButton>
             </form>
-            <LinkButton href="/admin/fee-plans/new">+ New plan</LinkButton>
+            <LinkButton href="/admin/fee-plans/new">{L.fp_new}</LinkButton>
           </>
         }
       />
@@ -42,19 +46,19 @@ export default async function FeePlansPage({
       <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
         <span className="font-medium text-slate-700">Stripe</span>
         {configured ? (
-          <Badge tone={mode === "live" ? "green" : "blue"}>{mode === "live" ? "live" : "test"} mode</Badge>
+          <Badge tone={mode === "live" ? "green" : "blue"}>{mode === "live" ? L.fp_live_mode : L.fp_test_mode}</Badge>
         ) : (
-          <Badge tone="yellow">not configured</Badge>
+          <Badge tone="yellow">{L.fp_not_configured}</Badge>
         )}
-        <Badge tone={webhookSet ? "green" : "slate"}>{webhookSet ? "webhook set" : "no webhook secret"}</Badge>
+        <Badge tone={webhookSet ? "green" : "slate"}>{webhookSet ? L.fp_webhook_set : L.fp_no_webhook}</Badge>
         {!configured && (
-          <span className="text-slate-500">Add STRIPE_SECRET_KEY to enable online payments — see STRIPE.md.</span>
+          <span className="text-slate-500">{L.fp_stripe_hint}</span>
         )}
       </div>
 
       {synced && (
         <p className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          Synced {synced} fee plan(s) to Stripe.
+          {L.fp_synced.replace("{n}", synced)}
         </p>
       )}
       {error && (
@@ -62,44 +66,44 @@ export default async function FeePlansPage({
       )}
 
       {plans && plans.length > 0 ? (
-        <Section title={`Plans (${plans.length})`} flush>
+        <Section title={`${L.fp_section} (${plans.length})`} flush>
           <Table>
             <thead>
               <tr>
-                <Th>Name</Th>
-                <Th>Rank</Th>
-                <Th>Amount</Th>
-                <Th>Billing</Th>
-                <Th>Stripe</Th>
-                <Th className="text-right">Actions</Th>
+                <Th>{L.col_name}</Th>
+                <Th>{L.fp_rank}</Th>
+                <Th>{L.fp_amount}</Th>
+                <Th>{L.fp_billing}</Th>
+                <Th>{L.fp_stripe_col}</Th>
+                <Th className="text-right">{L.col_actions}</Th>
               </tr>
             </thead>
             <tbody>
               {plans.map((p: any) => (
                 <tr key={p.id} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{p.name}</Td>
-                  <Td label="Rank">
+                  <Td label={L.fp_rank}>
                     {p.rank ? (
                       <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", rankBadgeClass(p.rank))}>{p.rank}</span>
                     ) : (
                       <span className="text-slate-400">—</span>
                     )}
                   </Td>
-                  <Td label="Amount" className="font-medium text-slate-900">{formatCurrency(Number(p.amount), p.currency)}</Td>
-                  <Td label="Billing">
-                    <Badge tone="blue">{p.interval === "one_time" ? "one-time" : p.interval}</Badge>
+                  <Td label={L.fp_amount} className="font-medium text-slate-900">{formatCurrency(Number(p.amount), p.currency)}</Td>
+                  <Td label={L.fp_billing}>
+                    <Badge tone="blue">{p.interval === "one_time" ? L.fp_one_time : p.interval === "monthly" ? L.fp_monthly : p.interval}</Badge>
                   </Td>
-                  <Td label="Stripe">
-                    {p.stripe_price_id ? <Badge tone="green">synced</Badge> : <Badge tone="slate">—</Badge>}
+                  <Td label={L.fp_stripe_col}>
+                    {p.stripe_price_id ? <Badge tone="green">{L.fp_synced_badge}</Badge> : <Badge tone="slate">—</Badge>}
                   </Td>
-                  <Td label="Actions" className="text-right">
+                  <Td label={L.col_actions} className="text-right">
                     <div className="flex justify-end gap-2">
                       <LinkButton href={`/admin/fee-plans/${p.id}`} variant="secondary">
-                        Edit
+                        {L.edit_btn}
                       </LinkButton>
                       <form action={deleteFeePlan}>
                         <input type="hidden" name="id" value={p.id} />
-                        <ConfirmButton confirmText={`Delete plan "${p.name}"?`} />
+                        <ConfirmButton confirmText={L.fp_delete_confirm.replace("{name}", p.name)} />
                       </form>
                     </div>
                   </Td>
@@ -109,7 +113,7 @@ export default async function FeePlansPage({
           </Table>
         </Section>
       ) : (
-        <EmptyState message="No fee plans yet." />
+        <EmptyState message={L.fp_empty} />
       )}
     </div>
   );

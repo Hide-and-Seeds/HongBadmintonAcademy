@@ -7,6 +7,7 @@ import { PageHeader, StatCard, Section, Table, Th, Td, EmptyState, Input, Select
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { dict } from "@/lib/i18n";
 import { createCourt, deleteCourt, logRental, deleteRental } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export default async function CourtRentalsPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   const me = await requireSuperAdmin();
+  const L = dict(me.locale);
   const supabase = await createClient();
   const bf = await getViewBranchId(me);
 
@@ -73,124 +75,124 @@ export default async function CourtRentalsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Court Rentals"
-        description="What the academy pays to rent courts, per court, per month — for cost analysis."
+        title={L.cr_title}
+        description={L.cr_desc}
         action={<LinkButton href={`/api/court-rentals/csv?month=${monthStr}`} target="_blank" rel="noopener" variant="secondary">CSV</LinkButton>}
       />
 
       {/* Month control */}
       <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-        <Link href={`/admin/court-rentals?month=${prevM}`} aria-label="Previous month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+        <Link href={`/admin/court-rentals?month=${prevM}`} aria-label={L.cs_prev_month} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <div className="text-center">
           <div className="text-sm font-semibold text-slate-900">{monthLabelStr}</div>
           {monthStr !== thisM && (
-            <Link href={`/admin/court-rentals?month=${thisM}`} className="text-xs font-medium text-green-700 hover:underline">Jump to this month</Link>
+            <Link href={`/admin/court-rentals?month=${thisM}`} className="text-xs font-medium text-green-700 hover:underline">{L.cr_jump_this}</Link>
           )}
         </div>
-        <Link href={`/admin/court-rentals?month=${nextM}`} aria-label="Next month" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+        <Link href={`/admin/court-rentals?month=${nextM}`} aria-label={L.cs_next_month} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
           <ChevronRight className="h-5 w-5" />
         </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard label="Rental cost this month" value={formatCurrency(totalAmount, currency)} tone="red" />
-        <StatCard label="Total hours" value={totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)} tone="slate" />
-        <StatCard label="Courts" value={courtList.length} tone="blue" />
+        <StatCard label={L.cr_cost_month} value={formatCurrency(totalAmount, currency)} tone="red" />
+        <StatCard label={L.cr_total_hours} value={totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)} tone="slate" />
+        <StatCard label={L.cr_courts} value={courtList.length} tone="blue" />
       </div>
 
       {/* Per-court report */}
-      <Section title={`Cost by court — ${monthLabelStr}`} flush>
+      <Section title={`${L.cr_cost_by_court} — ${monthLabelStr}`} flush>
         {rows.length ? (
           <Table>
             <thead>
-              <tr><Th>Court</Th><Th className="text-right">Rentals</Th><Th className="text-right">Hours</Th><Th className="text-right">Cost</Th></tr>
+              <tr><Th>{L.cr_court}</Th><Th className="text-right">{L.cr_rentals}</Th><Th className="text-right">{L.cr_hours}</Th><Th className="text-right">{L.cr_cost}</Th></tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.name} className="hover:bg-slate-50">
                   <Td className="font-medium text-slate-900">{r.name}</Td>
-                  <Td label="Rentals" className="text-right tabular-nums text-slate-500">{r.count}</Td>
-                  <Td label="Hours" className="text-right tabular-nums text-slate-500">{r.hours % 1 === 0 ? r.hours : r.hours.toFixed(1)}</Td>
-                  <Td label="Cost" className="text-right font-semibold tabular-nums text-slate-900">{formatCurrency(r.amount, currency)}</Td>
+                  <Td label={L.cr_rentals} className="text-right tabular-nums text-slate-500">{r.count}</Td>
+                  <Td label={L.cr_hours} className="text-right tabular-nums text-slate-500">{r.hours % 1 === 0 ? r.hours : r.hours.toFixed(1)}</Td>
+                  <Td label={L.cr_cost} className="text-right font-semibold tabular-nums text-slate-900">{formatCurrency(r.amount, currency)}</Td>
                 </tr>
               ))}
               <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-                <Td className="text-slate-900">Total</Td>
-                <Td label="Rentals" className="text-right tabular-nums text-slate-500">{rentalList.length}</Td>
-                <Td label="Hours" className="text-right tabular-nums text-slate-500">{totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}</Td>
-                <Td label="Cost" className="text-right tabular-nums text-slate-900">{formatCurrency(totalAmount, currency)}</Td>
+                <Td className="text-slate-900">{L.total_word}</Td>
+                <Td label={L.cr_rentals} className="text-right tabular-nums text-slate-500">{rentalList.length}</Td>
+                <Td label={L.cr_hours} className="text-right tabular-nums text-slate-500">{totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}</Td>
+                <Td label={L.cr_cost} className="text-right tabular-nums text-slate-900">{formatCurrency(totalAmount, currency)}</Td>
               </tr>
             </tbody>
           </Table>
         ) : (
-          <div className="p-5"><EmptyState message="No court rentals logged for this month yet." /></div>
+          <div className="p-5"><EmptyState message={L.cr_empty_month} /></div>
         )}
       </Section>
 
       {/* Log a rental */}
-      <Section title="Log a court rental">
+      <Section title={L.cr_log_title}>
         {courtList.length ? (
           <form action={logRental} className="flex flex-wrap items-end gap-3">
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-slate-500">Court</span>
+              <span className="text-xs font-medium text-slate-500">{L.cr_court}</span>
               <Select name="court_id" defaultValue="" className="h-9 w-48" required>
-                <option value="" disabled>Select court…</option>
+                <option value="" disabled>{L.cr_select_court}</option>
                 {courtList.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}{c.hourly_rate ? ` (${formatCurrency(Number(c.hourly_rate), c.currency)}/h)` : ""}</option>
                 ))}
               </Select>
             </label>
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-slate-500">Date</span>
+              <span className="text-xs font-medium text-slate-500">{L.col_date}</span>
               <Input type="date" name="rental_date" defaultValue={todayMYT()} className="h-9 w-40" required />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-slate-500">Hours</span>
+              <span className="text-xs font-medium text-slate-500">{L.cr_hours}</span>
               <Input type="number" name="hours" step="0.5" min="0" placeholder="2" className="h-9 w-24" />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-slate-500">Amount</span>
+              <span className="text-xs font-medium text-slate-500">{L.cr_amount}</span>
               <Input type="number" name="amount" step="0.01" min="0" placeholder="0.00" className="h-9 w-28" required />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-slate-500">Arm</span>
+              <span className="text-xs font-medium text-slate-500">{L.cr_arm}</span>
               <Select name="business" defaultValue="academy" className="h-9 w-28">
-                <option value="academy">Academy</option>
-                <option value="club">Club</option>
+                <option value="academy">{L.cr_academy}</option>
+                <option value="club">{L.cr_club}</option>
               </Select>
             </label>
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-slate-500">Note</span>
-              <Input name="note" placeholder="optional" maxLength={200} className="h-9 w-40" />
+              <span className="text-xs font-medium text-slate-500">{L.cr_note}</span>
+              <Input name="note" placeholder={L.cr_optional} maxLength={200} className="h-9 w-40" />
             </label>
-            <SubmitButton pendingText="Saving…">Add rental</SubmitButton>
+            <SubmitButton pendingText={L.cr_saving}>{L.cr_add_rental}</SubmitButton>
           </form>
         ) : (
-          <p className="text-sm text-slate-500">Add a court first to start logging rentals.</p>
+          <p className="text-sm text-slate-500">{L.cr_add_court_first}</p>
         )}
       </Section>
 
       {/* Recent rentals (this month) */}
       {rentalList.length > 0 && (
-        <Section title="Rentals this month" flush>
+        <Section title={L.cr_rentals_month} flush>
           <Table>
             <thead>
-              <tr><Th>Date</Th><Th>Court</Th><Th className="text-right">Hours</Th><Th className="text-right">Amount</Th><Th>Note</Th><Th className="text-right">·</Th></tr>
+              <tr><Th>{L.col_date}</Th><Th>{L.cr_court}</Th><Th className="text-right">{L.cr_hours}</Th><Th className="text-right">{L.cr_amount}</Th><Th>{L.cr_note}</Th><Th className="text-right">·</Th></tr>
             </thead>
             <tbody>
               {rentalList.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50">
                   <Td className="text-slate-500">{formatDate(r.rental_date)}</Td>
-                  <Td label="Court" className="font-medium text-slate-900">{r.courts?.name ?? "—"}</Td>
-                  <Td label="Hours" className="text-right tabular-nums text-slate-500">{Number(r.hours) % 1 === 0 ? Number(r.hours) : Number(r.hours).toFixed(1)}</Td>
-                  <Td label="Amount" className="text-right tabular-nums text-slate-900">{formatCurrency(Number(r.amount), currency)}</Td>
-                  <Td label="Note" className="text-slate-500">{r.note ?? ""}</Td>
-                  <Td label="Actions" className="text-right">
+                  <Td label={L.cr_court} className="font-medium text-slate-900">{r.courts?.name ?? "—"}</Td>
+                  <Td label={L.cr_hours} className="text-right tabular-nums text-slate-500">{Number(r.hours) % 1 === 0 ? Number(r.hours) : Number(r.hours).toFixed(1)}</Td>
+                  <Td label={L.cr_amount} className="text-right tabular-nums text-slate-900">{formatCurrency(Number(r.amount), currency)}</Td>
+                  <Td label={L.cr_note} className="text-slate-500">{r.note ?? ""}</Td>
+                  <Td label={L.col_actions} className="text-right">
                     <form action={deleteRental}>
                       <input type="hidden" name="id" value={r.id} />
-                      <ConfirmButton confirmText="Delete this rental entry?" />
+                      <ConfirmButton confirmText={L.cr_del_rental} />
                     </form>
                   </Td>
                 </tr>
@@ -201,26 +203,26 @@ export default async function CourtRentalsPage({
       )}
 
       {/* Manage courts */}
-      <Section title="Courts">
+      <Section title={L.cr_courts_section}>
         <form action={createCourt} className="flex flex-wrap items-end gap-3 border-b border-slate-100 pb-4">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-500">Court name</span>
+            <span className="text-xs font-medium text-slate-500">{L.cr_court_name}</span>
             <Input name="name" placeholder="Court 1" maxLength={80} className="h-9 w-40" required />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-500">Branch</span>
+            <span className="text-xs font-medium text-slate-500">{L.branch}</span>
             <Select name="branch_id" defaultValue="" className="h-9 w-44">
-              <option value="">— shared / none —</option>
+              <option value="">{L.cr_shared_none}</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </Select>
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-500">Rate / hour</span>
+            <span className="text-xs font-medium text-slate-500">{L.cr_rate_hour}</span>
             <Input type="number" name="hourly_rate" step="0.01" min="0" placeholder="0.00" className="h-9 w-28" />
           </label>
-          <SubmitButton variant="secondary" pendingText="Adding…">Add court</SubmitButton>
+          <SubmitButton variant="secondary" pendingText={L.cr_adding}>{L.cr_add_court}</SubmitButton>
         </form>
 
         {courtList.length ? (
@@ -228,17 +230,17 @@ export default async function CourtRentalsPage({
             {courtList.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-3 py-3">
                 <span className="font-medium text-slate-900">{c.name}</span>
-                {c.branch_id && <span className="text-xs text-slate-400">{branchName.get(c.branch_id) ?? "branch"}</span>}
-                <span className="text-sm text-slate-500">{c.hourly_rate ? `${formatCurrency(Number(c.hourly_rate), c.currency)}/h` : "no rate"}</span>
+                {c.branch_id && <span className="text-xs text-slate-400">{branchName.get(c.branch_id) ?? L.cr_branch_word}</span>}
+                <span className="text-sm text-slate-500">{c.hourly_rate ? `${formatCurrency(Number(c.hourly_rate), c.currency)}/h` : L.cr_no_rate}</span>
                 <form action={deleteCourt} className="ml-auto">
                   <input type="hidden" name="id" value={c.id} />
-                  <ConfirmButton confirmText="Delete this court and all its rental entries?" />
+                  <ConfirmButton confirmText={L.cr_del_court} />
                 </form>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="pt-4 text-sm text-slate-500">No courts yet — add one above.</p>
+          <p className="pt-4 text-sm text-slate-500">{L.cr_no_courts}</p>
         )}
       </Section>
     </div>
