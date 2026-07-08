@@ -25,6 +25,12 @@ const clean = (v: FormDataEntryValue | null) => {
   return s ? s : null;
 };
 
+const COLOR_KEYS = new Set(["emerald", "blue", "amber", "rose", "violet", "cyan", "orange", "teal", "slate"]);
+const cleanColor = (v: FormDataEntryValue | null) => {
+  const s = String(v ?? "").trim();
+  return COLOR_KEYS.has(s) ? s : null;
+};
+
 export async function createBranch(formData: FormData) {
   await requireSuperAdmin();
   const name = clean(formData.get("name"));
@@ -35,6 +41,7 @@ export async function createBranch(formData: FormData) {
     code: clean(formData.get("code")),
     address: clean(formData.get("address")),
     phone: clean(formData.get("phone")),
+    color: cleanColor(formData.get("color")),
   });
   if (error) err(error.message);
   revalidatePath("/admin/branches");
@@ -54,6 +61,7 @@ export async function updateBranch(formData: FormData) {
       code: clean(formData.get("code")),
       address: clean(formData.get("address")),
       phone: clean(formData.get("phone")),
+      color: cleanColor(formData.get("color")),
     })
     .eq("id", id);
   if (error) err(error.message);

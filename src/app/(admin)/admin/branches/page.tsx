@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   PageHeader, Card, Section, Field, Input, Badge, EmptyState, cn,
 } from "@/components/ui";
+import { BranchDot, BranchColorPicker } from "@/components/branch-chip";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { dict } from "@/lib/i18n";
@@ -60,6 +61,11 @@ export default async function BranchesPage({
             <Field label={L.br_address}>
               <Input name="address" />
             </Field>
+            <div className="sm:col-span-2">
+              <Field label={L.br_color}>
+                <BranchColorPicker />
+              </Field>
+            </div>
           </div>
           <SubmitButton pendingText={L.cr_adding}>{L.br_add_btn}</SubmitButton>
         </form>
@@ -73,6 +79,7 @@ export default async function BranchesPage({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
+                      <BranchDot color={b.color} />
                       <span className="font-semibold text-slate-900">{b.name}</span>
                       {b.code && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">{b.code}</span>}
                       <Badge tone={b.is_active ? "green" : "slate"}>{b.is_active ? L.adm_active : L.adm_inactive}</Badge>
@@ -111,6 +118,11 @@ export default async function BranchesPage({
                     <Field label={L.br_address}>
                       <Input name="address" defaultValue={b.address ?? ""} />
                     </Field>
+                    <div className="sm:col-span-2">
+                      <Field label={L.br_color}>
+                        <BranchColorPicker value={b.color} />
+                      </Field>
+                    </div>
                     <div className="sm:col-span-2">
                       <SubmitButton pendingText={L.cr_saving}>{L.br_save_changes}</SubmitButton>
                     </div>

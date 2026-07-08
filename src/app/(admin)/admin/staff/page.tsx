@@ -2,6 +2,7 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { PageHeader, Section, Badge, EmptyState, LinkButton, Avatar } from "@/components/ui";
+import { BranchChip } from "@/components/branch-chip";
 import { ConfirmButton } from "@/components/confirm-button";
 import { ROLE_LABEL } from "@/lib/constants";
 import { dict, roleLabel } from "@/lib/i18n";
@@ -22,9 +23,9 @@ export default async function StaffPage() {
       .in("role", ["admin", "super_admin"])
       .order("role")
       .order("full_name"),
-    supabase.from("branches").select("id, name"),
+    supabase.from("branches").select("*"),
   ]);
-  const branchName = new Map((branches ?? []).map((b: any) => [b.id, b.name as string]));
+  const branchInfo = new Map((branches ?? []).map((b: any) => [b.id, { name: b.name as string, color: b.color as string | null }]));
 
   return (
     <div className="space-y-6">
@@ -46,9 +47,11 @@ export default async function StaffPage() {
                       <span className="font-medium text-slate-900">{a.full_name ?? "—"}</span>
                       <Badge tone={a.role === "super_admin" ? "green" : "blue"}>{roleLabel(me.locale, a.role, ROLE_LABEL[a.role] ?? a.role)}</Badge>
                     </div>
-                    <div className="truncate text-sm text-slate-500">
-                      {a.email ?? "—"}
-                      {a.role !== "super_admin" && ` · ${a.branch_id ? branchName.get(a.branch_id) ?? "—" : L.st_no_branch}`}
+                    <div className="flex items-center gap-2 truncate text-sm text-slate-500">
+                      <span className="truncate">{a.email ?? "—"}</span>
+                      {a.role !== "super_admin" && (a.branch_id
+                        ? <BranchChip name={branchInfo.get(a.branch_id)?.name} color={branchInfo.get(a.branch_id)?.color} />
+                        : <span className="shrink-0 text-slate-400">{L.st_no_branch}</span>)}
                     </div>
                   </div>
                 </div>

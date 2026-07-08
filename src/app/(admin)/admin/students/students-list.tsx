@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
 import { getViewBranchId, listBranches } from "@/lib/branch";
 import { Collapsible, LinkButton, Table, Th, Td, Badge, EmptyState, Avatar, cn } from "@/components/ui";
+import { BranchChip, BranchDot } from "@/components/branch-chip";
 import { ConfirmButton } from "@/components/confirm-button";
 import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components/bulk-select";
 import { Paginator } from "@/components/paginator";
@@ -54,8 +55,8 @@ export async function StudentsList({
   // Show which branch each student is in when a super-admin is viewing across
   // branches (a branch-admin only ever sees one branch, so the column is noise).
   const showBranch = me?.role === "super_admin";
-  const branchName = new Map<string, string>(
-    showBranch ? (await listBranches(false)).map((b) => [b.id, b.name]) : [],
+  const branchInfo = new Map<string, { name: string; color: string | null }>(
+    showBranch ? (await listBranches(false)).map((b) => [b.id, { name: b.name, color: b.color }]) : [],
   );
 
   const sortKey: SortKey = sort && SORT_COLUMN[sort] ? sort : "name";
@@ -115,7 +116,7 @@ export async function StudentsList({
                   <span className="block truncate font-medium text-slate-900">{s.full_name}{s.nickname ? <span className="font-normal text-slate-400"> · {s.nickname}</span> : null}</span>
                   <span className="block truncate text-xs text-slate-500">
                     {s.parent?.full_name ?? "No parent"} · {formatDate(s.dob)}
-                    {showBranch ? ` · ${branchName.get(s.branch_id) ?? "—"}` : ""}
+                    {showBranch && s.branch_id ? <> · <BranchDot color={branchInfo.get(s.branch_id)?.color} /> {branchInfo.get(s.branch_id)?.name ?? "—"}</> : null}
                   </span>
                 </span>
               </Link>
@@ -180,7 +181,7 @@ export async function StudentsList({
                   </Td>
                   <Td label="Level"><LevelPill level={levelOf(s)} /></Td>
                   <Td className="text-slate-500">{s.parent?.full_name ?? "—"}</Td>
-                  {showBranch && <Td className="text-slate-500">{branchName.get(s.branch_id) ?? "—"}</Td>}
+                  {showBranch && <Td label="Branch">{s.branch_id ? <BranchChip name={branchInfo.get(s.branch_id)?.name} color={branchInfo.get(s.branch_id)?.color} /> : <span className="text-slate-400">—</span>}</Td>}
                   <Td>{s.nfc_tag_uid ? <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{s.nfc_tag_uid}</code> : "—"}</Td>
                   <Td className="text-slate-500">{formatDate(s.dob)}</Td>
                   <Td>

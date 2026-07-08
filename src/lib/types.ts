@@ -33,6 +33,7 @@ export interface Branch {
   code: string | null;
   address: string | null;
   phone: string | null;
+  color: string | null;
   is_active: boolean;
   created_at: string;
 }

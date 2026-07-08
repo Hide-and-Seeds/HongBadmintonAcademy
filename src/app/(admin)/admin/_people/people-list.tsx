@@ -6,6 +6,8 @@ import { BulkProvider, BulkSelectAll, BulkCheckbox, BulkBar } from "@/components
 import { Paginator } from "@/components/paginator";
 import { PAGE_SIZE } from "@/lib/constants";
 import { SortHeader } from "@/components/sort-header";
+import { BranchChip } from "@/components/branch-chip";
+import { listBranches } from "@/lib/branch";
 import { formatDate } from "@/lib/format";
 import { levelBadgeClass } from "@/lib/training";
 import type { Role } from "@/lib/types";
@@ -83,6 +85,12 @@ export async function PeopleList({
       childrenByParent.set(k.parent_id, arr);
     }
   }
+  // Coaches carry a home branch — surface it so it's obvious where each is based.
+  const branchInfo = new Map<string, { name: string; color: string | null }>();
+  if (isCoach && people && people.length) {
+    for (const b of await listBranches(false)) branchInfo.set(b.id, { name: b.name, color: b.color });
+  }
+
   const title = isCoach ? "Coaches" : "Parents";
   const description = isCoach
     ? "Coaching staff accounts and login credentials."
@@ -111,6 +119,7 @@ export async function PeopleList({
               <tr>
                 <Th className="w-10"><BulkSelectAll /></Th>
                 <Th><SortHeader label="Name" sortKey="name" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
+                {isCoach && <Th>Branch</Th>}
                 {isParent && <Th>Children</Th>}
                 <Th><SortHeader label="Email" sortKey="email" current={sortKey} dir={ascending ? "asc" : "desc"} /></Th>
                 <Th>Phone</Th>
@@ -131,6 +140,11 @@ export async function PeopleList({
                       </Link>
                     </div>
                   </Td>
+                  {isCoach && (
+                    <Td label="Branch">
+                      {p.branch_id ? <BranchChip name={branchInfo.get(p.branch_id)?.name} color={branchInfo.get(p.branch_id)?.color} /> : <span className="text-slate-400">—</span>}
+                    </Td>
+                  )}
                   {isParent && (
                     <Td label="Children" className="text-slate-600">
                       {(() => {

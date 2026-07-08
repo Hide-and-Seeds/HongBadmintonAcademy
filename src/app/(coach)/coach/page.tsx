@@ -3,6 +3,8 @@ import { Clock, MapPin, UserCheck } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatCard, Section, EmptyState, Badge } from "@/components/ui";
+import { BranchChip } from "@/components/branch-chip";
+import { listBranches } from "@/lib/branch";
 import { formatTime } from "@/lib/format";
 import { dict } from "@/lib/i18n";
 import { coachClassIds } from "./_data";
@@ -14,6 +16,7 @@ export default async function CoachDashboard() {
   const L = dict(me.locale);
   const supabase = await createClient();
   const classIds = await coachClassIds(supabase, me.id);
+  const myBranch = me.branch_id ? (await listBranches(false)).find((b) => b.id === me.branch_id) ?? null : null;
   // Malaysia time (server runs UTC on Vercel) so "today" doesn't roll over early
   // and point the check-in CTA at the wrong day after ~4pm MYT.
   const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
@@ -71,7 +74,12 @@ export default async function CoachDashboard() {
     <div>
       <PageHeader
         title={`${L.coach_welcome}, ${me.full_name ?? "Coach"}`}
-        description={L.coach_dash_desc}
+        description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {L.coach_dash_desc}
+            {myBranch && <BranchChip name={myBranch.name} color={myBranch.color} />}
+          </span>
+        }
       />
 
       {current ? (

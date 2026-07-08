@@ -10,6 +10,7 @@ import { levelBadgeClass, nextExamWindow, DECISION_LABEL, bandFor, type Decision
 import { getLevelInfoMerged } from "@/lib/syllabus";
 import { dict } from "@/lib/i18n";
 import { ChildCoachPicker } from "./child-coach-picker";
+import { ChildNicknameEditor } from "./child-nickname-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function ChildDetailPage({
   // Service-role bypasses RLS; restrict to this parent's child explicitly.
   const { data: student } = await supabase
     .from("students")
-    .select("id, full_name, status, dob, parent_id, rank, level, branch_id, coach_id, created_at, photo_url, branches(name), fee_plans(name, amount, currency, interval)")
+    .select("id, full_name, nickname, status, dob, parent_id, rank, level, branch_id, coach_id, created_at, photo_url, branches(name), fee_plans(name, amount, currency, interval)")
     .eq("id", id)
     .eq("parent_id", me.id)
     .maybeSingle();
@@ -139,6 +140,7 @@ export default async function ChildDetailPage({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-lg font-bold text-slate-900">{student.full_name}</span>
+              {(student as any).nickname && <span className="text-sm font-medium text-slate-400">“{(student as any).nickname}”</span>}
               <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold", levelBadgeClass(level))}>
                 L{level} · {levelLabel}
               </span>
@@ -271,6 +273,12 @@ export default async function ChildDetailPage({
       )}
 
       {/* ── Assigned coach (parent-editable setting, kept at the bottom) ──── */}
+      <ChildNicknameEditor
+        studentId={student.id}
+        current={(student as any).nickname ?? null}
+        labels={{ title: L.nn_title, hint: L.nn_hint, placeholder: L.nn_placeholder, save: L.nn_save, saved: L.saved_tick }}
+      />
+
       <ChildCoachPicker
         studentId={student.id}
         coaches={branchCoaches ?? []}

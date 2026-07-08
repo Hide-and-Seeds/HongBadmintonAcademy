@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/auth";
 import { listBranches } from "@/lib/branch";
 import { PageHeader, Section, StatCard, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { BranchChip } from "@/components/branch-chip";
 import { formatCurrency } from "@/lib/format";
 import { dict } from "@/lib/i18n";
 import { PersonForm } from "../../_people/person-form";
@@ -29,6 +30,9 @@ export default async function EditCoachPage({
     supabase.from("class_coaches").select("classes(id, name, is_active)").eq("coach_id", id),
   ]);
   if (!person) notFound();
+
+  const branches = await listBranches(false);
+  const myBranch = branches.find((b) => b.id === (person as any).branch_id) ?? null;
 
   // Merge primary-coach + co-coach classes, unique by id.
   const classMap = new Map<string, { id: string; name: string; is_active: boolean }>();
@@ -67,7 +71,12 @@ export default async function EditCoachPage({
     <div className="space-y-6">
       <PageHeader
         title={L.cd_edit_title}
-        description={person.full_name ?? undefined}
+        description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {person.full_name ?? "—"}
+            {myBranch && <BranchChip name={myBranch.name} color={myBranch.color} />}
+          </span>
+        }
         action={<LinkButton href="/admin/coaches/summary" variant="ghost">{L.cd_pay_att}</LinkButton>}
       />
 
@@ -99,7 +108,7 @@ export default async function EditCoachPage({
         role="coach"
         person={person}
         action={updatePerson.bind(null, "coach")}
-        branches={await listBranches()}
+        branches={branches}
         showBranch
         allowEmailEdit
         error={error}
