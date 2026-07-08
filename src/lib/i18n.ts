@@ -1142,6 +1142,12 @@ const en = {
   asm_location: "Location (optional)",
   asm_add_session: "Add session",
   asm_no_classes: "No active classes yet — create a class first.",
+
+  // ── admin: session tile ──
+  st_status_prefix: "Status: ",
+  st_view_roster: "View roster & attendance →",
+  st_cancel_notify: "Cancel & notify parents",
+  st_cancel_note: "Cancelling queues a WhatsApp notice to enrolled students' parents.",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;
@@ -2265,6 +2271,12 @@ const zh: Dict = {
   asm_location: "地点（可选）",
   asm_add_session: "添加课程",
   asm_no_classes: "暂无开班班级 — 请先创建班级。",
+
+  // ── admin: session tile ──
+  st_status_prefix: "状态：",
+  st_view_roster: "查看名单与出勤 →",
+  st_cancel_notify: "取消并通知家长",
+  st_cancel_note: "取消会向已报名学员的家长排队发送 WhatsApp 通知。",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as Dict, zh };

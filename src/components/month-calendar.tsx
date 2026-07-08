@@ -130,7 +130,7 @@ export function MonthCalendar({
                     <div className="mb-1 truncate text-[9px] font-medium text-rose-600" title={holiday}>🎌 {holiday}</div>
                   )}
                   <div className="space-y-1">
-                    {list.map((s) => (interactive ? <SessionTile key={s.id} s={s} /> : <ReadonlyTile key={s.id} s={s} detailBase={detailBase} />))}
+                    {list.map((s) => (interactive ? <SessionTile key={s.id} s={s} locale={locale} /> : <ReadonlyTile key={s.id} s={s} detailBase={detailBase} />))}
                   </div>
                 </div>
               );
