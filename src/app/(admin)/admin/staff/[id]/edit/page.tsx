@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { listBranches } from "@/lib/branch";
 import { PageHeader, Section } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { dict } from "@/lib/i18n";
@@ -22,11 +21,9 @@ export default async function EditStaffPage({
   const { id } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
-  const [{ data: person }, branches] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
-    listBranches(),
-  ]);
-  if (!person || (person.role !== "admin" && person.role !== "super_admin" && person.role !== "coach")) notFound();
+  const { data: person } = await supabase.from("profiles").select("*").eq("id", id).maybeSingle();
+  // Staff page manages admins only. Coaches live under /admin/coaches.
+  if (!person || (person.role !== "admin" && person.role !== "super_admin")) notFound();
 
   return (
     <div>
@@ -38,10 +35,7 @@ export default async function EditStaffPage({
         roleOptions={[
           { value: "admin", label: L.pf_role_branch_admin },
           { value: "super_admin", label: L.pf_role_super },
-          { value: "coach", label: L.pf_coach },
         ]}
-        branches={branches}
-        showBranch
         allowEmailEdit
         cancelHref="/admin/staff"
         submitLabel={L.br_save_changes}
