@@ -58,21 +58,15 @@ export default async function TrialPage({
             <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_child_name}</span>
             <input name="child_name" required className={inputCls} />
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">{L.sf_dob} <span className="font-normal text-slate-400">{L.trp_optional}</span></span>
-              <input type="date" name="child_dob" className={inputCls} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_experience}</span>
-              <select name="experience" defaultValue="" className={inputCls}>
-                <option value="">{L.trp_exp_unsure}</option>
-                <option value="none">{L.exp_none}</option>
-                <option value="some">{L.exp_some}</option>
-                <option value="experienced">{L.exp_experienced}</option>
-              </select>
-            </label>
-          </div>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">{L.trp_experience}</span>
+            <select name="experience" defaultValue="" className={inputCls}>
+              <option value="">{L.trp_exp_unsure}</option>
+              <option value="none">{L.exp_none}</option>
+              <option value="some">{L.exp_some}</option>
+              <option value="experienced">{L.exp_experienced}</option>
+            </select>
+          </label>
         </div>
 
         {/* ── Parent / contact ── */}
