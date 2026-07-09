@@ -5,7 +5,7 @@ import { PageHeader, LinkButton, Card, Badge, Select, Button, Input, EmptyState,
 import { waLink } from "@/lib/wa";
 import { levelName } from "@/lib/training";
 import { dict } from "@/lib/i18n";
-import { updateLeadStatus, assignLead, addLeadNote, convertLead } from "./actions";
+import { updateLeadStatus, assignLead, addLeadNote, convertLead, cancelTrialBooking } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -174,17 +174,30 @@ export default async function LeadsPage({
                       </div>
                     )}
                     {l.preferred_slot && (
-                      <div className="mt-0.5 text-xs text-slate-500">
-                        {L.lead_prefers}
-                        {l.preferred_session_id ? (
-                          <a
-                            href={`/admin/sessions/${l.preferred_session_id}`}
-                            className="font-medium text-emerald-700 hover:underline"
-                          >
-                            {l.preferred_slot}
-                          </a>
-                        ) : (
-                          l.preferred_slot
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                        <span>
+                          {L.lead_prefers}
+                          {l.preferred_session_id ? (
+                            <a
+                              href={`/admin/sessions/${l.preferred_session_id}`}
+                              className="font-medium text-emerald-700 hover:underline"
+                            >
+                              {l.preferred_slot}
+                            </a>
+                          ) : (
+                            l.preferred_slot
+                          )}
+                        </span>
+                        {l.preferred_session_id && (
+                          <form action={cancelTrialBooking}>
+                            <input type="hidden" name="id" value={l.id} />
+                            <button
+                              type="submit"
+                              className="rounded px-1.5 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                            >
+                              {L.trial_cancel_btn}
+                            </button>
+                          </form>
                         )}
                       </div>
                     )}

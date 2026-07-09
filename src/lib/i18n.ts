@@ -328,6 +328,12 @@ const en = {
   sess_empty_hint: "Sessions generate automatically from each class's weekly schedule (and nightly). If this looks wrong, add a weekly schedule to the class, or clear the filters above.",
   sess_empty_no_sched: "{n} active class(es) have no weekly schedule yet — add one and sessions appear instantly.",
   sess_empty_manage: "Manage classes →",
+  cal_more: "+{n} more",
+  cal_day_title: "Sessions on {date}",
+  cal_day_close: "← Back to month",
+  trial_cancel_btn: "Cancel trial",
+  trial_cancel_confirm: "Cancel this trial booking? The slot is freed and the lead goes back to “Contacted”.",
+  trial_cancelled_note: "Trial booking cancelled.",
   adm_all_classes: "All classes",
 
   // ── admin: leave & makeup ──
@@ -1546,6 +1552,12 @@ const zh: Dict = {
   sess_empty_hint: "课程会根据每个班级的每周排程自动生成（每晚也会跑一次）。若显示有误，请为班级添加每周排程，或清除上方筛选。",
   sess_empty_no_sched: "有 {n} 个启用中的班级尚未设置每周排程 — 添加后课程会立即出现。",
   sess_empty_manage: "管理班级 →",
+  cal_more: "+{n} 更多",
+  cal_day_title: "{date} 的课程",
+  cal_day_close: "← 返回月视图",
+  trial_cancel_btn: "取消试课",
+  trial_cancel_confirm: "取消此试课预约？该时段将被释放，线索退回“已联系”。",
+  trial_cancelled_note: "试课预约已取消。",
   adm_all_classes: "所有班级",
 
   // ── admin: leave & makeup ──

@@ -48,14 +48,12 @@ export function SessionTile({ s, locale }: { s: CalendarSession; locale?: string
         title={`${s.className ?? L.class_word} · ${formatTime(s.start_time)}–${formatTime(s.end_time)} · ${s.status}`}
         className={"block w-full rounded-md border px-1.5 py-1 text-left text-[11px] leading-tight transition-shadow hover:shadow-sm " + tone(s.classRank, s.status) + (canceled ? " line-through opacity-70" : "")}
       >
-        <div className="font-medium">{s.status === "completed" ? "✓ " : ""}{formatTime(s.start_time)}</div>
-        <div className="truncate">{s.className ?? L.class_word}</div>
-        {s.classRank && (
-          <span className={"mt-0.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase leading-none " + rankBadgeClass(s.classRank)}>
-            {s.classRank}
-          </span>
-        )}
-        {s.coachName && <div className="mt-0.5 truncate text-[10px] text-slate-600">🎯 {s.coachName}</div>}
+        {/* Compact: time + class only. Rank is conveyed by the tile colour and
+            coach/rank/full detail live in the modal — keeps day cells short. */}
+        <div className="flex items-baseline gap-1">
+          <span className="font-semibold">{s.status === "completed" ? "✓" : ""}{formatTime(s.start_time)}</span>
+          <span className="truncate">{s.className ?? L.class_word}</span>
+        </div>
       </button>
 
       {open && (

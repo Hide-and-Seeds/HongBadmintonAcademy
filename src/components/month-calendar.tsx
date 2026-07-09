@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SessionTile, type CalendarSession } from "@/components/session-tile";
-import { rankBadgeClass, rankCardClass } from "@/lib/ranks";
+import { rankCardClass } from "@/lib/ranks";
 import { formatTime } from "@/lib/format";
 import { dict } from "@/lib/i18n";
 
@@ -25,13 +25,10 @@ function ReadonlyTile({ s, detailBase }: { s: CalendarSession; detailBase?: stri
     (canceled ? " line-through opacity-70" : detailBase ? " transition-shadow hover:shadow-sm" : "");
   const title = `${s.className ?? "Class"} · ${formatTime(s.start_time)}–${formatTime(s.end_time)} · ${s.status}`;
   const inner = (
-    <>
-      <div className="font-medium">{s.status === "completed" ? "✓ " : ""}{formatTime(s.start_time)}</div>
-      <div className="truncate">{s.className ?? "Class"}</div>
-      {s.classRank && (
-        <span className={"mt-0.5 inline-flex rounded px-1 py-px text-[9px] font-bold uppercase leading-none " + rankBadgeClass(s.classRank)}>{s.classRank}</span>
-      )}
-    </>
+    <div className="flex items-baseline gap-1">
+      <span className="font-semibold">{s.status === "completed" ? "✓" : ""}{formatTime(s.start_time)}</span>
+      <span className="truncate">{s.className ?? "Class"}</span>
+    </div>
   );
   return detailBase ? (
     <Link href={`${detailBase}/${s.id}`} title={title} className={className}>{inner}</Link>
@@ -55,6 +52,7 @@ export function MonthCalendar({
   interactive = true,
   detailBase,
   locale,
+  maxPerDay = 4,
 }: {
   sessions: CalendarSession[];
   monthStr: string;
@@ -63,6 +61,7 @@ export function MonthCalendar({
   interactive?: boolean; // false = read-only tiles (no modal), e.g. coach view
   detailBase?: string; // when set, read-only tiles link to `${detailBase}/${id}`
   locale?: string | null;
+  maxPerDay?: number; // cap tiles per day cell; overflow → "+N more" (day panel)
 }) {
   const L = dict(locale);
   const DOW = locale === "zh" ? DOW_ZH : DOW_EN;
@@ -123,6 +122,8 @@ export function MonthCalendar({
               const list = (byDate.get(ymd) ?? []).sort((a, b) => a.start_time.localeCompare(b.start_time));
               const isToday = ymd === todayYmd;
               const holiday = holidays[ymd];
+              const shown = list.slice(0, maxPerDay);
+              const overflow = list.length - shown.length;
               return (
                 <div key={i} className={"min-h-[92px] border-b border-r border-slate-100 p-1.5 last:border-r-0 " + (holiday ? "bg-rose-50/60" : weekend ? "bg-slate-50/40" : "")}>
                   <div className={"mb-1 text-xs " + (isToday ? "font-bold text-green-700" : "text-slate-400")}>{day}</div>
@@ -130,7 +131,15 @@ export function MonthCalendar({
                     <div className="mb-1 truncate text-[9px] font-medium text-rose-600" title={holiday}>🎌 {holiday}</div>
                   )}
                   <div className="space-y-1">
-                    {list.map((s) => (interactive ? <SessionTile key={s.id} s={s} locale={locale} /> : <ReadonlyTile key={s.id} s={s} detailBase={detailBase} />))}
+                    {shown.map((s) => (interactive ? <SessionTile key={s.id} s={s} locale={locale} /> : <ReadonlyTile key={s.id} s={s} detailBase={detailBase} />))}
+                    {overflow > 0 && (
+                      <Link
+                        href={`${basePath}?month=${monthStr}&day=${ymd}`}
+                        className="block rounded-md px-1.5 py-0.5 text-[11px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                      >
+                        {L.cal_more.replace("{n}", String(overflow))}
+                      </Link>
+                    )}
                   </div>
                 </div>
               );

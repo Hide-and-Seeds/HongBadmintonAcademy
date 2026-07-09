@@ -11,6 +11,7 @@ import { rankBadgeClass } from "@/lib/ranks";
 import { dict } from "@/lib/i18n";
 import type { AttendanceStatus } from "@/lib/types";
 import { cancelSession, restoreSession, removeSession } from "../actions";
+import { cancelTrialBooking } from "../../leads/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -138,7 +139,7 @@ export default async function SessionDetailPage({
           <p className="px-4 pt-4 text-sm text-slate-500">{L.trial_guest_sub}</p>
           <Table>
             <thead>
-              <tr><Th>{L.trp_child_name}</Th><Th>{L.trp_your_name}</Th><Th>{L.col_status}</Th></tr>
+              <tr><Th>{L.trp_child_name}</Th><Th>{L.trp_your_name}</Th><Th>{L.col_status}</Th><Th aria-label="actions"></Th></tr>
             </thead>
             <tbody>
               {guests.map((g) => {
@@ -158,6 +159,12 @@ export default async function SessionDetailPage({
                       )}
                     </Td>
                     <Td><Badge tone="yellow">{leadStLabel[g.status] ?? g.status}</Badge></Td>
+                    <Td>
+                      <form action={cancelTrialBooking}>
+                        <input type="hidden" name="id" value={g.id} />
+                        <ConfirmButton label={L.trial_cancel_btn} confirmText={L.trial_cancel_confirm} variant="ghost" locale={me.locale} />
+                      </form>
+                    </Td>
                   </tr>
                 );
               })}

@@ -55,6 +55,46 @@ export async function addLeadNote(formData: FormData) {
   revalidatePath("/admin/leads");
 }
 
+// Cancel a trial BOOKING: free the picked session, drop the lead back to
+// "contacted" (still a live lead — use the status dropdown → "Lost" to give up
+// entirely), and best-effort WhatsApp the parent that the slot was released.
+// The session row itself is untouched — only this lead's hold on it.
+export async function cancelTrialBooking(formData: FormData) {
+  await requireRole("admin");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const db = await createClient();
+  const { data: lead } = await db
+    .from("trial_leads")
+    .select("phone, child_name, parent_name, preferred_session_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  await db
+    .from("trial_leads")
+    .update({ preferred_session_id: null, preferred_slot: null, status: "contacted" })
+    .eq("id", id);
+
+  // Tell the parent the trial slot was released (drip via the worker). Only if
+  // there was actually a booking + a phone. Never block the cancel on it.
+  if (lead?.preferred_session_id && lead.phone) {
+    try {
+      const admin = createAdminClient();
+      const body =
+        `🏸 Hong Badminton Academy\n` +
+        `Hi ${lead.parent_name}, your free-trial booking for ${lead.child_name} has been cancelled. ` +
+        `Reply to this message and we'll help you pick another time.`;
+      await admin.from("message_queue").insert({ kind: `trial_cancel:${id}`, recipient_phone: lead.phone, body });
+    } catch {
+      // messaging is best-effort
+    }
+  }
+
+  revalidatePath("/admin/leads");
+  revalidatePath("/admin/sessions", "layout");
+}
+
 function clampLevel(v: FormDataEntryValue | null): number {
   const n = Math.round(Number(v));
   return Number.isFinite(n) ? Math.min(6, Math.max(1, n)) : 1;

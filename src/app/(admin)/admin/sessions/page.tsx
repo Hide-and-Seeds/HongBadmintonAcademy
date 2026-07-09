@@ -1,11 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { getViewBranchId, listBranches } from "@/lib/branch";
-import { PageHeader, LinkButton } from "@/components/ui";
+import { PageHeader, LinkButton, cn } from "@/components/ui";
 import { MonthCalendar } from "@/components/month-calendar";
 import { AddSessionModal } from "@/components/add-session-modal";
 import { FilterSelect } from "@/components/filter-controls";
 import { loadHolidayMap } from "@/lib/holidays-server";
+import { formatDate, formatTime } from "@/lib/format";
+import { rankBadgeClass } from "@/lib/ranks";
 import { dict } from "@/lib/i18n";
 import { createSession } from "./actions";
 
@@ -19,9 +21,9 @@ function todayMYT(): string {
 export default async function SessionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; class?: string; coach?: string; branch?: string; error?: string; created?: string }>;
+  searchParams: Promise<{ month?: string; day?: string; class?: string; coach?: string; branch?: string; error?: string; created?: string }>;
 }) {
-  const { month, class: classParam, coach: coachParam, branch: branchParam, error, created } = await searchParams;
+  const { month, day: dayParam, class: classParam, coach: coachParam, branch: branchParam, error, created } = await searchParams;
   const me = await requireRole("admin");
   const L = dict(me.locale);
   const supabase = await createClient();
@@ -40,6 +42,10 @@ export default async function SessionsPage({
   const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
 
   const classFilter = isUuid(classParam) ? classParam! : "";
+
+  // Optional "day drill-down" (from a calendar cell's "+N more"): must be a real
+  // date inside the shown month.
+  const dayFilter = /^\d{4}-\d{2}-\d{2}$/.test(dayParam ?? "") && dayParam!.startsWith(monthStr) ? dayParam! : "";
 
   // Coach filter → resolve to that coach's class ids (primary + co-coach), then
   // narrow sessions to those classes.
@@ -177,6 +183,46 @@ export default async function SessionsPage({
           </LinkButton>
         </div>
       )}
+
+      {dayFilter && (() => {
+        const dayList = list
+          .filter((s) => s.session_date === dayFilter)
+          .sort((a, b) => a.start_time.localeCompare(b.start_time));
+        const keep = new URLSearchParams();
+        keep.set("month", monthStr);
+        if (classFilter) keep.set("class", classFilter);
+        if (coachFilter) keep.set("coach", coachFilter);
+        if (branchFilter) keep.set("branch", branchFilter);
+        return (
+          <div className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5">
+              <div className="text-sm font-semibold text-slate-800">
+                {L.cal_day_title.replace("{date}", formatDate(dayFilter))}
+              </div>
+              <LinkButton href={`/admin/sessions?${keep.toString()}`} variant="ghost" className="h-8">
+                {L.cal_day_close}
+              </LinkButton>
+            </div>
+            <ul className="divide-y divide-slate-100">
+              {dayList.map((s) => (
+                <li key={s.id}>
+                  <a href={`/admin/sessions/${s.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-2.5 hover:bg-slate-50">
+                    <span className="font-semibold text-slate-900">{formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
+                    <span className="text-slate-800">{s.classes?.name ?? "—"}</span>
+                    {s.classes?.level && (
+                      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold", rankBadgeClass(s.classes.level))}>{s.classes.level}</span>
+                    )}
+                    <span className="text-xs text-slate-500">🎯 {s.classes?.coach?.full_name ?? L.sess_no_coach}</span>
+                    {s.location && <span className="text-xs text-slate-400">📍 {s.location}</span>}
+                    {s.status === "canceled" && <span className="text-xs font-medium text-red-600">{L.canceled}</span>}
+                  </a>
+                </li>
+              ))}
+              {dayList.length === 0 && <li className="px-4 py-3 text-sm text-slate-400">—</li>}
+            </ul>
+          </div>
+        );
+      })()}
 
       <MonthCalendar
         monthStr={monthStr}
