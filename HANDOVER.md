@@ -279,7 +279,10 @@ Postgres, ~40 tables across the migrations. Grouped by domain:
 **Attendance**
 `attendance` (per student per session; present/late/absent/excused),
 `nfc_tap_events`, `coach_checkins` ("I'm here" per coach per session),
-`leave_requests` (+ `makeup_session_id`), `coach_leave_requests`.
+`leave_requests` (+ `makeup_session_id`), `coach_leave_requests` (+
+`replacement_coach_id`, `cover_status` `none|open|filled`, `replacement_accepted`
+`null|true`), `coach_cover_offers` (a coach's "I'll cover" offer on an open
+leave; migration `0057`). See §9 Coach for the cover flow.
 
 **Marking, exams & progress**
 `marking_schemes` + `marking_criteria` (legacy weighted scheme), `assessments` +
@@ -305,12 +308,18 @@ audit log), `scorecards` (**legacy** monthly PDF, retired).
 *book*).
 
 **Growth / intake**
-`trial_leads` (migration `0049`) — the public free-trial funnel. A prospect
-submits `/trial` (no login, no payment) → a lead lands in the admin inbox in
-status `new` → an admin works the status ladder (`new` → `contacted` →
-`trial_booked` → `trialed` → `enrolled`/`lost`) and converts a trialed lead into
-a real student. Branch-scoped via `admin_branch_ok`. **The student record is born
-last — after the trial — the inverse of the admin-only create flow.**
+`trial_leads` (migration `0049`, `+ preferred_session_id` in `0055`) — the public
+free-trial funnel. A prospect submits `/trial` (no login, no payment) and now
+**picks a real upcoming session** (grouped by branch, 14-day horizon) instead of
+free-typing a time; the lead lands in the admin inbox already `trial_booked` with
+its branch derived from the session, and a bilingual WhatsApp confirmation is
+queued to the parent. Admin works the status ladder (`new` → `contacted` →
+`trial_booked` → `trialed` → `enrolled`/`lost`), converts a trialed lead into a
+real student, or **Cancels the trial** (frees the slot, reverts to `contacted`,
+WhatsApps the parent). Booked trial guests also surface on the target session's
+admin detail + coach check-in board. Branch-scoped via `admin_branch_ok`. **The
+student record is born last — after the trial — the inverse of the admin-only
+create flow.**
 
 **Generated TypeScript types:** `npm run db:types` →
 `src/lib/types/database.ts`. App-facing types are hand-maintained in
@@ -326,10 +335,13 @@ last — after the trial — the inverse of the admin-only create flow.**
 ### Admin (`/admin`) — nav in `src/lib/constants.ts` (`ADMIN_NAV`)
 
 - **Daily:** Attendance (live board, matrix, per-session roster, coverage),
-  Sessions (calendar, generate next 4 weeks skipping holidays), Leave & Makeup
-  (approve/decline, assign makeup), **Trial Leads** (inbox for the public
-  `/trial` funnel — status ladder, assign, notes, convert to student), Directory
-  (students + parents + coaches, paginated, filters), Classes & Schedule.
+  Sessions (month calendar — compact tiles capped at 4/day with a "+N more" day
+  drill-down; a self-explaining empty state; sessions auto-generate when a class
+  schedule is added and nightly), Leave & Makeup (approve/decline, assign makeup;
+  **coach-cover flow** — see below; **Undo** a recently-decided leave),
+  **Trial Leads** (inbox for the public `/trial` funnel — status ladder, assign,
+  notes, convert to student, cancel trial), Directory (students + parents +
+  coaches, paginated, filters), Classes & Schedule.
 - **Teaching:** Coaches & Payroll, At-risk (attendance-drop win-back), Leaderboard
   (by level), Exams & Progress, Training Syllabus (editable), Reward Rules.
 - **Finance & Comms** (several **super-only**): Invoices & Payments, Collections
@@ -349,6 +361,21 @@ view (branch admin).
 Check-in & mark (live board, NFC scan, coach "I'm here", drop-in makeups),
 Schedule (with a Leave button per session), Monthly Marks (whole-roster grid,
 tap-to-save), Assessments/Exams (per-student promotion scoring), My Payroll.
+Dashboard also shows **"Assigned to you"** (Accept/Decline a cover an admin
+picked for you) and **"Cover requests"** (open covers you're free for — tap
+"I'll cover").
+
+**Coach-cover flow (leave replacement).** When an admin approves a coach's leave
+they either (**B**) pick a replacement from a list **filtered to coaches actually
+free at that session's date+time** (helper `src/lib/cover.ts`), or (**A**) hit
+"Ask coaches to cover" to broadcast the open slot (push + in-app bell, never
+WhatsApp) to those free coaches. A coach claims via "I'll cover" (a
+`coach_cover_offers` row); the admin **confirms** one under "Seeking cover" — an
+offer never auto-assigns (the human gate). A directly-assigned coach must
+**Accept** (or **Decline**, which reopens the slot). Admin can **Undo cover**
+(revert the replacement, re-broadcast) or **Stop asking** (close an open search).
+The confirmed sub can check-in + mark that one session only (`coach_of_replacement`
+RLS, migration `0053`; marketplace `0057`; acceptance `0058`).
 
 ### Parent (`/parent`) — `PARENT_NAV`
 
@@ -383,6 +410,7 @@ All in `vercel.json`, region `sin1`, times in **UTC** (MYT = +8), each gated by
 |-----|-----|-----|------|
 | `flag-absences` | `0 16 * * *` | 00:00 daily | Close finished sessions, flag late/absent, flip unpaid past-due → overdue. |
 | `enqueue-reminders` | `0 1 * * *` | 09:00 daily | **Web-push only** fee reminders to parents at exact milestones (due-today, overdue 3/7/14/28), milestone-gated so it can't spam. **WhatsApp fee reminders were removed 2026-06-22** (DMing parents about money is the top ban risk). |
+| `generate-sessions` | `0 2 * * *` | 10:00 daily | Materialize concrete `sessions` from active weekly `class_schedules` over a rolling horizon, skipping holidays. Idempotent (upsert on `class_id,session_date,start_time`). **Also runs instantly when an admin adds a schedule** (`addSchedule`), so the calendar is never empty waiting for the nightly run. |
 | `generate-invoices` | `0 3 * * *` | 11:00 daily | On the admin-set **run day**, raise this month's fee invoice per active student on a monthly plan (due on the **due day**); prorates mid-month joiners; then posts the combined Community notice; also generates **club dues**. Idempotent. |
 | `backup` | `0 18 * * *` | 02:00 daily | JSON snapshot of every table → private `backups` bucket, then prune `messages` + finished `message_queue` rows older than 90 days. |
 | `exam-window` | `0 1 1 1,4,7,10 *` | 09:00 MYT, 1st of Jan/Apr/Jul/Oct | Open the promotion-exam window; nudge each coach (push + in-app) with their due-student count + an admin broadcast. |
@@ -610,9 +638,13 @@ Migrations `0043`→`0048` are all applied (confirmed 2026-07-07). Full plan:
 **Parked by owner (do NOT build until unpinned):**
 - **Reward engine** (auto point rules) — manual + leaderboard only for now; a
   mockup is the reference.
-- **Trial funnel.**
 - **WhatsApp auto-add to Community group** — high ban risk (WhatsApp forces invite
   links); safer path is auto-sending the invite link on signup.
+
+*(The **trial funnel** is no longer parked — SHIPPED: public `/trial` with a real
+session picker, admin Leads inbox, convert-to-student, cancel-trial, and booked
+guests shown on the session roster. The **coach-cover** replacement system —
+free-coach filter, broadcast/claim, accept/decline, undo — is also live.)*
 
 **Open / follow-ups:**
 - Security TODOs in §7 (public student-photos bucket, leaked-password protection,

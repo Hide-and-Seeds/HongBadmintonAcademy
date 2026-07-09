@@ -318,6 +318,23 @@ extend outward when asked.
   without it secrets are unset and it crash-loops.
 - **`super_admin` must satisfy every strict admin check** (§5.2).
 - **Parent pages must keep the `parent_id` filter** (§4).
+- **RLS null-embed on cross-table joins.** If a role can read a *row* via one
+  policy but you `select("…, other_table(…)")` an FK whose table has its own
+  *stricter* RLS, PostgREST silently returns the embed as **null** — no error.
+  A coach could read an open `coach_leave_requests` row but not its `sessions`
+  embed (they don't coach that class), so `if (!l.sessions) continue` dropped
+  every open cover and the "Cover requests" list was always empty (fixed
+  `ade93fa`). When the outer row is visible under a broad policy but the joined
+  table isn't, **hydrate the detail with the service-role client** instead of
+  trusting the join. Two RLS policies that reference *each other's* tables can
+  also deadlock into `infinite recursion detected in policy` — wrap the
+  cross-table check in a `security definer` fn (see `0056`).
+- **Don't reference `sessions` (or any table whose policy back-references this
+  one) inline in an RLS `USING`/`WITH CHECK`** — use a `security definer` helper
+  (`replacement_covers_class`, `coach_of_replacement`). `0053` inlined a
+  `join sessions` into `enrollments_select` while `sessions_select` subqueried
+  `enrollments` → recursion → **every** authed sessions read errored (empty
+  calendar app-wide). Fixed in `0056`.
 
 ---
 
@@ -337,8 +354,10 @@ These exist but are **not** the live path — don't extend them:
 - `reward_rules.config` jsonb + the reward *engine* — parked (manual + leaderboard
   only). Don't build auto-rules until the owner unpins.
 
-**Parked features (do not build):** reward engine, trial funnel, WhatsApp
-auto-add-to-group (ban risk — auto-send an invite link instead).
+**Parked features (do not build):** reward engine, WhatsApp auto-add-to-group
+(ban risk — auto-send an invite link instead). *(The trial funnel is now
+SHIPPED — public `/trial` with a real session picker, admin Leads inbox, convert,
+cancel; see HANDOVER §8/§9.)*
 
 ---
 
