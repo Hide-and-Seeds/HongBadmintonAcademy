@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { getViewBranchId, listBranches } from "@/lib/branch";
 import { computeAnalytics } from "@/lib/analytics";
+
+// A filesystem-safe slug from a branch name, for export filenames.
+function branchSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 
 export const runtime = "nodejs";
 
@@ -18,17 +24,23 @@ export async function GET(req: Request) {
   }
 
   const supabase = await createClient();
-  const monthParam = new URL(req.url).searchParams.get("month");
+  const url = new URL(req.url);
+  const monthParam = url.searchParams.get("month");
   const valid = monthParam && /^\d{4}-\d{2}$/.test(monthParam);
   const monthDate = valid
     ? new Date(Number(monthParam!.slice(0, 4)), Number(monthParam!.slice(5, 7)) - 1, 1)
     : new Date();
   const monthSlug = valid ? monthParam! : new Date().toISOString().slice(0, 7);
-  const a = await computeAnalytics(supabase, monthDate);
+  // Branch focus: explicit ?branch= (from the page's picker) wins, else the
+  // sidebar switcher — so the extract matches the analytics shown on-screen.
+  const bf = url.searchParams.get("branch") || (await getViewBranchId(profile));
+  const branchName = bf ? ((await listBranches(false)).find((b) => b.id === bf)?.name ?? null) : null;
+  const a = await computeAnalytics(supabase, monthDate, bf);
 
   const rows: [string, string | number][] = [
     ["Metric", "Value"],
     ["Month", a.monthLabel],
+    ["Branch", branchName ?? "All branches"],
     ["Currency", a.currency],
     ["Revenue", a.revenueThisMonth],
     ["Outstanding fees", a.outstanding],
@@ -70,7 +82,7 @@ export async function GET(req: Request) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="hba-analytics-${monthSlug}.csv"`,
+      "Content-Disposition": `attachment; filename="hba-analytics${branchName ? `-${branchSlug(branchName)}` : ""}-${monthSlug}.csv"`,
     },
   });
 }

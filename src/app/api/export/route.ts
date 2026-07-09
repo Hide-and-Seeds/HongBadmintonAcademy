@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { getViewBranchId, listBranches } from "@/lib/branch";
 import { buildXlsx } from "@/lib/xlsx";
 import { APP_NAME } from "@/lib/constants";
 
@@ -77,12 +78,18 @@ async function tablePdf({ title, headers, rows }: Dataset): Promise<Uint8Array> 
   return doc.save();
 }
 
-async function dataset(type: string, supabase: any): Promise<Dataset | null> {
+// `bf` = the admin's chosen branch focus (null = all branches). Every dataset is
+// scoped to it so an export matches what the picker shows on-screen. students &
+// invoices carry branch_id directly; payments & attendance inherit it through
+// their invoice / session (an !inner embed makes the nested filter a join).
+async function dataset(type: string, supabase: any, bf: string | null): Promise<Dataset | null> {
   if (type === "students") {
-    const { data } = await supabase
+    let q = supabase
       .from("students")
       .select("full_name, status, nfc_tag_uid, dob, parent:profiles!students_parent_id_fkey(full_name)")
       .order("full_name");
+    if (bf) q = q.eq("branch_id", bf);
+    const { data } = await q;
     return {
       title: "Students",
       headers: ["Name", "Status", "NFC tag", "DOB", "Parent"],
@@ -90,10 +97,12 @@ async function dataset(type: string, supabase: any): Promise<Dataset | null> {
     };
   }
   if (type === "invoices") {
-    const { data } = await supabase
+    let q = supabase
       .from("invoices")
       .select("invoice_no, amount, currency, status, due_date, paid_at, students(full_name), parent:profiles!invoices_parent_id_fkey(full_name)")
       .order("created_at", { ascending: false });
+    if (bf) q = q.eq("branch_id", bf);
+    const { data } = await q;
     return {
       title: "Invoices",
       headers: ["Invoice #", "Student", "Parent", "Amount", "Currency", "Status", "Due", "Paid at"],
@@ -101,10 +110,12 @@ async function dataset(type: string, supabase: any): Promise<Dataset | null> {
     };
   }
   if (type === "payments") {
-    const { data } = await supabase
+    let q = supabase
       .from("payments")
-      .select("created_at, amount, currency, provider, status, invoices(invoice_no)")
+      .select(`created_at, amount, currency, provider, status, invoices${bf ? "!inner" : ""}(invoice_no, branch_id)`)
       .order("created_at", { ascending: false });
+    if (bf) q = q.eq("invoices.branch_id", bf);
+    const { data } = await q;
     return {
       title: "Payments",
       headers: ["Date", "Invoice #", "Amount", "Currency", "Provider", "Status"],
@@ -112,11 +123,13 @@ async function dataset(type: string, supabase: any): Promise<Dataset | null> {
     };
   }
   if (type === "attendance") {
-    const { data } = await supabase
+    let q = supabase
       .from("attendance")
-      .select("status, tap_in_at, tap_out_at, students(full_name), sessions(session_date, classes(name))")
+      .select(`status, tap_in_at, tap_out_at, students(full_name), sessions${bf ? "!inner" : ""}(session_date, branch_id, classes(name))`)
       .order("created_at", { ascending: false })
       .limit(5000);
+    if (bf) q = q.eq("sessions.branch_id", bf);
+    const { data } = await q;
     return {
       title: "Attendance",
       headers: ["Date", "Class", "Student", "Status", "Tap in", "Tap out"],
@@ -141,11 +154,25 @@ export async function GET(req: NextRequest) {
   }
   const format = req.nextUrl.searchParams.get("format") ?? "csv";
   const supabase = await createClient();
-  const ds = await dataset(type, supabase);
+  // Scope to the branch chosen in the sidebar switcher (null = all branches),
+  // so the file matches what the admin sees on-screen.
+  const bf = await getViewBranchId(profile);
+  const ds = await dataset(type, supabase, bf);
   if (!ds) return NextResponse.json({ error: "Unknown export type" }, { status: 400 });
 
+  // Label the export with the branch when scoped, so a single-branch file is
+  // self-describing (title in the PDF header, and the download filename).
+  let branchSlug = "";
+  if (bf) {
+    const branchName = (await listBranches(false)).find((b) => b.id === bf)?.name ?? null;
+    if (branchName) {
+      ds.title = `${ds.title} — ${branchName}`;
+      branchSlug = `-${branchName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+    }
+  }
+
   const stamp = new Date().toISOString().slice(0, 10);
-  const base = `hba-${type}-${stamp}`;
+  const base = `hba-${type}${branchSlug}-${stamp}`;
 
   if (format === "xlsx") {
     const buf = buildXlsx(ds.headers, ds.rows);

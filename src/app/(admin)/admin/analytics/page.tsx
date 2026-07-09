@@ -64,8 +64,8 @@ export default async function AnalyticsPage({
         description={branchLabel ? `${branchLabel} — ${L.ana_desc_branch}` : L.ana_desc_all}
         action={isSuper ? (
           <div className="flex flex-wrap items-center gap-1.5">
-            <LinkButton href={`/api/analytics/pdf?month=${monthStr}`} target="_blank" rel="noopener" variant="secondary">PDF</LinkButton>
-            <LinkButton href={`/api/analytics/csv?month=${monthStr}`} target="_blank" rel="noopener" variant="secondary">CSV</LinkButton>
+            <LinkButton href={`/api/analytics/pdf?month=${monthStr}${bq}`} target="_blank" rel="noopener" variant="secondary">PDF</LinkButton>
+            <LinkButton href={`/api/analytics/csv?month=${monthStr}${bq}`} target="_blank" rel="noopener" variant="secondary">CSV</LinkButton>
           </div>
         ) : undefined}
       />

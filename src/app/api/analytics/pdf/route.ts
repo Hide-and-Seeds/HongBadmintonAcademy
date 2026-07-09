@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/auth";
+import { getViewBranchId, listBranches } from "@/lib/branch";
 import { computeAnalytics } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/format";
 import { APP_NAME } from "@/lib/constants";
+
+function branchSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 
 export const runtime = "nodejs";
 
@@ -21,13 +26,17 @@ export async function GET(req: Request) {
   }
 
   const supabase = await createClient();
-  const monthParam = new URL(req.url).searchParams.get("month");
+  const url = new URL(req.url);
+  const monthParam = url.searchParams.get("month");
   const valid = monthParam && /^\d{4}-\d{2}$/.test(monthParam);
   const monthDate = valid
     ? new Date(Number(monthParam!.slice(0, 4)), Number(monthParam!.slice(5, 7)) - 1, 1)
     : new Date();
   const monthSlug = valid ? monthParam! : new Date().toISOString().slice(0, 7);
-  const a = await computeAnalytics(supabase, monthDate);
+  // Branch focus: explicit ?branch= (page picker) wins, else the sidebar switcher.
+  const bf = url.searchParams.get("branch") || (await getViewBranchId(profile));
+  const branchName = bf ? ((await listBranches(false)).find((b) => b.id === bf)?.name ?? null) : null;
+  const a = await computeAnalytics(supabase, monthDate, bf);
 
   const doc = await PDFDocument.create();
   const page = doc.addPage([595.28, 841.89]);
@@ -41,7 +50,7 @@ export async function GET(req: Request) {
 
   page.drawRectangle({ x: 0, y: H - 100, width: W, height: 100, color: BRAND });
   t(APP_NAME, M, H - 50, 20, bold, WHITE);
-  t(`Analytics — ${a.monthLabel}`, M, H - 74, 12, font, WHITE);
+  t(`Analytics — ${a.monthLabel}${branchName ? ` · ${branchName}` : ""}`, M, H - 74, 12, font, WHITE);
   const dateStr = new Date().toLocaleDateString("en-MY", { dateStyle: "long" });
   t(dateStr, W - M - font.widthOfTextAtSize(dateStr, 11), H - 74, 11, font, WHITE);
 
@@ -100,7 +109,7 @@ export async function GET(req: Request) {
   return new NextResponse(Buffer.from(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="hba-analytics-${monthSlug}.pdf"`,
+      "Content-Disposition": `attachment; filename="hba-analytics${branchName ? `-${branchSlug(branchName)}` : ""}-${monthSlug}.pdf"`,
     },
   });
 }
