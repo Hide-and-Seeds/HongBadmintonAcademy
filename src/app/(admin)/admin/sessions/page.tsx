@@ -81,6 +81,26 @@ export default async function SessionsPage({
 
   const list = (sessions ?? []) as any[];
 
+  // When the month is empty, work out the most likely cause so the blank grid
+  // explains itself: count active classes (in the effective branch) that have
+  // no active weekly schedule — the usual reason nothing generates.
+  let classesWithoutSchedule = 0;
+  if (list.length === 0) {
+    let activeClassQ = supabase.from("classes").select("id").eq("is_active", true);
+    if (effBranch) activeClassQ = activeClassQ.eq("branch_id", effBranch);
+    const { data: activeClasses } = await activeClassQ;
+    const ids = (activeClasses ?? []).map((c: any) => c.id);
+    if (ids.length) {
+      const { data: scheds } = await supabase
+        .from("class_schedules")
+        .select("class_id")
+        .eq("is_active", true)
+        .in("class_id", ids);
+      const withSched = new Set((scheds ?? []).map((s: any) => s.class_id));
+      classesWithoutSchedule = ids.filter((id: string) => !withSched.has(id)).length;
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -142,6 +162,21 @@ export default async function SessionsPage({
           <LinkButton href={`/admin/sessions?month=${monthStr}`} variant="ghost">{L.clear_word}</LinkButton>
         )}
       </div>
+
+      {list.length === 0 && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-semibold text-amber-900">{L.sess_empty_title}</p>
+          <p className="mt-1 text-sm text-amber-800">{L.sess_empty_hint}</p>
+          {classesWithoutSchedule > 0 && (
+            <p className="mt-2 text-sm font-medium text-amber-900">
+              {L.sess_empty_no_sched.replace("{n}", String(classesWithoutSchedule))}
+            </p>
+          )}
+          <LinkButton href="/admin/classes" variant="secondary" className="mt-3">
+            {L.sess_empty_manage}
+          </LinkButton>
+        </div>
+      )}
 
       <MonthCalendar
         monthStr={monthStr}

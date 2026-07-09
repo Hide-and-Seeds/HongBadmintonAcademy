@@ -151,27 +151,28 @@ export default async function LeadsPage({
               <Card key={l.id} className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="font-semibold text-slate-900">{l.child_name}</span>
+                      <span className="text-sm text-slate-400">·</span>
+                      <span className="text-sm font-medium text-slate-600">{l.parent_name}</span>
                       <Badge tone={STATUS_TONE[l.status] ?? "slate"}>{statusLabel[l.status] ?? l.status}</Badge>
                     </div>
                     <div className="mt-0.5 text-xs text-slate-500">
                       {[age, exp, l.branch_id ? branchName.get(l.branch_id) : null].filter(Boolean).join(" · ") || "—"}
                     </div>
-                    <div className="mt-1.5 text-sm text-slate-700">
-                      {l.parent_name}
-                      {l.phone && (
-                        <>
-                          {" · "}
-                          {wa ? (
+                    {(l.phone || l.email) && (
+                      <div className="mt-1.5 text-sm text-slate-700">
+                        {l.phone && (
+                          wa ? (
                             <a href={wa} target="_blank" rel="noopener" className="font-medium text-emerald-700 hover:underline">{l.phone}</a>
                           ) : (
-                            l.phone
-                          )}
-                        </>
-                      )}
-                      {l.email && <> · <a href={`mailto:${l.email}`} className="text-slate-600 hover:underline">{l.email}</a></>}
-                    </div>
+                            <span>{l.phone}</span>
+                          )
+                        )}
+                        {l.phone && l.email && " · "}
+                        {l.email && <a href={`mailto:${l.email}`} className="text-slate-600 hover:underline">{l.email}</a>}
+                      </div>
+                    )}
                     {l.preferred_slot && (
                       <div className="mt-0.5 text-xs text-slate-500">
                         {L.lead_prefers}

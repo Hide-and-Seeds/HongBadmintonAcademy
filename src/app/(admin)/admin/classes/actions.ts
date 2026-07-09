@@ -12,12 +12,14 @@ function err(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
-// Sessions surface on the class page, the admin dashboard, and both parent
-// schedule views. Mutating a session must refresh all of them or those lists
-// serve stale rows from the router cache.
+// Sessions surface on the class page, the month calendar, the admin dashboard,
+// the coach schedule, and both parent schedule views. Mutating a session must
+// refresh all of them or those lists serve stale rows from the router cache.
 function revalidateSchedule(class_id: string) {
   revalidatePath(`/admin/classes/${class_id}`);
+  revalidatePath("/admin/sessions");
   revalidatePath("/admin");
+  revalidatePath("/coach/schedule");
   revalidatePath("/parent");
   revalidatePath("/parent/schedule");
 }
@@ -72,7 +74,17 @@ export async function addSchedule(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.from("class_schedules").insert(parsed.data);
   if (error) err(`/admin/classes/${class_id}`, error.message);
-  revalidatePath(`/admin/classes/${class_id}`);
+
+  // Auto-generate sessions right away so the calendar isn't empty until the
+  // nightly cron runs. Idempotent (upsert, ignoreDuplicates), so re-adding a
+  // schedule never double-books. Best-effort: a materialize hiccup must not
+  // block the schedule being saved.
+  try {
+    await materializeSessions(supabase, { classIds: [class_id] });
+  } catch {
+    // schedule is saved; the nightly cron (or manual "Generate") will fill in.
+  }
+  revalidateSchedule(class_id);
 }
 
 export async function deleteSchedule(formData: FormData) {
