@@ -7,7 +7,7 @@ import { PageHeader, Section, Badge, EmptyState, Select, cn } from "@/components
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, formatTime } from "@/lib/format";
 import { dict } from "@/lib/i18n";
-import { approveLeave, declineLeave, assignMakeup, decideCoachLeave, confirmCoverOffer } from "./actions";
+import { approveLeave, declineLeave, assignMakeup, decideCoachLeave, confirmCoverOffer, reopenCover, cancelCoverSearch } from "./actions";
 import { eligibleCoverCoaches, type EligibleCoach } from "@/lib/cover";
 
 export const dynamic = "force-dynamic";
@@ -262,6 +262,10 @@ export default async function LeavePage() {
                     <span className="text-sm text-slate-500">
                       {l.sessions?.classes?.name ?? "—"} · {formatDate(l.sessions?.session_date)} {formatTime(l.sessions?.start_time)}
                     </span>
+                    <form action={cancelCoverSearch} className="ml-auto">
+                      <input type="hidden" name="id" value={l.id} />
+                      <SubmitButton variant="ghost" pendingText="…">{L.lv_stop_asking}</SubmitButton>
+                    </form>
                   </div>
                   {offers.length === 0 ? (
                     <p className="text-sm text-slate-400">{L.lv_no_offers}</p>
@@ -321,6 +325,12 @@ export default async function LeavePage() {
                 </span>
                 {l.status === "approved" && l.replacement?.full_name && (
                   <span className="text-sm text-emerald-700">{L.lv_cover_by}{l.replacement.full_name}</span>
+                )}
+                {l.status === "approved" && l.replacement_coach_id && (
+                  <form action={reopenCover} className="ml-auto">
+                    <input type="hidden" name="id" value={l.id} />
+                    <SubmitButton variant="ghost" pendingText="…">{L.lv_undo_cover}</SubmitButton>
+                  </form>
                 )}
               </li>
             ))}

@@ -308,3 +308,75 @@ export async function confirmCoverOffer(formData: FormData) {
 
   revalidate();
 }
+
+// Undo a confirmed/assigned cover: drop the replacement and re-open the slot to
+// offers (fresh — old offers are cleared), tell the removed sub, and re-broadcast
+// to whoever's free now. This is the "oops, wrong coach / they can't after all"
+// button.
+export async function reopenCover(formData: FormData) {
+  await requireRole("admin");
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) return;
+
+  const db = createAdminClient();
+  const { data: leave } = await db
+    .from("coach_leave_requests")
+    .select("id, coach_id, session_id, replacement_coach_id, sessions(session_date, start_time, end_time, branch_id, classes(name))")
+    .eq("id", id)
+    .maybeSingle();
+  if (!leave) return;
+
+  const s = (leave as any).sessions;
+  const when = `${formatDate(s?.session_date)} ${formatTime(s?.start_time)}`;
+  const className = s?.classes?.name ?? "class";
+  const removed = (leave as any).replacement_coach_id as string | null;
+
+  await db
+    .from("coach_leave_requests")
+    .update({ replacement_coach_id: null, cover_status: "open" })
+    .eq("id", id);
+  await db.from("coach_cover_offers").delete().eq("leave_id", id);
+
+  // Tell the coach who was covering that they're off the hook.
+  if (removed) {
+    const body = `You're no longer covering ${className} on ${when}.`;
+    await createNotifications([removed], { type: "coach_cover", title: "Cover removed", body, url: "/coach" });
+    try { await pushToUsers([removed], { title: "Cover removed", body, url: "/coach", tag: "cover" }); } catch { /* best-effort */ }
+  }
+
+  // Re-broadcast to everyone free now.
+  if (s) {
+    const eligible = await eligibleCoverCoaches({
+      sessionId: (leave as any).session_id,
+      sessionDate: s.session_date,
+      startTime: s.start_time,
+      endTime: s.end_time,
+      branchId: s.branch_id ?? null,
+      onLeaveCoachId: (leave as any).coach_id,
+    });
+    const ids = eligible.map((c) => c.id).filter((cid) => cid !== removed);
+    if (ids.length) {
+      const body = `Cover needed: ${className} on ${when}. Tap to offer.`;
+      await createNotifications(ids, { type: "coach_cover", title: "Cover needed", body, url: "/coach" });
+      try { await pushToUsers(ids, { title: "Cover needed", body, url: "/coach", tag: "cover" }); } catch { /* best-effort */ }
+    }
+  }
+
+  revalidate();
+}
+
+// Stop asking coaches to cover (open → none). Clears any pending offers.
+export async function cancelCoverSearch(formData: FormData) {
+  await requireRole("admin");
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) return;
+
+  const db = createAdminClient();
+  await db.from("coach_cover_offers").delete().eq("leave_id", id);
+  await db
+    .from("coach_leave_requests")
+    .update({ cover_status: "none", replacement_coach_id: null })
+    .eq("id", id);
+
+  revalidate();
+}
