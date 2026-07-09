@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { dict } from "@/lib/i18n";
 import { coachClassIds, coachCoverSessionIds } from "../_data";
@@ -59,6 +60,25 @@ export default async function CheckinPage() {
     : { data: [] as any[] };
   const coachedSet = new Set((coachIns ?? []).map((c: any) => c.session_id));
 
+  // Trial leads booked into any of TODAY's sessions the coach is running.
+  // trial_leads is admin-only under RLS, so read via the service-role client
+  // but scope strictly to this coach's own session ids — no cross-coach leakage.
+  const guestsBySession = new Map<string, { child_name: string; experience: string | null }[]>();
+  if (sessIds.length) {
+    const admin = createAdminClient();
+    const { data: guests } = await admin
+      .from("trial_leads")
+      .select("preferred_session_id, child_name, experience")
+      .in("preferred_session_id", sessIds)
+      .is("converted_student_id", null)
+      .order("created_at");
+    for (const g of (guests ?? []) as any[]) {
+      const arr = guestsBySession.get(g.preferred_session_id) ?? [];
+      arr.push({ child_name: g.child_name, experience: g.experience });
+      guestsBySession.set(g.preferred_session_id, arr);
+    }
+  }
+
   const blocks: Block[] = [];
   for (const s of sessions ?? []) {
     const [{ data: enr }, { data: att }, { data: marks }, { data: makeups }] = await Promise.all([
@@ -103,7 +123,7 @@ export default async function CheckinPage() {
         dropIn: true,
       } as any);
     }
-    blocks.push({ session: s as any, roster: roster as any, coachedIn: coachedSet.has(s.id), covering: coverSet.has(s.id) });
+    blocks.push({ session: s as any, roster: roster as any, coachedIn: coachedSet.has(s.id), covering: coverSet.has(s.id), trialGuests: guestsBySession.get(s.id) ?? [] });
   }
 
   return (

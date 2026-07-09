@@ -36,6 +36,9 @@ export interface Block {
   // True when this coach is covering the session (approved coach-leave sub) —
   // renders a badge and, at some point, hints they're not the regular coach.
   covering?: boolean;
+  // Trial leads who booked this session but aren't students yet — shown as a
+  // read-only "expected" strip (no attendance row; they have no student id).
+  trialGuests?: { child_name: string; experience: string | null }[];
 }
 
 type AddableStudent = { id: string; full_name: string; photo_url: string | null };
@@ -243,7 +246,7 @@ export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]
       )}
 
       <div className="space-y-6">
-        {visible.map(({ session, roster, coachedIn, covering }) => {
+        {visible.map(({ session, roster, coachedIn, covering, trialGuests }) => {
           const present = roster.filter(
             (r) => r.att && (r.att.status === "present" || r.att.status === "late"),
           ).length;
@@ -332,6 +335,19 @@ export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]
                       ))}
                     </ul>
                   )}
+                </div>
+              )}
+              {trialGuests && trialGuests.length > 0 && (
+                <div className="border-b border-amber-100 bg-amber-50/70 px-4 py-2.5">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-700">{L.trial_guest_expected}</div>
+                  <ul className="flex flex-wrap gap-1.5">
+                    {trialGuests.map((g, i) => (
+                      <li key={i} className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-amber-900 ring-1 ring-inset ring-amber-200">
+                        <span className="rounded bg-amber-100 px-1 py-px text-[9px] font-bold uppercase text-amber-700">{L.trial_guest_tag}</span>
+                        {g.child_name}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
               <ul className="divide-y divide-slate-100">

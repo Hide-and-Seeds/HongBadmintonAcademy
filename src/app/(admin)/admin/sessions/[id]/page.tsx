@@ -6,6 +6,7 @@ import {
 } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { formatDate, formatTime } from "@/lib/format";
+import { waLink } from "@/lib/wa";
 import { rankBadgeClass } from "@/lib/ranks";
 import { dict } from "@/lib/i18n";
 import type { AttendanceStatus } from "@/lib/types";
@@ -43,10 +44,25 @@ export default async function SessionDetailPage({
   const s = session as any;
   const cls = s.classes;
 
-  const [{ data: enrollments }, { data: attendance }] = await Promise.all([
+  const [{ data: enrollments }, { data: attendance }, { data: trialGuests }] = await Promise.all([
     supabase.from("enrollments").select("student_id, students(full_name)").eq("class_id", s.class_id).eq("active", true),
     supabase.from("attendance").select("student_id, status").eq("session_id", id),
+    // Trial leads who booked THIS session and aren't converted to a student yet.
+    supabase
+      .from("trial_leads")
+      .select("id, child_name, parent_name, phone, experience, status")
+      .eq("preferred_session_id", id)
+      .is("converted_student_id", null)
+      .order("created_at"),
   ]);
+  const guests = (trialGuests ?? []) as any[];
+  const expLabel: Record<string, string> = {
+    none: L.exp_none, some: L.exp_some, experienced: L.exp_experienced,
+  };
+  const leadStLabel: Record<string, string> = {
+    new: L.lead_st_new, contacted: L.lead_st_contacted, trial_booked: L.lead_st_trial_booked,
+    trialed: L.lead_st_trialed, enrolled: L.lead_st_enrolled, lost: L.lead_st_lost,
+  };
 
   const statusByStudent = new Map<string, string>();
   for (const a of (attendance ?? []) as any[]) statusByStudent.set(a.student_id, a.status);
@@ -116,6 +132,42 @@ export default async function SessionDetailPage({
           <div className="px-5 pt-5"><EmptyState message={L.no_enrolled_class} /></div>
         )}
       </Section>
+
+      {guests.length > 0 && (
+        <Section title={`${L.trial_guests} (${guests.length})`} flush>
+          <p className="px-4 pt-4 text-sm text-slate-500">{L.trial_guest_sub}</p>
+          <Table>
+            <thead>
+              <tr><Th>{L.trp_child_name}</Th><Th>{L.trp_your_name}</Th><Th>{L.col_status}</Th></tr>
+            </thead>
+            <tbody>
+              {guests.map((g) => {
+                const wa = g.phone ? waLink(g.phone, L.lead_wa_msg.replace("{name}", g.parent_name)) : null;
+                const exp = g.experience ? expLabel[g.experience] ?? g.experience : null;
+                return (
+                  <tr key={g.id} className="hover:bg-slate-50">
+                    <Td className="font-medium text-slate-900">
+                      {g.child_name}
+                      <span className="ml-2 rounded bg-amber-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700">{L.trial_guest_tag}</span>
+                      {exp && <span className="ml-2 text-xs font-normal text-slate-400">{exp}</span>}
+                    </Td>
+                    <Td className="text-slate-700">
+                      {g.parent_name}
+                      {g.phone && (
+                        <> · {wa ? <a href={wa} target="_blank" rel="noopener" className="font-medium text-emerald-700 hover:underline">{g.phone}</a> : g.phone}</>
+                      )}
+                    </Td>
+                    <Td><Badge tone="yellow">{leadStLabel[g.status] ?? g.status}</Badge></Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+          <div className="px-4 pb-4 pt-3">
+            <LinkButton href="/admin/leads" variant="ghost">{L.trial_guest_manage}</LinkButton>
+          </div>
+        </Section>
+      )}
     </div>
   );
 }
