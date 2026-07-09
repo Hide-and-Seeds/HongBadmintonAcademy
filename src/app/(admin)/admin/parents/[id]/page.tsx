@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
-import { PageHeader, Section, Badge, EmptyState, Select, cn } from "@/components/ui";
+import { PageHeader, Section, Collapsible, Badge, EmptyState, Select, cn } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { levelBadgeClass, levelName } from "@/lib/training";
@@ -54,11 +54,9 @@ export default async function EditParentPage({
         </p>
       )}
 
-      <Section
-        title={L.pd_signin}
-        description={L.pd_signin_desc}
-      >
+      <Collapsible title={L.pd_signin} defaultOpen={false}>
         <div className="space-y-4 p-5">
+          <p className="text-xs text-slate-500">{L.pd_signin_desc}</p>
           <div className="flex flex-wrap gap-2">
             <form action={sendParentPasswordReset}>
               <input type="hidden" name="parent_id" value={id} />
@@ -72,7 +70,7 @@ export default async function EditParentPage({
 
           {link && <LoginLinkPanel link={link} wa={wa ?? null} />}
         </div>
-      </Section>
+      </Collapsible>
 
       <Section title={`${L.pd_children} (${children?.length ?? 0})`} flush>
         {children && children.length > 0 ? (

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/auth";
 import { listBranches } from "@/lib/branch";
-import { PageHeader, Section, StatCard, Badge, EmptyState, LinkButton } from "@/components/ui";
+import { PageHeader, Collapsible, StatCard, Badge, EmptyState, LinkButton } from "@/components/ui";
 import { BranchChip } from "@/components/branch-chip";
 import { formatCurrency } from "@/lib/format";
 import { dict } from "@/lib/i18n";
@@ -87,7 +87,7 @@ export default async function EditCoachPage({
         <StatCard label={L.cls_students} value={students} sub={L.cd_active_sub} />
       </div>
 
-      <Section title={`${L.cls_section} (${classes.length})`} flush>
+      <Collapsible title={L.cls_section} count={classes.length} defaultOpen={false}>
         {classes.length > 0 ? (
           <ul className="divide-y divide-slate-100">
             {classes.map((c) => (
@@ -102,7 +102,7 @@ export default async function EditCoachPage({
         ) : (
           <div className="p-5"><EmptyState message={L.cd_no_classes} /></div>
         )}
-      </Section>
+      </Collapsible>
 
       <PersonForm
         role="coach"

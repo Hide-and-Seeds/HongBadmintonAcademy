@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { listBranches, canChooseBranch } from "@/lib/branch";
 import {
-  PageHeader, Section, Field, Input, Select, Button, Badge,
+  PageHeader, Collapsible, Field, Input, Select, Button, Badge,
   Table, Th, Td, EmptyState, LinkButton,
 } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -94,7 +94,7 @@ export default async function ManageClassPage({
       />
 
       {/* Schedule */}
-      <Section title={L.cm_schedule} flush>
+      <Collapsible title={L.cm_schedule} count={schedules?.length ?? 0}>
         {schedules && schedules.length > 0 ? (
           <Table>
             <thead>
@@ -137,10 +137,11 @@ export default async function ManageClassPage({
           <Field label={L.cm_grace_min}><Input type="number" name="grace_minutes" defaultValue={15} /></Field>
           <Button type="submit">{L.cm_add_slot}</Button>
         </form>
-      </Section>
+      </Collapsible>
 
       {/* Coaches */}
-      <Section title={L.cm_coaches}>
+      <Collapsible title={L.cm_coaches} count={(assigned ?? []).length} defaultOpen={false}>
+        <div className="p-5">
         <div className="flex flex-wrap gap-2">
           {(assigned ?? []).map((a: any) => (
             <form key={a.coach_id} action={removeCoach}>
@@ -173,10 +174,11 @@ export default async function ManageClassPage({
         ) : (
           <p className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-400">{L.cm_all_coaches}</p>
         )}
-      </Section>
+        </div>
+      </Collapsible>
 
       {/* Enrollment */}
-      <Section title={L.cm_enrolled} flush>
+      <Collapsible title={L.cm_enrolled} count={(enrollments ?? []).length} defaultOpen={false}>
         {enrollments && enrollments.length > 0 ? (
           <Table>
             <thead><tr><Th>{L.student_col}</Th><Th className="text-right">—</Th></tr></thead>
@@ -219,10 +221,10 @@ export default async function ManageClassPage({
         ) : (
           <p className="border-t border-slate-100 p-5 text-sm text-slate-400">{L.cm_all_enrolled}</p>
         )}
-      </Section>
+      </Collapsible>
 
       {/* Sessions */}
-      <Section title={L.cm_upcoming} flush>
+      <Collapsible title={L.cm_upcoming} count={sessionCount ?? 0} defaultOpen={false}>
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-5">
           <div className="text-sm text-slate-600">
             <span className="text-2xl font-bold text-slate-900">{sessionCount ?? 0}</span> {L.cm_total_scheduled}
@@ -294,7 +296,7 @@ export default async function ManageClassPage({
             <EmptyState message={L.cm_no_upcoming} />
           </div>
         )}
-      </Section>
+      </Collapsible>
     </div>
   );
 }

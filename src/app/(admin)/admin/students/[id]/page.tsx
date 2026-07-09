@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import {
-  PageHeader, Section, StatCard, Table, Th, Td, Badge, EmptyState,
+  PageHeader, Section, Collapsible, StatCard, Table, Th, Td, Badge, EmptyState,
   LinkButton, Field, Input, Select, Button, cn,
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
@@ -11,7 +11,6 @@ import { levelBadgeClass } from "@/lib/training";
 import { getLevelInfoMerged } from "@/lib/syllabus";
 import { dict } from "@/lib/i18n";
 import type { AttendanceStatus, InvoiceStatus } from "@/lib/types";
-import type { ReactNode } from "react";
 import { awardReward, promoteStudent } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -22,29 +21,6 @@ const ATT_TONE: Record<AttendanceStatus, "green" | "yellow" | "red" | "slate"> =
 const INV_TONE: Record<InvoiceStatus, "green" | "yellow" | "red" | "slate"> = {
   draft: "slate", unpaid: "yellow", paid: "green", overdue: "red", canceled: "slate", refunded: "slate",
 };
-
-// Collapsible card matching Section's chrome — the secondary history blocks on a
-// student profile are dense, so they fold away (native <details>, no client JS;
-// forms inside still post). `count` shows in the header so you can gauge a
-// section without opening it; the most-used one (attendance) starts open.
-function Collapsible({
-  title, count, defaultOpen, children,
-}: { title: string; count?: number; defaultOpen?: boolean; children: ReactNode }) {
-  return (
-    <details open={defaultOpen} className="group rounded-xl border border-slate-200 bg-white shadow-sm">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 [&::-webkit-details-marker]:hidden">
-        <h2 className="text-sm font-semibold text-slate-900">
-          {title}
-          {count != null && <span className="ml-2 text-xs font-normal text-slate-400">{count}</span>}
-        </h2>
-        <svg viewBox="0 0 12 12" className="h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <path d="M4.5 2.5 8 6l-3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </summary>
-      <div className="border-t border-slate-100">{children}</div>
-    </details>
-  );
-}
 
 export default async function StudentProfilePage({
   params,
@@ -224,7 +200,7 @@ export default async function StudentProfilePage({
       </Collapsible>
 
       {/* Promotion exams */}
-      <Collapsible title={L.sd_promo_exams} count={(exams ?? []).length}>
+      <Collapsible title={L.sd_promo_exams} count={(exams ?? []).length} defaultOpen={false}>
         {exams && exams.length ? (
           <Table>
             <thead><tr><Th>{L.col_date}</Th><Th>{L.level_word}</Th><Th>{L.ex_score}</Th><Th>{L.ex_result}</Th><Th>PDF</Th></tr></thead>
@@ -244,7 +220,7 @@ export default async function StudentProfilePage({
       </Collapsible>
 
       {/* Monthly marks (coach's 1–5 monthly assessment — the parent report source) */}
-      <Collapsible title={L.sd_monthly} count={(monthly ?? []).length}>
+      <Collapsible title={L.sd_monthly} count={(monthly ?? []).length} defaultOpen={false}>
         {monthly && monthly.length ? (
           <Table>
             <thead><tr><Th>{L.sd_month}</Th><Th>{L.fitness}</Th><Th>{L.skills}</Th><Th>{L.attitude}</Th><Th>{L.sd_comment}</Th><Th>{L.adm_coach}</Th></tr></thead>
@@ -265,7 +241,7 @@ export default async function StudentProfilePage({
       </Collapsible>
 
       {/* Rewards */}
-      <Collapsible title={L.sd_rewards_ledger} count={(ledger ?? []).length}>
+      <Collapsible title={L.sd_rewards_ledger} count={(ledger ?? []).length} defaultOpen={false}>
         <div className="grid gap-6 p-5 lg:grid-cols-3">
           <div className="lg:col-span-2">
             {ledger && ledger.length ? (
@@ -309,7 +285,7 @@ export default async function StudentProfilePage({
       </Collapsible>
 
       {/* Invoices */}
-      <Collapsible title={L.sd_fees} count={(invoices ?? []).length}>
+      <Collapsible title={L.sd_fees} count={(invoices ?? []).length} defaultOpen={false}>
         {invoices && invoices.length ? (
           <Table>
             <thead><tr><Th>{L.inv_invoice}</Th><Th>{L.fp_amount}</Th><Th>{L.inv_due}</Th><Th>{L.col_status}</Th></tr></thead>
