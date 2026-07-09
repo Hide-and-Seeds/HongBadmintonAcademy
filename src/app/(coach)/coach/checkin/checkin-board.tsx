@@ -33,6 +33,9 @@ export interface Block {
   };
   roster: Roster[];
   coachedIn?: boolean;
+  // True when this coach is covering the session (approved coach-leave sub) —
+  // renders a badge and, at some point, hints they're not the regular coach.
+  covering?: boolean;
 }
 
 type AddableStudent = { id: string; full_name: string; photo_url: string | null };
@@ -240,7 +243,7 @@ export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]
       )}
 
       <div className="space-y-6">
-        {visible.map(({ session, roster, coachedIn }) => {
+        {visible.map(({ session, roster, coachedIn, covering }) => {
           const present = roster.filter(
             (r) => r.att && (r.att.status === "present" || r.att.status === "late"),
           ).length;
@@ -248,7 +251,7 @@ export function CheckinBoard({ initialBlocks, locale }: { initialBlocks: Block[]
           return (
             <Section
               key={session.id}
-              title={session.classes?.name ?? "Class"}
+              title={`${session.classes?.name ?? "Class"}${covering ? ` · ${L.cover_badge}` : ""}`}
               description={`${formatTime(session.start_time)}–${formatTime(session.end_time)} · ${
                 session.location ?? "—"
               }`}

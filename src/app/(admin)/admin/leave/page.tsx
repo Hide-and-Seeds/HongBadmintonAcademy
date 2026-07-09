@@ -40,11 +40,11 @@ export default async function LeavePage() {
     `)
     .order("created_at", { ascending: false })
     .limit(100);
-  const [{ data: leavesRaw }, { data: coachLeavesRaw }, mkQ] = await Promise.all([
+  const [{ data: leavesRaw }, { data: coachLeavesRaw }, mkQ, coachesQ] = await Promise.all([
     lq,
     supabase
       .from("coach_leave_requests")
-      .select("id, status, reason, created_at, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), sessions(id, session_date, start_time, branch_id, classes(name))")
+      .select("id, status, reason, created_at, replacement_coach_id, coach_id, coach:profiles!coach_leave_requests_coach_id_fkey(full_name), replacement:profiles!coach_leave_requests_replacement_coach_id_fkey(full_name), sessions(id, session_date, start_time, branch_id, classes(name))")
       .order("created_at", { ascending: false })
       .limit(50),
     supabase
@@ -55,7 +55,9 @@ export default async function LeavePage() {
       .order("session_date")
       .order("start_time")
       .limit(120),
+    supabase.from("profiles").select("id, full_name").eq("role", "coach").order("full_name"),
   ]);
+  const coachOptions = (coachesQ.data ?? []) as { id: string; full_name: string | null }[];
 
   // Branch focus (super-admin) — filter by the source session's branch.
   const leaves = ((leavesRaw ?? []) as any[]).filter((l) => !bf || l.session?.branch_id === bf);
@@ -155,10 +157,21 @@ export default async function LeavePage() {
                   </span>
                 </div>
                 {l.reason && <div className="text-sm text-slate-600">“{l.reason}”</div>}
-                <div className="flex flex-wrap gap-2">
-                  <form action={decideCoachLeave}>
+                <div className="flex flex-wrap items-end gap-2">
+                  <form action={decideCoachLeave} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="id" value={l.id} />
                     <input type="hidden" name="decision" value="approved" />
+                    <label className="block space-y-1">
+                      <span className="text-xs font-medium text-slate-500">{L.lv_cover_coach}</span>
+                      <Select name="replacement_coach_id" defaultValue="" className="h-9 w-56">
+                        <option value="">{L.lv_no_cover}</option>
+                        {coachOptions
+                          .filter((c) => c.id !== l.coach_id)
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>{c.full_name ?? "—"}</option>
+                          ))}
+                      </Select>
+                    </label>
                     <SubmitButton pendingText="…">{L.lv_approve}</SubmitButton>
                   </form>
                   <form action={decideCoachLeave}>
@@ -217,6 +230,9 @@ export default async function LeavePage() {
                 <span className="text-sm text-slate-500">
                   {L.lv_coach_leave_tag} · {l.sessions?.classes?.name ?? "—"} · {formatDate(l.sessions?.session_date)} {formatTime(l.sessions?.start_time)}
                 </span>
+                {l.status === "approved" && l.replacement?.full_name && (
+                  <span className="text-sm text-emerald-700">{L.lv_cover_by}{l.replacement.full_name}</span>
+                )}
               </li>
             ))}
           </ul>

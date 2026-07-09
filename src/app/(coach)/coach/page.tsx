@@ -7,7 +7,7 @@ import { BranchChip } from "@/components/branch-chip";
 import { listBranches } from "@/lib/branch";
 import { formatTime } from "@/lib/format";
 import { dict } from "@/lib/i18n";
-import { coachClassIds } from "./_data";
+import { coachClassIds, coachCoverSessionIds } from "./_data";
 
 export const dynamic = "force-dynamic";
 
@@ -15,23 +15,49 @@ export default async function CoachDashboard() {
   const me = await requireRole("coach");
   const L = dict(me.locale);
   const supabase = await createClient();
-  const classIds = await coachClassIds(supabase, me.id);
+  const [classIds, coverIds] = await Promise.all([
+    coachClassIds(supabase, me.id),
+    coachCoverSessionIds(supabase, me.id),
+  ]);
+  const coverSet = new Set(coverIds);
   const myBranch = me.branch_id ? (await listBranches(false)).find((b) => b.id === me.branch_id) ?? null : null;
   // Malaysia time (server runs UTC on Vercel) so "today" doesn't roll over early
   // and point the check-in CTA at the wrong day after ~4pm MYT.
   const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 
   let sessions: any[] = [];
+  const upcomingQueries: Promise<{ data: any[] | null }>[] = [];
   if (classIds.length) {
-    const { data: s } = await supabase
-      .from("sessions")
-      .select("id, class_id, session_date, start_time, end_time, location, status, classes(name)")
-      .in("class_id", classIds)
-      .gte("session_date", today)
-      .order("session_date")
-      .order("start_time")
-      .limit(5);
-    sessions = s ?? [];
+    upcomingQueries.push(
+      supabase
+        .from("sessions")
+        .select("id, class_id, session_date, start_time, end_time, location, status, classes(name)")
+        .in("class_id", classIds)
+        .gte("session_date", today)
+        .order("session_date")
+        .order("start_time")
+        .limit(5) as any,
+    );
+  }
+  if (coverIds.length) {
+    upcomingQueries.push(
+      supabase
+        .from("sessions")
+        .select("id, class_id, session_date, start_time, end_time, location, status, classes(name)")
+        .in("id", coverIds)
+        .gte("session_date", today)
+        .order("session_date")
+        .order("start_time")
+        .limit(5) as any,
+    );
+  }
+  if (upcomingQueries.length) {
+    const results = await Promise.all(upcomingQueries);
+    const merged = results.flatMap((r) => r.data ?? []);
+    const dedup = new Map<string, any>();
+    for (const s of merged) if (!dedup.has(s.id)) dedup.set(s.id, s);
+    sessions = [...dedup.values()].sort((a, b) => (a.session_date + a.start_time).localeCompare(b.session_date + b.start_time)).slice(0, 5);
+    for (const s of sessions) s.__cover = coverSet.has(s.id);
   }
 
   // Current class to check in: today's first session that hasn't ended yet
@@ -91,7 +117,12 @@ export default async function CoachDashboard() {
             <div className="text-xs font-semibold uppercase tracking-wide text-green-700">
               {inProgress ? L.coach_in_progress : L.coach_next_today}
             </div>
-            <div className="text-lg font-bold text-slate-900">{current.classes?.name ?? "Class"}</div>
+            <div className="text-lg font-bold text-slate-900">
+              {current.classes?.name ?? "Class"}
+              {current.__cover && (
+                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">{L.cover_badge}</span>
+              )}
+            </div>
             <div className="text-sm text-slate-600">
               {formatTime(current.start_time)}–{formatTime(current.end_time)}{current.location ? ` · ${current.location}` : ""}
             </div>
@@ -141,7 +172,12 @@ export default async function CoachDashboard() {
                         <span className="text-xl font-bold leading-none text-emerald-800">{d.getDate()}</span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-900">{s.classes?.name ?? "Class"}</div>
+                        <div className="font-semibold text-slate-900">
+                          {s.classes?.name ?? "Class"}
+                          {s.__cover && (
+                            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">{L.cover_badge}</span>
+                          )}
+                        </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
                           <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{wd} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
                           {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}

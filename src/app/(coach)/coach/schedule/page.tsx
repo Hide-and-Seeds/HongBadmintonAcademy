@@ -7,7 +7,7 @@ import { formatDate, formatTime } from "@/lib/format";
 import { MonthCalendar } from "@/components/month-calendar";
 import { loadHolidayMap } from "@/lib/holidays-server";
 import { dict } from "@/lib/i18n";
-import { coachClassIds } from "../_data";
+import { coachClassIds, coachCoverSessionIds } from "../_data";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +18,12 @@ function todayMYT(): string {
 // One tappable row → the session detail page. Used for both upcoming and past.
 // Upcoming, non-canceled rows also get a "Leave" link that deep-links to the
 // leave form on the detail page (coaches kept missing it buried down that page).
-function CoachSessionRow({ s, leaveLabel }: { s: any; leaveLabel: string }) {
+function CoachSessionRow({ s, leaveLabel, coverLabel }: { s: any; leaveLabel: string; coverLabel?: string }) {
   const d = new Date(`${s.session_date}T00:00:00`);
   const upcoming = s.session_date >= todayMYT();
-  const canLeave = upcoming && s.status !== "canceled";
+  // A cover session isn't owned by this coach → no "Leave" button.
+  const isCover = !!s.__cover;
+  const canLeave = upcoming && s.status !== "canceled" && !isCover;
   return (
     <li className="flex items-stretch">
       <Link href={`/coach/sessions/${s.id}`} className="flex flex-1 items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50">
@@ -30,7 +32,12 @@ function CoachSessionRow({ s, leaveLabel }: { s: any; leaveLabel: string }) {
           <span className={cn("text-xl font-bold leading-none", upcoming ? "text-emerald-800" : "text-slate-700")}>{d.getDate()}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-slate-900">{s.classes?.name ?? "Class"}</div>
+          <div className="font-semibold text-slate-900">
+            {s.classes?.name ?? "Class"}
+            {isCover && coverLabel && (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">{coverLabel}</span>
+            )}
+          </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500">
             <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{d.toLocaleDateString("en-MY", { weekday: "short" })} {formatTime(s.start_time)}–{formatTime(s.end_time)}</span>
             {s.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.location}</span>}
@@ -61,7 +68,11 @@ export default async function CoachSchedulePage({
   const me = await requireRole("coach");
   const L = dict(me.locale);
   const supabase = await createClient();
-  const classIds = await coachClassIds(supabase, me.id);
+  const [classIds, coverIds] = await Promise.all([
+    coachClassIds(supabase, me.id),
+    coachCoverSessionIds(supabase, me.id),
+  ]);
+  const coverSet = new Set(coverIds);
 
   const sp = await searchParams;
   const monthStr = /^\d{4}-\d{2}$/.test(sp.month ?? "") ? sp.month! : todayMYT().slice(0, 7);
@@ -75,7 +86,7 @@ export default async function CoachSchedulePage({
   const thisM = todayMYT().slice(0, 7);
   const monthLabelStr = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-MY", { month: "long", year: "numeric" });
 
-  const [{ data: sessions }, holidays] = await Promise.all([
+  const [{ data: sessions }, { data: coverSessions }, holidays] = await Promise.all([
     classIds.length
       ? supabase
           .from("sessions")
@@ -87,10 +98,26 @@ export default async function CoachSchedulePage({
           .order("start_time")
           .limit(400)
       : Promise.resolve({ data: [] as any[] }),
+    coverIds.length
+      ? supabase
+          .from("sessions")
+          .select("id, class_id, session_date, start_time, end_time, location, status, classes(name, level)")
+          .in("id", coverIds)
+          .gte("session_date", start)
+          .lte("session_date", end)
+      : Promise.resolve({ data: [] as any[] }),
     loadHolidayMap(supabase, start, end),
   ]);
 
-  const all = (sessions ?? []) as any[];
+  const seen = new Set<string>();
+  const merged = [...(sessions ?? []), ...(coverSessions ?? [])].filter((s: any) => {
+    if (seen.has(s.id)) return false;
+    seen.add(s.id);
+    return true;
+  });
+  merged.sort((a: any, b: any) => (a.session_date + a.start_time).localeCompare(b.session_date + b.start_time));
+  for (const s of merged as any[]) s.__cover = coverSet.has(s.id);
+  const all = merged as any[];
   const today = todayMYT();
   const upcoming = all.filter((s) => s.session_date >= today);
   const past = all.filter((s) => s.session_date < today);
@@ -189,7 +216,7 @@ export default async function CoachSchedulePage({
               <div className="space-y-4">
                 <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
                   {(upcoming.length ? upcoming : all).map((s: any) => (
-                    <CoachSessionRow key={s.id} s={s} leaveLabel={L.leave_word} />
+                    <CoachSessionRow key={s.id} s={s} leaveLabel={L.leave_word} coverLabel={L.cover_badge} />
                   ))}
                 </ul>
                 {upcoming.length > 0 && past.length > 0 && (
@@ -199,7 +226,7 @@ export default async function CoachSchedulePage({
                     </summary>
                     <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
                       {past.map((s: any) => (
-                        <CoachSessionRow key={s.id} s={s} leaveLabel={L.leave_word} />
+                        <CoachSessionRow key={s.id} s={s} leaveLabel={L.leave_word} coverLabel={L.cover_badge} />
                       ))}
                     </ul>
                   </details>

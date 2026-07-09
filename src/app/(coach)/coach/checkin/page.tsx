@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { dict } from "@/lib/i18n";
-import { coachClassIds } from "../_data";
+import { coachClassIds, coachCoverSessionIds } from "../_data";
 import { NfcScanner } from "@/components/nfc-scanner";
 import { scanTap } from "./actions";
 import { type Block } from "./checkin-board";
@@ -14,17 +14,43 @@ export default async function CheckinPage() {
   const me = await requireRole("coach");
   const L = dict(me.locale);
   const supabase = await createClient();
-  const classIds = await coachClassIds(supabase, me.id);
+  const [classIds, coverSessionIds] = await Promise.all([
+    coachClassIds(supabase, me.id),
+    coachCoverSessionIds(supabase, me.id),
+  ]);
   const today = new Date().toLocaleDateString("en-CA");
 
-  const { data: sessions } = classIds.length
-    ? await supabase
-        .from("sessions")
-        .select("id, class_id, session_date, start_time, end_time, location, grace_minutes, classes(name)")
-        .in("class_id", classIds)
-        .eq("session_date", today)
-        .order("start_time")
-    : { data: [] as any[] };
+  // Own-class sessions today PLUS sessions the coach is covering today (via an
+  // approved coach-leave replacement). Two queries so RLS resolves each set
+  // through its correct predicate.
+  const [{ data: ownSess }, { data: coverSess }] = await Promise.all([
+    classIds.length
+      ? supabase
+          .from("sessions")
+          .select("id, class_id, session_date, start_time, end_time, location, grace_minutes, classes(name)")
+          .in("class_id", classIds)
+          .eq("session_date", today)
+          .order("start_time")
+      : Promise.resolve({ data: [] as any[] }),
+    coverSessionIds.length
+      ? supabase
+          .from("sessions")
+          .select("id, class_id, session_date, start_time, end_time, location, grace_minutes, classes(name)")
+          .in("id", coverSessionIds)
+          .eq("session_date", today)
+          .order("start_time")
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const coverSet = new Set(coverSessionIds);
+  const combined = [...(ownSess ?? []), ...(coverSess ?? [])];
+  // Dedupe (a coach who is somehow both class-coach and replacement — shouldn't
+  // happen, but keep it defensive).
+  const seenIds = new Set<string>();
+  const sessions = combined.filter((s: any) => {
+    if (seenIds.has(s.id)) return false;
+    seenIds.add(s.id);
+    return true;
+  });
 
   // Which of today's sessions the coach has checked into (showed up for).
   const sessIds = (sessions ?? []).map((s: any) => s.id);
@@ -77,7 +103,7 @@ export default async function CheckinPage() {
         dropIn: true,
       } as any);
     }
-    blocks.push({ session: s as any, roster: roster as any, coachedIn: coachedSet.has(s.id) });
+    blocks.push({ session: s as any, roster: roster as any, coachedIn: coachedSet.has(s.id), covering: coverSet.has(s.id) });
   }
 
   return (
