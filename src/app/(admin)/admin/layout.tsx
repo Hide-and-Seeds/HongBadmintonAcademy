@@ -6,7 +6,7 @@ import { LangToggle } from "@/components/lang-toggle";
 import { toggleStaffLocale } from "@/app/staff-locale-actions";
 import { CommandPalette } from "@/components/command-palette";
 import { NotificationBellServer } from "@/components/notification-bell-server";
-import { ADMIN_NAV, ROLE_LABEL } from "@/lib/constants";
+import { ADMIN_PRIMARY, ADMIN_ADVANCED, ROLE_LABEL } from "@/lib/constants";
 import { dict, navLabel, roleLabel } from "@/lib/i18n";
 import { setBranchView } from "./branches/actions";
 
@@ -20,7 +20,8 @@ export default async function AdminLayout({
   // Branch-admins don't see super-only items (branches, staff, settings, fee
   // plans); empty groups (e.g. Organization) drop out entirely.
   const isSuper = profile.role === "super_admin";
-  const groups = ADMIN_NAV
+  const primaryItems = ADMIN_PRIMARY.map((i) => ({ ...i, label: navLabel(profile.locale, i.label) }));
+  const groups = ADMIN_ADVANCED
     .map((g) => ({
       group: navLabel(profile.locale, g.group),
       items: g.items
@@ -36,6 +37,8 @@ export default async function AdminLayout({
   return (
     <AppShell
       groups={groups}
+      primaryItems={primaryItems}
+      advancedLabel={navLabel(profile.locale, "Advanced")}
       role={profile.role}
       roleLabel={roleLabel(profile.locale, profile.role, ROLE_LABEL[profile.role] ?? profile.role)}
       name={profile.full_name ?? profile.email ?? "Admin"}

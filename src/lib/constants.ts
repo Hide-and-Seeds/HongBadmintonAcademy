@@ -22,19 +22,25 @@ export interface NavItem {
   superOnly?: boolean;
 }
 
-// Admin sidebar — frequent sections first; occasional tools tucked under "More".
-// "Dashboard" (the role home) is pinned by AppShell above these groups, so it is
-// not repeated here.
-export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
+// Admin sidebar — split two tiers to cut cognitive load. ADMIN_PRIMARY is the
+// lean ~5 things used every day; it renders flat, always visible, directly under
+// the pinned Dashboard. Everything else lives in ADMIN_ADVANCED, tucked behind a
+// single collapsed "Advanced (N)" toggle in AppShell. Nothing is removed — power
+// tools stay one tap away. "Dashboard" itself is pinned by AppShell, not listed.
+export const ADMIN_PRIMARY: NavItem[] = [
+  { href: "/admin/attendance/matrix", label: "Attendance" },
+  { href: "/admin/sessions", label: "Sessions" },
+  { href: "/admin/people", label: "Directory" },
+  { href: "/admin/invoices", label: "Invoices & Payments" },
+  { href: "/admin/leads", label: "Trial Leads" },
+];
+
+export const ADMIN_ADVANCED: { group: string; items: NavItem[] }[] = [
   {
-    group: "Daily",
+    group: "Scheduling",
     items: [
-      { href: "/admin/attendance/matrix", label: "Attendance" },
-      { href: "/admin/sessions", label: "Sessions" },
-      { href: "/admin/leave", label: "Leave & Makeup" },
-      { href: "/admin/leads", label: "Trial Leads" },
-      { href: "/admin/people", label: "Directory" },
       { href: "/admin/classes", label: "Classes & Schedule" },
+      { href: "/admin/leave", label: "Leave & Makeup" },
     ],
   },
   {
@@ -51,7 +57,6 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Finance & Comms",
     items: [
-      { href: "/admin/invoices", label: "Invoices & Payments" },
       { href: "/admin/collections", label: "Collections" },
       { href: "/admin/club", label: "Club", superOnly: true },
       { href: "/admin/calculator", label: "Fee Calculator" },

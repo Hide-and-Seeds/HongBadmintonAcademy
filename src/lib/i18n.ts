@@ -2526,6 +2526,8 @@ export function dict(locale: string | null | undefined): Dict {
 const ZH_NAV: Record<string, string> = {
   // group titles
   Daily: "日常",
+  Advanced: "更多",
+  Scheduling: "课务",
   Teaching: "教学",
   "Finance & Comms": "财务与通讯",
   Costs: "成本",

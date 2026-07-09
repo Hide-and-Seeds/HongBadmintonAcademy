@@ -61,6 +61,8 @@ function shortLabel(label: string): string {
 
 export function AppShell({
   groups,
+  primaryItems,
+  advancedLabel,
   role,
   roleLabel,
   name,
@@ -72,6 +74,11 @@ export function AppShell({
   children,
 }: {
   groups: NavGroup[];
+  // Admin only: a lean always-visible list rendered flat under Dashboard. When
+  // present, `groups` are treated as the "Advanced" bucket behind one toggle.
+  // Coach/parent omit this → `groups` render as the classic flat/accordion nav.
+  primaryItems?: NavItem[];
+  advancedLabel?: string;
   role: string;
   roleLabel?: string;
   name: string;
@@ -98,6 +105,44 @@ export function AppShell({
   useEffect(() => {
     if (collapsible && activeGroup) setOpenGroup(activeGroup);
   }, [collapsible, activeGroup]);
+
+  // Two-tier admin nav: `primaryItems` render flat, always visible; `groups`
+  // collapse behind one "Advanced (N)" toggle. Advanced auto-opens when you're
+  // already inside one of its items so you're never stranded.
+  const hasPrimary = (primaryItems?.length ?? 0) > 0;
+  const advancedActive =
+    hasPrimary && groups.some((g) => g.items.some((i) => isActive(pathname, i.href)));
+  const [advOpen, setAdvOpen] = useState(advancedActive);
+  useEffect(() => {
+    if (advancedActive) setAdvOpen(true);
+  }, [advancedActive]);
+  const advCount = groups.reduce((n, g) => n + g.items.length, 0);
+
+  const renderItem = (item: NavItem) => {
+    const active = isActive(pathname, item.href);
+    const Icon = navIcon(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => setOpen(false)}
+        className={cn(
+          "group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+          active
+            ? "bg-green-50 font-semibold text-green-700"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+        )}
+      >
+        <Icon
+          className={cn(
+            "h-4 w-4 shrink-0 transition-colors",
+            active ? "text-green-600" : "text-slate-400 group-hover:text-slate-500",
+          )}
+        />
+        {item.label}
+      </Link>
+    );
+  };
 
   const nav = (
     <nav className={collapsible ? "space-y-1" : "space-y-6"}>
@@ -160,6 +205,48 @@ export function AppShell({
           </div>
         );
       })}
+    </nav>
+  );
+
+  const primaryNav = (
+    <nav className="space-y-0.5">
+      {(primaryItems ?? []).map(renderItem)}
+      <div className="mt-3 border-t border-slate-200 pt-3">
+        <button
+          type="button"
+          onClick={() => setAdvOpen((v) => !v)}
+          aria-expanded={advOpen}
+          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+        >
+          <span className="flex items-center gap-1.5">
+            {advancedLabel ?? "Advanced"}
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-500">
+              {advCount}
+            </span>
+          </span>
+          <svg
+            viewBox="0 0 12 12"
+            className={cn("h-3 w-3 transition-transform", advOpen && "rotate-90")}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path d="M4.5 2.5 8 6l-3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        {advOpen && (
+          <div className="mt-1 space-y-3">
+            {groups.map((g) => (
+              <div key={g.group}>
+                <div className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  {g.group}
+                </div>
+                <div className="mt-1 space-y-0.5">{g.items.map(renderItem)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </nav>
   );
 
@@ -257,7 +344,7 @@ export function AppShell({
           {switcher && <div className="mb-4 px-1">{switcher}</div>}
 
           {dashboardLink}
-          {nav}
+          {hasPrimary ? primaryNav : nav}
 
           <div className="mt-6 border-t border-slate-200 pt-4">
             <div className="flex items-center gap-2.5 px-2 pb-3">
