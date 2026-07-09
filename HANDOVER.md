@@ -2,11 +2,12 @@
 
 > Complete operator + developer handover for the Hong Badminton Academy (HBA)
 > Management System. Written for someone taking over cold. Pair this with
-> [`README.md`](README.md) (dev quick-start), [`OPERATIONS.md`](OPERATIONS.md)
+> [`README.md`](README.md) (dev quick-start), [`DEVELOPER.md`](DEVELOPER.md)
+> (developer/maintainer guide — cookbook + the **footguns** list), [`OPERATIONS.md`](OPERATIONS.md)
 > (day-to-day operator guide), and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 > (system diagram + database ER diagram).
 >
-> **Last updated:** 2026-07-07.
+> **Last updated:** 2026-07-09.
 
 ---
 
@@ -124,10 +125,17 @@ The Bash tool has no Node — use PowerShell for anything Node-related.
 Common scripts: `npm run dev`, `npm run build`, `npm run typecheck`
 (`tsc --noEmit`), `npm run lint`.
 
-**Database:** migrations are in `supabase/migrations/*` (currently **51 files**,
-`0001`→`0049`). Apply to a hosted project with `npx supabase link --project-ref
+**Database:** migrations are in `supabase/migrations/*` (currently **58 files**,
+`0001`→`0058`). Apply to a hosted project with `npx supabase link --project-ref
 <ref>` then `npx supabase db push`, or run a local stack with `npx supabase start`
 + `npx supabase db reset` (which also loads `supabase/seed.sql` demo data).
+
+> ⚠️ **A Vercel deploy does NOT run migrations.** Pushing code that needs a new
+> migration will build fine but the feature stays broken until you apply the SQL
+> separately (`supabase db push`, or paste it into the Supabase SQL editor). This
+> already bit us: `0055`–`0058` shipped with code that was inert / errored on a
+> missing column until the SQL was run. Symptom = "new feature does nothing" or a
+> `column/table does not exist` error in logs → check the migration was applied.
 
 **First admin on a fresh DB:** `node scripts/create-admin.mjs`, or add a user in
 the Supabase dashboard and set `profiles.role = 'super_admin'`. Other helper
@@ -613,7 +621,9 @@ Built and shipped:
   billed, outstanding, court cost, salaries, and available = collected − court −
   salaries; combined P&L.
 
-Migrations `0043`→`0048` are all applied (confirmed 2026-07-07). Full plan:
+Migrations `0043`→`0058` are all applied (`0055`–`0058` — trial session-picker,
+sessions↔enrollments RLS-recursion fix, coach-cover offers, cover acceptance —
+confirmed applied 2026-07-09). Full club plan:
 [`CLUB-PLAN-2026-07-06.md`](CLUB-PLAN-2026-07-06.md).
 
 ---
@@ -681,12 +691,13 @@ only — extend `src/lib/i18n.ts` when asked).
 | `src/lib/settings.ts` | `app_settings` accessors (kill switches, schedule, worker URL) |
 | `src/lib/backup.ts` | Daily snapshot + prune |
 | `src/middleware.ts` | Route gating (`/admin`, `/coach`, `/parent`) |
-| `src/app/api/cron/*` | The five cron routes |
+| `src/app/api/cron/*` | The six cron routes (§11) |
 | `src/app/api/webhooks/stripe/route.ts` | Payment reconciliation |
 | `src/app/api/worker/*` | Queue polling (`next`/`result`) + URL self-register |
 | `wa-worker/server.mjs` / `tunnel.mjs` | The WhatsApp worker + tunnel self-registration |
 | `src/app/trial/*` · `src/app/(admin)/admin/leads/*` | Public free-trial funnel + admin lead inbox (convert lead → student) |
-| `supabase/migrations/*` | 51 migrations, `0001`→`0049` |
+| `src/lib/cover.ts` | Free-coach eligibility for coach-leave replacement (filter + broadcast + claim) |
+| `supabase/migrations/*` | 58 migrations, `0001`→`0058` |
 
 ---
 
@@ -695,6 +706,9 @@ only — extend `src/lib/i18n.ts` when asked).
 | Symptom | First check |
 |---------|-------------|
 | Pushed to GitHub, not live | Vercel → Settings → Git points at `Hide-and-Seeds/HongBadmintonAcademy`; check the build log. |
+| New feature does nothing / `column does not exist` in logs | Its **migration wasn't applied** — a Vercel deploy doesn't migrate. Apply the SQL (§5). |
+| Session calendar empty for **everyone** logged in (data is there) | An **RLS policy recursion** — evaluating one table's policy re-enters another's and back. Sign in via an anon JWT and query it: the tell is `infinite recursion detected in policy for relation "…"`. Fix = wrap the cross-table check in a `security definer` fn (see `0056`, and DEVELOPER.md §10). |
+| A role can read a row but a joined field is always null | **RLS null cross-table embed** — the outer row is visible but the embedded FK table's own policy hides it, so PostgREST returns the embed as `null` (no error). Hydrate that detail with the service-role client (see commit `ade93fa`, DEVELOPER.md §10). |
 | No WhatsApp messages going out | Worker box up + logged in? `curl localhost:8787/health` → `ready:true`. `worker_paused` off in Settings? Re-link if `LOGOUT` in logs. |
 | Community post didn't send | `WA_COMMUNITY_GROUP_ID` set + bot is a group admin? |
 | Cron didn't run / 401 | `CRON_SECRET` matches in Vercel; check the route logs. |
@@ -708,5 +722,5 @@ only — extend `src/lib/i18n.ts` when asked).
 
 *This document is a snapshot. External state (Vercel/Stripe/Supabase/worker
 access) must be re-verified by whoever takes over. Code-level claims were checked
-against the repo on 2026-07-07; operational/account claims come from project
+against the repo on 2026-07-09; operational/account claims come from project
 history and should be confirmed live.*
