@@ -785,7 +785,7 @@ const en = {
 
   // ── admin: staff ──
   st_title: "Staff & admins",
-  st_desc: "Super admins manage the whole academy; branch admins are scoped to one branch.",
+  st_desc: "Super admins own finance, staff, settings and branches. Regular admins handle daily operations across every branch.",
   st_new: "+ New staff",
   st_admins_section: "Admins",
   st_no_branch: "no branch",
@@ -967,9 +967,9 @@ const en = {
   pf_new_parent: "New parent",
   pf_new_coach: "New coach",
   pf_new_staff: "New staff",
-  pf_new_staff_desc: "Create a branch admin, super admin or coach.",
-  pf_role_branch_admin: "Branch admin (one branch)",
-  pf_role_super: "Super admin (all branches)",
+  pf_new_staff_desc: "Create an admin, super admin or coach.",
+  pf_role_branch_admin: "Admin (daily ops)",
+  pf_role_super: "Super admin (full access)",
   pf_create_staff: "Create staff",
 
   // ── admin: fee plan form ──
@@ -1992,7 +1992,7 @@ const zh: Dict = {
 
   // ── admin: staff ──
   st_title: "员工与管理员",
-  st_desc: "超级管理员管理整个学院；分院管理员仅限一个分院。",
+  st_desc: "超级管理员负责财务、员工、设置及分院管理；普通管理员负责日常事务，覆盖全部分院。",
   st_new: "+ 新建员工",
   st_admins_section: "管理员",
   st_no_branch: "无分院",
@@ -2174,9 +2174,9 @@ const zh: Dict = {
   pf_new_parent: "新建家长",
   pf_new_coach: "新建教练",
   pf_new_staff: "新建员工",
-  pf_new_staff_desc: "创建分院管理员、超级管理员或教练。",
-  pf_role_branch_admin: "分院管理员（单个分院）",
-  pf_role_super: "超级管理员（所有分院）",
+  pf_new_staff_desc: "创建管理员、超级管理员或教练。",
+  pf_role_branch_admin: "管理员（日常事务）",
+  pf_role_super: "超级管理员（完全权限）",
   pf_create_staff: "创建员工",
 
   // ── admin: fee plan form ──
@@ -2484,7 +2484,7 @@ const ZH_NAV: Record<string, string> = {
 
 const ZH_ROLE: Record<string, string> = {
   super_admin: "超级管理员",
-  admin: "分院管理员",
+  admin: "管理员",
   coach: "教练",
   parent: "家长",
 };

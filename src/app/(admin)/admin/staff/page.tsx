@@ -2,7 +2,6 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { PageHeader, Section, Badge, EmptyState, LinkButton, Avatar } from "@/components/ui";
-import { BranchChip } from "@/components/branch-chip";
 import { ConfirmButton } from "@/components/confirm-button";
 import { ROLE_LABEL } from "@/lib/constants";
 import { dict, roleLabel } from "@/lib/i18n";
@@ -16,16 +15,14 @@ export default async function StaffPage() {
   const L = dict(me.locale);
   const supabase = await createClient();
 
-  const [{ data: admins }, { data: branches }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, email, role, branch_id")
-      .in("role", ["admin", "super_admin"])
-      .order("role")
-      .order("full_name"),
-    supabase.from("branches").select("*"),
-  ]);
-  const branchInfo = new Map((branches ?? []).map((b: any) => [b.id, { name: b.name as string, color: b.color as string | null }]));
+  // Admins no longer carry a home branch (they span all branches), so no branch
+  // lookup is needed for this list.
+  const { data: admins } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role")
+    .in("role", ["admin", "super_admin"])
+    .order("role")
+    .order("full_name");
 
   return (
     <div className="space-y-6">
@@ -49,9 +46,6 @@ export default async function StaffPage() {
                     </div>
                     <div className="flex items-center gap-2 truncate text-sm text-slate-500">
                       <span className="truncate">{a.email ?? "—"}</span>
-                      {a.role !== "super_admin" && (a.branch_id
-                        ? <BranchChip name={branchInfo.get(a.branch_id)?.name} color={branchInfo.get(a.branch_id)?.color} />
-                        : <span className="shrink-0 text-slate-400">{L.st_no_branch}</span>)}
                     </div>
                   </div>
                 </div>

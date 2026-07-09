@@ -77,7 +77,10 @@ export function PersonForm({
           <Input name="phone" defaultValue={person?.phone ?? ""} placeholder="+60…" />
         </Field>
 
-        {showBranch && (
+        {/* Only coaches carry a home branch — admins/super-admins span all
+            branches, so the picker is suppressed for staff even when the caller
+            passes showBranch. */}
+        {showBranch && role === "coach" && (
           <Field label={L.branch} hint={L.pf_branch_hint}>
             <Select name="branch_id" defaultValue={person?.branch_id ?? defaultBranchId ?? ""}>
               <option value="">{L.none}</option>

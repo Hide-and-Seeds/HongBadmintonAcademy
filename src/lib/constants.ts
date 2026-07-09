@@ -10,7 +10,7 @@ export const PAGE_SIZE = 25;
 
 export const ROLE_LABEL: Record<string, string> = {
   super_admin: "Super admin",
-  admin: "Branch admin",
+  admin: "Admin",
   coach: "Coach",
   parent: "Parent",
 };

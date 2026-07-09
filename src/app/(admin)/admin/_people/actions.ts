@@ -70,9 +70,9 @@ export async function createPerson(role: Role, formData: FormData) {
   });
   if (error) err(`${base}/new`, error.message);
 
-  // Coaches can be assigned a home branch from the form (parents have none).
+  // Only coaches carry a home branch (parents have none; admins span all).
   const branchId = String(formData.get("branch_id") ?? "").trim() || null;
-  if (created?.user?.id && branchId && role !== "parent") {
+  if (created?.user?.id && branchId && role === "coach") {
     await db.from("profiles").update({ branch_id: branchId }).eq("id", created.user.id);
   }
 
@@ -100,9 +100,10 @@ export async function createStaff(formData: FormData) {
   });
   if (error) err("/admin/staff/new", error.message);
 
+  // Only coaches carry a home branch. Admin / super-admin span all branches.
   const branchId = String(formData.get("branch_id") ?? "").trim() || null;
   if (created?.user?.id) {
-    await db.from("profiles").update({ branch_id: role === "super_admin" ? null : branchId }).eq("id", created.user.id);
+    await db.from("profiles").update({ branch_id: role === "coach" ? branchId : null }).eq("id", created.user.id);
   }
 
   revalidatePath("/admin/staff");
@@ -119,9 +120,9 @@ export async function updatePerson(role: Role, formData: FormData) {
 
   const db = createAdminClient();
   const update: Record<string, unknown> = { full_name, phone };
-  // Coaches/staff can be reassigned a branch from the edit form.
+  // Only coaches carry a home branch (parents have none; admins span all).
   const branchRaw = formData.get("branch_id");
-  if (branchRaw !== null && role !== "parent") update.branch_id = String(branchRaw).trim() || null;
+  if (branchRaw !== null && role === "coach") update.branch_id = String(branchRaw).trim() || null;
 
   // Staff (coach/admin) may also change their sign-in email from the edit form.
   const { email } = parsed.data;
@@ -173,10 +174,11 @@ export async function updateStaff(formData: FormData) {
     if (error) err(`/admin/staff/${id}/edit`, error.message);
   }
 
+  // Only coaches carry a home branch. Admin / super-admin span all branches.
   const branchId = String(formData.get("branch_id") ?? "").trim() || null;
   const { error } = await db
     .from("profiles")
-    .update({ full_name, phone, email: email ?? cur?.email, role, branch_id: role === "super_admin" ? null : branchId })
+    .update({ full_name, phone, email: email ?? cur?.email, role, branch_id: role === "coach" ? branchId : null })
     .eq("id", id);
   if (error) err(`/admin/staff/${id}/edit`, error.message);
 
